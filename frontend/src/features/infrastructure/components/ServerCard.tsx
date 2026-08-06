@@ -41,7 +41,7 @@ export default function ServerCard({ server }: Props) {
             href={server.monitoring_url}
             target="_blank"
             rel="noreferrer"
-            className="block text-sm text-primary underline underline-offset-2"
+            className="block text-sm text-brand underline underline-offset-2"
           >
             Monitoring dashboard
           </a>

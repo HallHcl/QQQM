@@ -12,8 +12,11 @@ import { Button } from "@/components/ui/button";
 import { useDeleteSchedule } from "@/hooks/useSchedules";
 import type { Schedule } from "@/types";
 
-const STATUS_VARIANT: Record<Schedule["status"], "default" | "secondary" | "outline" | "destructive"> = {
-  pending: "outline",
+const STATUS_VARIANT: Record<
+  Schedule["status"],
+  "default" | "secondary" | "outline" | "destructive" | "warning"
+> = {
+  pending: "warning",
   in_progress: "secondary",
   done: "default",
   cancelled: "destructive",

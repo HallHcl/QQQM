@@ -99,13 +99,13 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="title">Title</Label>
             <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label>Type</Label>
               <Select value={type} onValueChange={(v) => setType(v as ScheduleType)}>
                 <SelectTrigger>
@@ -120,7 +120,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="date">Date</Label>
               <Input
                 id="date"
@@ -133,7 +133,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label>Assigned to</Label>
               <Select value={assignedTo} onValueChange={setAssignedTo}>
                 <SelectTrigger>
@@ -148,7 +148,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label>Project</Label>
               <Select value={projectId} onValueChange={setProjectId}>
                 <SelectTrigger>
@@ -165,7 +165,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label>Status</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as ScheduleStatus)}>
               <SelectTrigger>
@@ -181,7 +181,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="notes">Notes</Label>
             <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>

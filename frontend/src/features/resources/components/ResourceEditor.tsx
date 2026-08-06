@@ -108,13 +108,13 @@ export default function ResourceEditor({ open, onOpenChange, mode, resourceId }:
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "create" && (
             <>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="title">Title</Label>
                 <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label>Type</Label>
                   <Select value={type} onValueChange={(v) => setType(v as ResourceType)}>
                     <SelectTrigger>
@@ -129,7 +129,7 @@ export default function ResourceEditor({ open, onOpenChange, mode, resourceId }:
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label>Project</Label>
                   <Select value={projectId} onValueChange={setProjectId}>
                     <SelectTrigger>
@@ -146,14 +146,14 @@ export default function ResourceEditor({ open, onOpenChange, mode, resourceId }:
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="category">Category</Label>
                 <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} />
               </div>
             </>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="content">Content</Label>
             <Textarea
               id="content"
@@ -163,7 +163,7 @@ export default function ResourceEditor({ open, onOpenChange, mode, resourceId }:
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="externalUrl">External URL</Label>
             <Input
               id="externalUrl"
@@ -173,7 +173,7 @@ export default function ResourceEditor({ open, onOpenChange, mode, resourceId }:
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="commitMessage">Commit message</Label>
             <Input
               id="commitMessage"

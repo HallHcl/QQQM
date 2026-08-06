@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format, isBefore, startOfDay } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,11 +39,11 @@ export default function NotificationBell() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          <Bell className="h-5 w-5 text-muted-foreground" />
           {dueSchedules.length > 0 && (
-            <Badge className="absolute -right-1 -top-1 h-5 min-w-5 justify-center rounded-full px-1 text-xs">
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 animate-pulse-slow items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-background">
               {dueSchedules.length}
-            </Badge>
+            </span>
           )}
         </Button>
       </DropdownMenuTrigger>

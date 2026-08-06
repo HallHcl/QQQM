@@ -4,73 +4,65 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Brand palette — Razer-inspired dark theme (single, non-togglable) */
+    --background: #0a0a0a;
+    --surface: #121212;
+    --surface-hover: #1a1a1a;
+    --border: #262626;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --accent: #44d62c;
+    --accent-hover: #58e840;
+    --accent-dim: #1f5c15;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --text-primary: #f5f5f5;
+    --text-secondary: #a3a3a3;
+    --text-muted: #6b6b6b;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --danger: #ff3b3b;
+    --warning: #ffb800;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* shadcn/ui semantic tokens mapped onto the palette above.
+       Note: shadcn's own "accent" slot is used internally for generic
+       hover fills (dropdown items, ghost buttons, etc.) and is kept
+       distinct from the brand --accent green above to avoid every
+       hover state turning neon green. Use the `brand` Tailwind color
+       (bg-brand / text-brand / border-brand) for the real accent. */
+    --foreground: var(--text-primary);
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --card: var(--surface);
+    --card-foreground: var(--text-primary);
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --popover: var(--surface);
+    --popover-foreground: var(--text-primary);
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --primary: var(--accent);
+    --primary-foreground: var(--background);
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --secondary: var(--surface);
+    --secondary-foreground: var(--text-primary);
 
-    --radius: 0.5rem;
+    --muted: var(--surface);
+    --muted-foreground: var(--text-secondary);
+
+    --shadcn-accent: var(--surface-hover);
+    --shadcn-accent-foreground: var(--text-primary);
+
+    --destructive: var(--danger);
+    --destructive-foreground: var(--text-primary);
+
+    --input: var(--border);
+    --ring: var(--accent);
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
-}
-
-@layer base {
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans text-sm;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
   }
 }

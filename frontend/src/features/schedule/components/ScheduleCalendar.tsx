@@ -1,3 +1,4 @@
+import { startOfDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import type { Schedule } from "@/types";
 
@@ -7,19 +8,29 @@ interface Props {
   onSelect: (date: Date | undefined) => void;
 }
 
+const DOT_BASE =
+  "relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full";
+
 export default function ScheduleCalendar({ schedules, selected, onSelect }: Props) {
-  const scheduledDates = schedules.map((s) => new Date(s.scheduled_date));
+  const today = startOfDay(new Date());
+
+  const isOverdue = (schedule: Schedule) =>
+    schedule.status === "pending" && startOfDay(new Date(schedule.scheduled_date)) < today;
+
+  const scheduledDates = schedules.filter((s) => !isOverdue(s)).map((s) => new Date(s.scheduled_date));
+  const overdueDates = schedules.filter(isOverdue).map((s) => new Date(s.scheduled_date));
 
   return (
     <Calendar
       mode="single"
       selected={selected}
       onSelect={onSelect}
-      modifiers={{ hasSchedule: scheduledDates }}
+      modifiers={{ scheduled: scheduledDates, overdue: overdueDates }}
       modifiersClassNames={{
-        hasSchedule: "font-semibold underline decoration-primary decoration-2",
+        scheduled: `${DOT_BASE} after:bg-brand`,
+        overdue: `${DOT_BASE} after:bg-danger`,
       }}
-      className="rounded-md border"
+      className="rounded-md border border-border bg-surface"
     />
   );
 }

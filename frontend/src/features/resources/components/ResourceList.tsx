@@ -21,10 +21,10 @@ export default function ResourceList({ resources, selectedId, onSelect }: Props)
             type="button"
             onClick={() => onSelect(resource)}
             className={cn(
-              "flex w-full flex-col items-start gap-1 rounded-md border p-3 text-left transition-colors",
+              "flex w-full flex-col items-start gap-1 rounded-md border border-border p-3 text-left transition-colors duration-150",
               selectedId === resource.id
-                ? "border-primary bg-accent"
-                : "hover:bg-accent/50"
+                ? "border-brand bg-surface-hover"
+                : "hover:border-brand hover:bg-surface-hover"
             )}
           >
             <span className="text-sm font-medium">{resource.title}</span>
