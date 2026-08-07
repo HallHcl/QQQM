@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
-import type { ActivityLog } from "@/types";
+import type { ActivityLog, Paginated } from "@/types";
 
 const KEY = "activityLogs";
 
@@ -15,7 +15,7 @@ export function useActivityLogs(filters: ActivityLogFilters = {}) {
   return useQuery({
     queryKey: [KEY, filters],
     queryFn: async () => {
-      const { data } = await api.get<ActivityLog[]>("/activity-logs", {
+      const { data } = await api.get<Paginated<ActivityLog>>("/activity-logs", {
         params: {
           entity_type: filters.entityType,
           entity_id: filters.entityId,
@@ -23,7 +23,7 @@ export function useActivityLogs(filters: ActivityLogFilters = {}) {
           to: filters.to,
         },
       });
-      return data;
+      return data.data;
     },
   });
 }

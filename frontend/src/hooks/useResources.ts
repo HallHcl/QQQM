@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import type { Resource } from "@/types";
+import type { Paginated, Resource } from "@/types";
 
 const KEY = "resources";
 
@@ -14,14 +14,14 @@ export function useResources(filters: ResourceFilters = {}) {
   return useQuery({
     queryKey: [KEY, filters],
     queryFn: async () => {
-      const { data } = await api.get<Resource[]>("/resources", {
+      const { data } = await api.get<Paginated<Resource>>("/resources", {
         params: {
           project_id: filters.projectId,
           type: filters.type,
           search: filters.search,
         },
       });
-      return data;
+      return data.data;
     },
   });
 }
@@ -62,8 +62,17 @@ export function useCreateResource() {
 export function useUpdateResource() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data: input }: { id: string; data: Partial<Resource> }) => {
-      const { data } = await api.put<Resource>(`/resources/${id}`, input);
+    // Metadata only (title/category/tags) — content changes go through
+    // useCreateResourceVersion instead. updated_at is required for the
+    // API's optimistic lock.
+    mutationFn: async ({
+      id,
+      data: input,
+    }: {
+      id: string;
+      data: Partial<Pick<Resource, "title" | "category" | "tags">> & { updated_at: string };
+    }) => {
+      const { data } = await api.patch<Resource>(`/resources/${id}`, input);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),

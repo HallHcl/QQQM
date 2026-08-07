@@ -37,11 +37,11 @@ export default function PersonDetailDialog({ person, open, onOpenChange }: Props
 
   if (!person) return null;
 
-  const clientName = (clientId: string) =>
-    clients.find((c) => c.id === clientId)?.name ?? "Unknown client";
-
+  // GET /people/:id/clients already returns the client's own id + name
+  // inline (not a raw people_clients junction row), so no separate lookup
+  // is needed to display it.
   const availableClients = clients.filter(
-    (c) => !relationships.some((r) => r.client_id === c.id)
+    (c) => !relationships.some((r) => r.id === c.id)
   );
 
   return (
@@ -81,7 +81,7 @@ export default function PersonDetailDialog({ person, open, onOpenChange }: Props
                     className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
                   >
                     <span>
-                      {clientName(rel.client_id)}
+                      {rel.name}
                       {rel.relationship_type && (
                         <span className="ml-1 text-xs text-muted-foreground">
                           ({rel.relationship_type})
@@ -92,7 +92,7 @@ export default function PersonDetailDialog({ person, open, onOpenChange }: Props
                       variant="ghost"
                       size="sm"
                       onClick={() =>
-                        removeClient.mutate({ personId: person.id, clientId: rel.client_id })
+                        removeClient.mutate({ personId: person.id, clientId: rel.id })
                       }
                     >
                       Remove

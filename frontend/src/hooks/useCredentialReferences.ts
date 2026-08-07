@@ -8,9 +8,11 @@ export function useCredentialReferences(serverId?: string) {
   return useQuery({
     queryKey: [KEY, { serverId }],
     queryFn: async () => {
-      const { data } = await api.get<CredentialReference[]>("/credential-references", {
-        params: serverId ? { server_id: serverId } : undefined,
-      });
+      // Nested under the server, not a top-level list — there is no bare
+      // GET /credential-references on the real API. Not paginated.
+      const { data } = await api.get<CredentialReference[]>(
+        `/servers/${serverId}/credential-references`
+      );
       return data;
     },
     enabled: Boolean(serverId),
@@ -20,8 +22,17 @@ export function useCredentialReferences(serverId?: string) {
 export function useCreateCredentialReference() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Partial<CredentialReference>) => {
-      const { data } = await api.post<CredentialReference>("/credential-references", input);
+    mutationFn: async ({
+      serverId,
+      data: input,
+    }: {
+      serverId: string;
+      data: Partial<Omit<CredentialReference, "id" | "server_id" | "created_at">>;
+    }) => {
+      const { data } = await api.post<CredentialReference>(
+        `/servers/${serverId}/credential-references`,
+        input
+      );
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),
@@ -31,14 +42,15 @@ export function useCreateCredentialReference() {
 export function useUpdateCredentialReference() {
   const queryClient = useQueryClient();
   return useMutation({
+    // No optimistic lock on this resource (no updated_at field at all).
     mutationFn: async ({
       id,
       data: input,
     }: {
       id: string;
-      data: Partial<CredentialReference>;
+      data: Partial<Omit<CredentialReference, "id" | "server_id" | "created_at">>;
     }) => {
-      const { data } = await api.put<CredentialReference>(
+      const { data } = await api.patch<CredentialReference>(
         `/credential-references/${id}`,
         input
       );

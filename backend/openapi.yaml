@@ -1,0 +1,4521 @@
+openapi: 3.0.0
+info:
+  title: QQM API
+  version: 1.0.0
+  description: Client / project / infrastructure management API. Generated from
+    the actual implemented routes, controllers, and zod validators
+    (backend/src/openapi) — not from any prior design document.
+  license:
+    name: ISC
+    url: https://opensource.org/licenses/ISC
+servers:
+  - url: /
+    description: Same-origin backend
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT obtained from POST /api/auth/login, sent as `Authorization:
+        Bearer <token>`."
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        peopleId:
+          type: string
+          nullable: true
+          format: uuid
+        roles:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - username
+        - email
+        - peopleId
+        - roles
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              $ref: "#/components/schemas/ErrorCode"
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+          required:
+            - message
+      required:
+        - error
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - NOT_FOUND
+        - CONFLICT
+        - INTERNAL_ERROR
+    ClientListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Client"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          nullable: true
+          format: date-time
+      required:
+        - id
+        - name
+        - status
+        - description
+        - created_at
+        - updated_at
+        - deleted_at
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+      required:
+        - page
+        - per_page
+        - total
+        - total_pages
+    PersonForClient:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        type:
+          $ref: "#/components/schemas/PeopleType"
+        deleted_at:
+          type: string
+          nullable: true
+          format: date-time
+        relationship_type:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - email
+        - phone
+        - type
+        - deleted_at
+        - relationship_type
+    PeopleType:
+      type: string
+      enum:
+        - internal_engineer
+        - vendor
+        - client_contact
+        - project_owner
+        - approver
+    ProjectListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        owner_status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          nullable: true
+          format: date-time
+      required:
+        - id
+        - client_id
+        - name
+        - description
+        - owner_status
+        - created_at
+        - updated_at
+        - deleted_at
+    ProjectDetail:
+      allOf:
+        - $ref: "#/components/schemas/Project"
+        - type: object
+          properties:
+            client:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+              required:
+                - id
+                - name
+          required:
+            - client
+    ProjectPersonEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        role_in_project:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        person:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            email:
+              type: string
+              nullable: true
+            type:
+              type: string
+            deleted_at:
+              type: string
+              nullable: true
+              format: date-time
+          required:
+            - id
+            - name
+            - email
+            - type
+            - deleted_at
+      required:
+        - id
+        - project_id
+        - role_in_project
+        - created_at
+        - person
+    EnvironmentListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Environment"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+    Environment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          nullable: true
+          format: date-time
+        vpn_resource_id:
+          type: string
+          nullable: true
+          format: uuid
+      required:
+        - id
+        - project_id
+        - name
+        - description
+        - created_at
+        - updated_at
+        - deleted_at
+        - vpn_resource_id
+    EnvironmentDetail:
+      allOf:
+        - $ref: "#/components/schemas/Environment"
+        - type: object
+          properties:
+            project:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+              required:
+                - id
+                - name
+          required:
+            - project
+    ServerListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Server"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+    Server:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment_id:
+          type: string
+          format: uuid
+        hostname:
+          type: string
+        ip_address:
+          type: string
+          nullable: true
+        tech_stack:
+          type: array
+          items:
+            type: string
+        monitoring_url:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          nullable: true
+          format: date-time
+        display_name:
+          type: string
+        service_type:
+          $ref: "#/components/schemas/ServiceType"
+        access_method:
+          $ref: "#/components/schemas/AccessMethod"
+        access_host:
+          type: string
+        access_port:
+          type: integer
+          nullable: true
+        access_path:
+          type: string
+          nullable: true
+      required:
+        - id
+        - environment_id
+        - hostname
+        - ip_address
+        - tech_stack
+        - monitoring_url
+        - notes
+        - created_at
+        - updated_at
+        - deleted_at
+        - display_name
+        - service_type
+        - access_method
+        - access_host
+        - access_port
+        - access_path
+    ServiceType:
+      type: string
+      nullable: true
+      enum:
+        - application
+        - database
+        - proxy
+        - monitoring
+        - repository
+        - metrics
+        - jump_host
+        - other
+        - null
+    AccessMethod:
+      type: string
+      nullable: true
+      enum:
+        - ssh
+        - rdp
+        - telnet
+        - web
+        - other
+        - null
+    ServerDetail:
+      allOf:
+        - $ref: "#/components/schemas/Server"
+        - type: object
+          properties:
+            environment:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                project:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                  required:
+                    - id
+                    - name
+              required:
+                - id
+                - name
+                - project
+          required:
+            - environment
+    CredentialReference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        server_id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        reference_location:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        applies_to_access_method:
+          $ref: "#/components/schemas/AccessMethod"
+      required:
+        - id
+        - server_id
+        - label
+        - reference_location
+        - notes
+        - created_at
+        - applies_to_access_method
+    ResourceListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceListItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+    ResourceListItem:
+      allOf:
+        - $ref: "#/components/schemas/Resource"
+        - type: object
+          properties:
+            current_version:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                version_number:
+                  type: integer
+                created_at:
+                  type: string
+                  format: date-time
+                author:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                  required:
+                    - id
+                    - name
+              required:
+                - id
+                - version_number
+                - created_at
+                - author
+          required:
+            - current_version
+    ResourceType:
+      type: string
+      enum:
+        - runbook
+        - sop
+        - architecture
+        - troubleshooting
+        - faq
+        - link
+        - pdf
+    Resource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          nullable: true
+          format: uuid
+        type:
+          $ref: "#/components/schemas/ResourceType"
+        title:
+          type: string
+        category:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        current_version_id:
+          type: string
+          nullable: true
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          nullable: true
+          format: date-time
+      required:
+        - id
+        - project_id
+        - type
+        - title
+        - category
+        - tags
+        - current_version_id
+        - created_at
+        - updated_at
+        - deleted_at
+    ResourceDetail:
+      allOf:
+        - $ref: "#/components/schemas/Resource"
+        - type: object
+          properties:
+            current_version:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                version_number:
+                  type: integer
+                created_at:
+                  type: string
+                  format: date-time
+                author:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                  required:
+                    - id
+                    - name
+                content:
+                  type: string
+                  nullable: true
+                external_url:
+                  type: string
+                  nullable: true
+                file_path:
+                  type: string
+                  nullable: true
+                content_hash:
+                  type: string
+                commit_message:
+                  type: string
+                  nullable: true
+              required:
+                - id
+                - version_number
+                - created_at
+                - author
+                - content
+                - external_url
+                - file_path
+                - content_hash
+                - commit_message
+          required:
+            - current_version
+    ResourceVersionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceVersionSummary"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+    ResourceVersionSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        version_number:
+          type: integer
+        commit_message:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        author:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+          required:
+            - id
+            - name
+      required:
+        - id
+        - version_number
+        - commit_message
+        - created_at
+        - author
+    ResourceVersionWithAuthor:
+      allOf:
+        - $ref: "#/components/schemas/ResourceVersion"
+        - type: object
+          properties:
+            author:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+              required:
+                - id
+                - name
+          required:
+            - author
+    ResourceVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        resource_id:
+          type: string
+          format: uuid
+        version_number:
+          type: integer
+        content:
+          type: string
+          nullable: true
+        content_hash:
+          type: string
+        external_url:
+          type: string
+          nullable: true
+        file_path:
+          type: string
+          nullable: true
+        commit_message:
+          type: string
+          nullable: true
+        author_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - resource_id
+        - version_number
+        - content
+        - content_hash
+        - external_url
+        - file_path
+        - commit_message
+        - author_id
+        - created_at
+    CreateVersionResult:
+      type: object
+      properties:
+        version:
+          $ref: "#/components/schemas/ResourceVersion"
+        warning:
+          type: string
+      required:
+        - version
+    PersonListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Person"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+    Person:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        type:
+          $ref: "#/components/schemas/PeopleType"
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          nullable: true
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - phone
+        - type
+        - notes
+        - created_at
+        - updated_at
+        - deleted_at
+    PersonDetail:
+      allOf:
+        - $ref: "#/components/schemas/Person"
+        - type: object
+          properties:
+            clients:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  relationship_type:
+                    type: string
+                    nullable: true
+                required:
+                  - id
+                  - name
+                  - relationship_type
+            account:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                username:
+                  type: string
+                active:
+                  type: boolean
+              required:
+                - id
+                - username
+                - active
+          required:
+            - clients
+            - account
+    ScheduleListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleListItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+    ScheduleListItem:
+      allOf:
+        - $ref: "#/components/schemas/Schedule"
+        - type: object
+          properties:
+            is_overdue:
+              type: boolean
+          required:
+            - is_overdue
+    ScheduleType:
+      type: string
+      enum:
+        - PM
+        - MA
+        - other
+    ScheduleStatus:
+      type: string
+      enum:
+        - pending
+        - in_progress
+        - done
+        - cancelled
+    Schedule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          nullable: true
+          format: uuid
+        server_id:
+          type: string
+          nullable: true
+          format: uuid
+        title:
+          type: string
+        type:
+          $ref: "#/components/schemas/ScheduleType"
+        scheduled_date:
+          type: string
+        started_at:
+          type: string
+          nullable: true
+          format: date-time
+        completed_at:
+          type: string
+          nullable: true
+          format: date-time
+        assigned_to:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/ScheduleStatus"
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          nullable: true
+          format: date-time
+      required:
+        - id
+        - project_id
+        - server_id
+        - title
+        - type
+        - scheduled_date
+        - started_at
+        - completed_at
+        - assigned_to
+        - status
+        - notes
+        - created_at
+        - updated_at
+        - deleted_at
+    ScheduleDetail:
+      allOf:
+        - $ref: "#/components/schemas/Schedule"
+        - type: object
+          properties:
+            is_overdue:
+              type: boolean
+            assigned_to_person:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+              required:
+                - id
+                - name
+            project:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+              required:
+                - id
+                - name
+            server:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+              required:
+                - id
+                - name
+          required:
+            - is_overdue
+            - assigned_to_person
+            - project
+            - server
+    ActivityLogListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityLog"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          $ref: "#/components/schemas/EntityType"
+        entity_id:
+          type: string
+          format: uuid
+        action:
+          $ref: "#/components/schemas/ActivityAction"
+        changed_by:
+          type: string
+          format: uuid
+        old_value:
+          type: object
+          additionalProperties: true
+        new_value:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        changed_by_person:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+          required:
+            - id
+            - name
+      required:
+        - id
+        - entity_type
+        - entity_id
+        - action
+        - changed_by
+        - created_at
+        - changed_by_person
+    EntityType:
+      type: string
+      enum:
+        - client
+        - project
+        - environment
+        - server
+        - credential_reference
+        - people
+        - resource
+        - resource_version
+        - schedule
+        - user
+    ActivityAction:
+      type: string
+      enum:
+        - create
+        - update
+        - delete
+        - restore
+  parameters: {}
+paths:
+  /api/auth/login:
+    post:
+      tags:
+        - Auth
+      operationId: login
+      summary: Log in with username and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  minLength: 1
+                password:
+                  type: string
+                  minLength: 1
+              required:
+                - username
+                - password
+      responses:
+        "200":
+          description: Login succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+                required:
+                  - token
+                  - user
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/me:
+    get:
+      tags:
+        - Auth
+      operationId: getCurrentUser
+      summary: Get the authenticated user's profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/logout:
+    post:
+      tags:
+        - Auth
+      operationId: logout
+      summary: Log out (client-side token discard; no server-side session to invalidate)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/change-password:
+    post:
+      tags:
+        - Auth
+      operationId: changePassword
+      summary: Change the authenticated user's password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                current_password:
+                  type: string
+                  minLength: 1
+                new_password:
+                  type: string
+                  minLength: 8
+              required:
+                - current_password
+                - new_password
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/clients:
+    get:
+      tags:
+        - Clients
+      operationId: listClients
+      summary: List clients
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            description: "Default: 1"
+          required: false
+          description: "Default: 1"
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: "Default: 20, max: 100"
+          required: false
+          description: "Default: 20, max: 100"
+          name: per_page
+          in: query
+        - schema:
+            type: string
+            enum:
+              - name
+              - status
+              - created_at
+              - updated_at
+            description: "Default: name"
+          required: false
+          description: "Default: name"
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            description: "Default: asc"
+          required: false
+          description: "Default: asc"
+          name: order
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "false"
+              - "true"
+              - all
+            description: "Default: false"
+          required: false
+          description: "Default: false"
+          name: deleted
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+      responses:
+        "200":
+          description: Paginated clients
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - Clients
+      operationId: createClient
+      summary: Create a client (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                status:
+                  type: string
+                description:
+                  type: string
+              required:
+                - name
+      responses:
+        "201":
+          description: Client created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/clients/{id}:
+    get:
+      tags:
+        - Clients
+      operationId: getClientById
+      summary: Get a client by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - Clients
+      operationId: updateClient
+      summary: Update a client (optimistic lock via updated_at)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                status:
+                  type: string
+                description:
+                  type: string
+                updated_at:
+                  type: string
+                  minLength: 1
+              required:
+                - updated_at
+      responses:
+        "200":
+          description: Client updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - Clients
+      operationId: deleteClient
+      summary: Soft-delete a client (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Client soft-deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/clients/{id}/restore:
+    post:
+      tags:
+        - Clients
+      operationId: restoreClient
+      summary: Restore a soft-deleted client (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Client restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/clients/{id}/people:
+    get:
+      tags:
+        - Clients
+      operationId: getClientPeople
+      summary: List people linked to a client (reverse of Person <-> Client link)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: People linked to this client
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PersonForClient"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects:
+    get:
+      tags:
+        - Projects
+      operationId: listProjects
+      summary: List projects
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            description: "Default: 1"
+          required: false
+          description: "Default: 1"
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: "Default: 20, max: 100"
+          required: false
+          description: "Default: 20, max: 100"
+          name: per_page
+          in: query
+        - schema:
+            type: string
+            enum:
+              - name
+              - created_at
+              - updated_at
+            description: "Default: name"
+          required: false
+          description: "Default: name"
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            description: "Default: asc"
+          required: false
+          description: "Default: asc"
+          name: order
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "false"
+              - "true"
+              - all
+            description: "Default: false"
+          required: false
+          description: "Default: false"
+          name: deleted
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: client_id
+          in: query
+      responses:
+        "200":
+          description: Paginated projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - Projects
+      operationId: createProject
+      summary: Create a project (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                client_id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                description:
+                  type: string
+                owner_status:
+                  type: string
+                  default: active
+              required:
+                - client_id
+                - name
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/{id}:
+    get:
+      tags:
+        - Projects
+      operationId: getProjectById
+      summary: Get a project by id, with its parent client inlined
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectDetail"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - Projects
+      operationId: updateProject
+      summary: Update a project (admin only; optimistic lock via updated_at; client_id
+        is not re-parentable)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                description:
+                  type: string
+                owner_status:
+                  type: string
+                updated_at:
+                  type: string
+                  minLength: 1
+              required:
+                - updated_at
+      responses:
+        "200":
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - Projects
+      operationId: deleteProject
+      summary: Soft-delete a project (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Project soft-deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/{id}/restore:
+    post:
+      tags:
+        - Projects
+      operationId: restoreProject
+      summary: Restore a soft-deleted project (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Project restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/{id}/people:
+    get:
+      tags:
+        - ProjectPeople
+      operationId: listProjectPeople
+      summary: List people assigned to a project (includes soft-deleted people, marked
+        via deleted_at, for history)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Project people
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProjectPersonEntry"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - ProjectPeople
+      operationId: addProjectPerson
+      summary: Assign a person to a project with a role
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                people_id:
+                  type: string
+                  format: uuid
+                role_in_project:
+                  type: string
+                  minLength: 1
+              required:
+                - people_id
+                - role_in_project
+      responses:
+        "201":
+          description: Person assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectPersonEntry"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/{id}/people/{peopleId}:
+    delete:
+      tags:
+        - ProjectPeople
+      operationId: removeProjectPerson
+      summary: Remove a person from a project
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: peopleId
+          in: path
+      responses:
+        "200":
+          description: Person removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/environments:
+    get:
+      tags:
+        - Environments
+      operationId: listEnvironments
+      summary: List environments
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            description: "Default: 1"
+          required: false
+          description: "Default: 1"
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: "Default: 20, max: 100"
+          required: false
+          description: "Default: 20, max: 100"
+          name: per_page
+          in: query
+        - schema:
+            type: string
+            enum:
+              - name
+              - created_at
+              - updated_at
+            description: "Default: name"
+          required: false
+          description: "Default: name"
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            description: "Default: asc"
+          required: false
+          description: "Default: asc"
+          name: order
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "false"
+              - "true"
+              - all
+            description: "Default: false"
+          required: false
+          description: "Default: false"
+          name: deleted
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: project_id
+          in: query
+      responses:
+        "200":
+          description: Paginated environments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvironmentListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - Environments
+      operationId: createEnvironment
+      summary: Create an environment (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+              required:
+                - project_id
+                - name
+      responses:
+        "201":
+          description: Environment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/environments/{id}:
+    get:
+      tags:
+        - Environments
+      operationId: getEnvironmentById
+      summary: Get an environment by id, with its parent project inlined
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Environment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvironmentDetail"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - Environments
+      operationId: updateEnvironment
+      summary: Update an environment (admin only; optimistic lock; project_id is not
+        re-parentable)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                vpn_resource_id:
+                  type: string
+                  nullable: true
+                  format: uuid
+                updated_at:
+                  type: string
+                  minLength: 1
+              required:
+                - updated_at
+      responses:
+        "200":
+          description: Environment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - Environments
+      operationId: deleteEnvironment
+      summary: Soft-delete an environment (admin only; cascades to its servers and
+        hard-deletes their credential_references)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Environment soft-deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/environments/{id}/restore:
+    post:
+      tags:
+        - Environments
+      operationId: restoreEnvironment
+      summary: Restore a soft-deleted environment (admin only; does not
+        cascade-restore servers)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Environment restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/servers:
+    get:
+      tags:
+        - Servers
+      operationId: listServers
+      summary: List servers
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            description: "Default: 1"
+          required: false
+          description: "Default: 1"
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: "Default: 20, max: 100"
+          required: false
+          description: "Default: 20, max: 100"
+          name: per_page
+          in: query
+        - schema:
+            type: string
+            enum:
+              - display_name
+              - created_at
+              - updated_at
+            description: "Default: display_name"
+          required: false
+          description: "Default: display_name"
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            description: "Default: asc"
+          required: false
+          description: "Default: asc"
+          name: order
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "false"
+              - "true"
+              - all
+            description: "Default: false"
+          required: false
+          description: "Default: false"
+          name: deleted
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: environment_id
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: service_type
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: access_method
+          in: query
+      responses:
+        "200":
+          description: Paginated servers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - Servers
+      operationId: createServer
+      summary: Create a server (admin or member)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                environment_id:
+                  type: string
+                  format: uuid
+                display_name:
+                  type: string
+                  minLength: 1
+                hostname:
+                  type: string
+                  minLength: 1
+                ip_address:
+                  type: string
+                service_type:
+                  type: string
+                  enum:
+                    - application
+                    - database
+                    - proxy
+                    - monitoring
+                    - repository
+                    - metrics
+                    - jump_host
+                    - other
+                access_method:
+                  type: string
+                  enum:
+                    - ssh
+                    - rdp
+                    - telnet
+                    - web
+                    - other
+                access_host:
+                  type: string
+                  minLength: 1
+                access_port:
+                  type: integer
+                  minimum: 1
+                  maximum: 65535
+                access_path:
+                  type: string
+                tech_stack:
+                  type: array
+                  items:
+                    type: string
+                  default: []
+                monitoring_url:
+                  type: string
+                  format: uri
+                notes:
+                  type: string
+              required:
+                - environment_id
+                - display_name
+                - hostname
+                - service_type
+                - access_method
+                - access_host
+      responses:
+        "201":
+          description: Server created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/servers/{id}:
+    get:
+      tags:
+        - Servers
+      operationId: getServerById
+      summary: Get a server by id, with its environment and that environment's project
+        inlined
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerDetail"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - Servers
+      operationId: updateServer
+      summary: Update a server (admin or member; optimistic lock; environment_id is
+        not re-parentable)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                  minLength: 1
+                hostname:
+                  type: string
+                  minLength: 1
+                ip_address:
+                  type: string
+                service_type:
+                  type: string
+                  enum:
+                    - application
+                    - database
+                    - proxy
+                    - monitoring
+                    - repository
+                    - metrics
+                    - jump_host
+                    - other
+                access_method:
+                  type: string
+                  enum:
+                    - ssh
+                    - rdp
+                    - telnet
+                    - web
+                    - other
+                access_host:
+                  type: string
+                  minLength: 1
+                access_port:
+                  type: integer
+                  minimum: 1
+                  maximum: 65535
+                access_path:
+                  type: string
+                tech_stack:
+                  type: array
+                  items:
+                    type: string
+                monitoring_url:
+                  type: string
+                  format: uri
+                notes:
+                  type: string
+                updated_at:
+                  type: string
+                  minLength: 1
+              required:
+                - updated_at
+      responses:
+        "200":
+          description: Server updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - Servers
+      operationId: deleteServer
+      summary: Soft-delete a server (admin only; hard-deletes its credential_references)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Server soft-deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/servers/{id}/restore:
+    post:
+      tags:
+        - Servers
+      operationId: restoreServer
+      summary: Restore a soft-deleted server (admin only; credential_references
+        hard-deleted at delete time are NOT restored)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Server restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/servers/{serverId}/credential-references:
+    get:
+      tags:
+        - CredentialReferences
+      operationId: listServerCredentialReferences
+      summary: List credential references for a server
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: serverId
+          in: path
+      responses:
+        "200":
+          description: Credential references
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CredentialReference"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - CredentialReferences
+      operationId: createServerCredentialReference
+      summary: Create a credential reference for a server (admin or member)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: serverId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  minLength: 1
+                reference_location:
+                  type: string
+                  minLength: 1
+                applies_to_access_method:
+                  type: string
+                  enum:
+                    - ssh
+                    - rdp
+                    - telnet
+                    - web
+                    - other
+                notes:
+                  type: string
+              required:
+                - label
+                - reference_location
+      responses:
+        "201":
+          description: Credential reference created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CredentialReference"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/credential-references/{id}:
+    get:
+      tags:
+        - CredentialReferences
+      operationId: getCredentialReferenceById
+      summary: Get a credential reference by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Credential reference
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CredentialReference"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - CredentialReferences
+      operationId: updateCredentialReference
+      summary: Update a credential reference (admin or member)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  minLength: 1
+                reference_location:
+                  type: string
+                  minLength: 1
+                applies_to_access_method:
+                  type: string
+                  enum:
+                    - ssh
+                    - rdp
+                    - telnet
+                    - web
+                    - other
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: Credential reference updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CredentialReference"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - CredentialReferences
+      operationId: deleteCredentialReference
+      summary: Hard-delete a credential reference (admin only; no soft delete /
+        restore for this resource)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Credential reference deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CredentialReference"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/resources:
+    get:
+      tags:
+        - Resources
+      operationId: listResources
+      summary: List resources (each item includes a lightweight current_version
+        summary, not full content)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            description: "Default: 1"
+          required: false
+          description: "Default: 1"
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: "Default: 20, max: 100"
+          required: false
+          description: "Default: 20, max: 100"
+          name: per_page
+          in: query
+        - schema:
+            type: string
+            enum:
+              - title
+              - created_at
+              - updated_at
+            description: "Default: title"
+          required: false
+          description: "Default: title"
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            description: "Default: asc"
+          required: false
+          description: "Default: asc"
+          name: order
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "false"
+              - "true"
+              - all
+            description: "Default: false"
+          required: false
+          description: "Default: false"
+          name: deleted
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: project_id
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: type
+          in: query
+      responses:
+        "200":
+          description: Paginated resources
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - Resources
+      operationId: createResource
+      summary: "Create a resource with its initial version (admin or member) — atomic:
+        resource + v1 + activity log or nothing"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum:
+                    - runbook
+                    - sop
+                    - architecture
+                    - troubleshooting
+                    - faq
+                    - link
+                    - pdf
+                title:
+                  type: string
+                  minLength: 1
+                category:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  default: []
+                content:
+                  type: string
+                external_url:
+                  type: string
+                commit_message:
+                  type: string
+              required:
+                - type
+                - title
+      responses:
+        "201":
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceDetail"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/resources/{id}:
+    get:
+      tags:
+        - Resources
+      operationId: getResourceById
+      summary: Get a resource by id, with full current_version content inlined
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceDetail"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - Resources
+      operationId: updateResourceMetadata
+      summary: Update resource metadata only — title/category/tags (admin only; never
+        touches content or creates a version)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                category:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                updated_at:
+                  type: string
+                  minLength: 1
+              required:
+                - updated_at
+      responses:
+        "200":
+          description: Resource metadata updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - Resources
+      operationId: deleteResource
+      summary: Soft-delete a resource (admin only; resource_versions history is never
+        touched)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Resource soft-deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/resources/{id}/restore:
+    post:
+      tags:
+        - Resources
+      operationId: restoreResource
+      summary: Restore a soft-deleted resource (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Resource restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/resources/{id}/versions:
+    get:
+      tags:
+        - Resources
+      operationId: listResourceVersions
+      summary: List a resource's version history, git-log style (newest first, no
+        content)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: integer
+            minimum: 1
+            description: "Default: 1"
+          required: false
+          description: "Default: 1"
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: "Default: 20"
+          required: false
+          description: "Default: 20"
+          name: per_page
+          in: query
+      responses:
+        "200":
+          description: Paginated version history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceVersionListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - Resources
+      operationId: createResourceVersion
+      summary: Create a new version of a resource (admin or member; safe under
+        concurrent requests via row lock)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                external_url:
+                  type: string
+                commit_message:
+                  type: string
+      responses:
+        "201":
+          description: Version created (response includes a `warning` if content is
+            byte-identical to the previous version)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateVersionResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/resources/{id}/versions/{versionId}:
+    get:
+      tags:
+        - Resources
+      operationId: getResourceVersionById
+      summary: Get a specific historical version's full content
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: versionId
+          in: path
+      responses:
+        "200":
+          description: Resource version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceVersionWithAuthor"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/people:
+    get:
+      tags:
+        - People
+      operationId: listPeople
+      summary: List people
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            description: "Default: 1"
+          required: false
+          description: "Default: 1"
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: "Default: 20, max: 100"
+          required: false
+          description: "Default: 20, max: 100"
+          name: per_page
+          in: query
+        - schema:
+            type: string
+            enum:
+              - name
+              - created_at
+              - updated_at
+            description: "Default: name"
+          required: false
+          description: "Default: name"
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            description: "Default: asc"
+          required: false
+          description: "Default: asc"
+          name: order
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "false"
+              - "true"
+              - all
+            description: "Default: false"
+          required: false
+          description: "Default: false"
+          name: deleted
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: type
+          in: query
+      responses:
+        "200":
+          description: Paginated people
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - People
+      operationId: createPerson
+      summary: Create a person (admin or member)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                type:
+                  type: string
+                  enum:
+                    - internal_engineer
+                    - vendor
+                    - client_contact
+                    - project_owner
+                    - approver
+                notes:
+                  type: string
+              required:
+                - name
+                - type
+      responses:
+        "201":
+          description: Person created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/people/{id}:
+    get:
+      tags:
+        - People
+      operationId: getPersonById
+      summary: Get a person by id, with linked clients and (if any) their user account
+        inlined
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Person
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonDetail"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - People
+      operationId: updatePerson
+      summary: Update a person (admin or member; optimistic lock)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                type:
+                  type: string
+                  enum:
+                    - internal_engineer
+                    - vendor
+                    - client_contact
+                    - project_owner
+                    - approver
+                notes:
+                  type: string
+                updated_at:
+                  type: string
+                  minLength: 1
+              required:
+                - updated_at
+      responses:
+        "200":
+          description: Person updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - People
+      operationId: deletePerson
+      summary: Soft-delete a person (admin only; also disables their linked user
+        account, if any, blocking login)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Person soft-deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/people/{id}/restore:
+    post:
+      tags:
+        - People
+      operationId: restorePerson
+      summary: Restore a soft-deleted person (admin only; also re-enables their linked
+        user account, if it was disabled)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Person restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/people/{id}/clients:
+    get:
+      tags:
+        - People
+      operationId: getPersonClients
+      summary: List clients linked to a person
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Linked clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    relationship_type:
+                      type: string
+                      nullable: true
+                  required:
+                    - id
+                    - name
+                    - relationship_type
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - People
+      operationId: linkPersonClient
+      summary: Link a client to a person (admin or member)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                client_id:
+                  type: string
+                  format: uuid
+                relationship_type:
+                  type: string
+              required:
+                - client_id
+      responses:
+        "201":
+          description: Client linked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  relationship_type:
+                    type: string
+                    nullable: true
+                required:
+                  - id
+                  - name
+                  - relationship_type
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/people/{id}/clients/{clientId}:
+    delete:
+      tags:
+        - People
+      operationId: unlinkPersonClient
+      summary: Unlink a client from a person (admin or member; hard delete of the
+        junction row)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: clientId
+          in: path
+      responses:
+        "200":
+          description: Client unlinked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/schedules:
+    get:
+      tags:
+        - Schedules
+      operationId: listSchedules
+      summary: List schedules (each item includes a computed is_overdue field)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            description: "Default: 1"
+          required: false
+          description: "Default: 1"
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: "Default: 20, max: 100"
+          required: false
+          description: "Default: 20, max: 100"
+          name: per_page
+          in: query
+        - schema:
+            type: string
+            enum:
+              - scheduled_date
+              - created_at
+              - updated_at
+            description: "Default: scheduled_date"
+          required: false
+          description: "Default: scheduled_date"
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            description: "Default: asc"
+          required: false
+          description: "Default: asc"
+          name: order
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "false"
+              - "true"
+              - all
+            description: "Default: false"
+          required: false
+          description: "Default: false"
+          name: deleted
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: project_id
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            description: Lower bound on scheduled_date
+          required: false
+          description: Lower bound on scheduled_date
+          name: from
+          in: query
+        - schema:
+            type: string
+            description: Upper bound on scheduled_date
+          required: false
+          description: Upper bound on scheduled_date
+          name: to
+          in: query
+      responses:
+        "200":
+          description: Paginated schedules
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - Schedules
+      operationId: createSchedule
+      summary: Create a schedule (admin or member; status is always 'pending' on create)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                server_id:
+                  type: string
+                  format: uuid
+                title:
+                  type: string
+                  minLength: 1
+                type:
+                  type: string
+                  enum:
+                    - PM
+                    - MA
+                    - other
+                scheduled_date:
+                  type: string
+                assigned_to:
+                  type: string
+                  format: uuid
+                notes:
+                  type: string
+              required:
+                - title
+                - type
+                - scheduled_date
+                - assigned_to
+      responses:
+        "201":
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/schedules/{id}:
+    get:
+      tags:
+        - Schedules
+      operationId: getScheduleById
+      summary: Get a schedule by id, with assignee/project/server inlined
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleDetail"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - Schedules
+      operationId: updateSchedule
+      summary: Update a schedule's status/notes (admin or member). Status transitions
+        are validated by a strict state machine; started_at/completed_at are set
+        automatically and cannot be provided directly.
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - pending
+                    - in_progress
+                    - done
+                    - cancelled
+                notes:
+                  type: string
+                updated_at:
+                  type: string
+                  minLength: 1
+              required:
+                - updated_at
+      responses:
+        "200":
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - Schedules
+      operationId: deleteSchedule
+      summary: Soft-delete a schedule (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Schedule soft-deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/schedules/{id}/restore:
+    post:
+      tags:
+        - Schedules
+      operationId: restoreSchedule
+      summary: Restore a soft-deleted schedule (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Schedule restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/activity-logs:
+    get:
+      tags:
+        - Activity
+      operationId: listActivityLogs
+      summary: List activity log entries (append-only audit trail; read-only — no
+        write endpoints exist for this resource)
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            description: "Default: 1"
+          required: false
+          description: "Default: 1"
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: "Default: 20"
+          required: false
+          description: "Default: 20"
+          name: per_page
+          in: query
+        - schema:
+            type: string
+            enum:
+              - created_at
+            description: "Only sortable field. Default: created_at"
+          required: false
+          description: "Only sortable field. Default: created_at"
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            description: "Default: desc"
+          required: false
+          description: "Default: desc"
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: entity_type
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: entity_id
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: action
+          in: query
+        - schema:
+            type: string
+            format: uuid
+            description: Filters by the people.id who made the change
+          required: false
+          description: Filters by the people.id who made the change
+          name: changed_by
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: from
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: to
+          in: query
+      responses:
+        "200":
+          description: Paginated activity log
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityLogListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"

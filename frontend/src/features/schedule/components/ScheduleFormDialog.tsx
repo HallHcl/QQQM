@@ -70,20 +70,24 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
     event.preventDefault();
     if (!assignedTo) return;
 
-    const payload = {
-      title,
-      type,
-      scheduled_date: scheduledDate,
-      assigned_to: assignedTo,
-      project_id: projectId,
-      status,
-      notes: notes || undefined,
-    };
-
     if (schedule) {
-      await updateSchedule.mutateAsync({ id: schedule.id, data: payload });
+      // Only status/notes are editable via PATCH; project_id/type/etc. are
+      // fixed at creation. updated_at is required for the optimistic lock —
+      // status transitions the user didn't intend to make (e.g. "pending" ->
+      // "done") are rejected server-side by the status state machine.
+      await updateSchedule.mutateAsync({
+        id: schedule.id,
+        data: { status, notes: notes || undefined, updated_at: schedule.updated_at },
+      });
     } else {
-      await createSchedule.mutateAsync(payload);
+      await createSchedule.mutateAsync({
+        title,
+        type,
+        scheduled_date: scheduledDate,
+        assigned_to: assignedTo,
+        project_id: projectId,
+        notes: notes || undefined,
+      });
     }
 
     onOpenChange(false);

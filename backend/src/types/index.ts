@@ -10,7 +10,7 @@ export type EntityType =
   | "schedule"
   | "user";
 
-export type ActivityAction = "create" | "update" | "delete";
+export type ActivityAction = "create" | "update" | "delete" | "restore";
 
 export type ScheduleStatus = "pending" | "in_progress" | "done" | "cancelled";
 
@@ -31,6 +31,18 @@ export type ResourceType =
   | "faq"
   | "link"
   | "pdf";
+
+export type ServiceType =
+  | "application"
+  | "database"
+  | "proxy"
+  | "monitoring"
+  | "repository"
+  | "metrics"
+  | "jump_host"
+  | "other";
+
+export type AccessMethod = "ssh" | "rdp" | "telnet" | "web" | "other";
 
 export interface Client {
   id: string;
@@ -113,7 +125,9 @@ export interface Environment {
   name: string;
   description: string | null;
   created_at: string;
+  updated_at: string;
   deleted_at: string | null;
+  vpn_resource_id: string | null;
 }
 
 export interface Server {
@@ -127,6 +141,12 @@ export interface Server {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  display_name: string;
+  service_type: ServiceType | null;
+  access_method: AccessMethod | null;
+  access_host: string;
+  access_port: number | null;
+  access_path: string | null;
 }
 
 export interface CredentialReference {
@@ -136,6 +156,7 @@ export interface CredentialReference {
   reference_location: string;
   notes: string | null;
   created_at: string;
+  applies_to_access_method: AccessMethod | null;
 }
 
 export interface Resource {

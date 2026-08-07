@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import type { PeopleClient, Person } from "@/types";
+import type { Paginated, Person } from "@/types";
 
 const KEY = "people";
 
@@ -14,14 +14,14 @@ export function usePeople(filters: PeopleFilters = {}) {
   return useQuery({
     queryKey: [KEY, filters],
     queryFn: async () => {
-      const { data } = await api.get<Person[]>("/people", {
+      const { data } = await api.get<Paginated<Person>>("/people", {
         params: {
           type: filters.type,
           client_id: filters.clientId,
           search: filters.search,
         },
       });
-      return data;
+      return data.data;
     },
   });
 }
@@ -51,8 +51,17 @@ export function useCreatePerson() {
 export function useUpdatePerson() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data: input }: { id: string; data: Partial<Person> }) => {
-      const { data } = await api.put<Person>(`/people/${id}`, input);
+    // updated_at is required for the API's optimistic lock.
+    mutationFn: async ({
+      id,
+      data: input,
+    }: {
+      id: string;
+      data: Partial<Pick<Person, "name" | "email" | "phone" | "type" | "notes">> & {
+        updated_at: string;
+      };
+    }) => {
+      const { data } = await api.patch<Person>(`/people/${id}`, input);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),
@@ -70,11 +79,19 @@ export function useDeletePerson() {
   });
 }
 
+/** Linked-client summary as actually returned by GET /people/:id/clients — not the raw people_clients junction row. */
+export interface PersonLinkedClient {
+  id: string;
+  name: string;
+  relationship_type: string | null;
+}
+
 export function usePersonClients(personId: string | undefined) {
   return useQuery({
     queryKey: [KEY, personId, "clients"],
     queryFn: async () => {
-      const { data } = await api.get<PeopleClient[]>(`/people/${personId}/clients`);
+      // Not paginated — this sub-resource returns a bare array.
+      const { data } = await api.get<PersonLinkedClient[]>(`/people/${personId}/clients`);
       return data;
     },
     enabled: Boolean(personId),
@@ -93,7 +110,7 @@ export function useAddPersonClient() {
       clientId: string;
       relationshipType?: string;
     }) => {
-      const { data } = await api.post<PeopleClient>(`/people/${personId}/clients`, {
+      const { data } = await api.post<PersonLinkedClient>(`/people/${personId}/clients`, {
         client_id: clientId,
         relationship_type: relationshipType,
       });
@@ -108,7 +125,7 @@ export function useRemovePersonClient() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ personId, clientId }: { personId: string; clientId: string }) => {
-      const { data } = await api.delete<PeopleClient>(
+      const { data } = await api.delete<{ message: string }>(
         `/people/${personId}/clients/${clientId}`
       );
       return data;

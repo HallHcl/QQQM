@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useResourceVersions } from "@/hooks/useResourceVersions";
-import { usePeople } from "@/hooks/usePeople";
+import { useResourceVersion, useResourceVersions } from "@/hooks/useResourceVersions";
 
 interface Props {
   resourceId: string;
@@ -10,17 +9,18 @@ interface Props {
 
 export default function VersionHistoryPanel({ resourceId }: Props) {
   const { data: versions = [], isLoading } = useResourceVersions(resourceId);
-  const { data: people = [] } = usePeople();
   const [selectedVersionId, setSelectedVersionId] = useState<string | undefined>(undefined);
-
-  const authorName = (authorId: string) =>
-    people.find((p) => p.id === authorId)?.name ?? "Unknown";
-
-  const selectedVersion =
-    versions.find((v) => v.id === selectedVersionId) ?? versions[0];
 
   const headVersionNumber =
     versions.length > 0 ? Math.max(...versions.map((v) => v.version_number)) : undefined;
+
+  const activeVersionId = selectedVersionId ?? versions[0]?.id;
+  // The list response is deliberately light (no content) — fetch the full
+  // version separately once one is selected.
+  const { data: selectedVersion, isLoading: isDetailLoading } = useResourceVersion(
+    resourceId,
+    activeVersionId
+  );
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading version history...</p>;
@@ -35,7 +35,7 @@ export default function VersionHistoryPanel({ resourceId }: Props) {
       <ul className="space-y-1">
         {versions.map((version) => {
           const isHead = version.version_number === headVersionNumber;
-          const isSelected = (selectedVersion?.id ?? versions[0].id) === version.id;
+          const isSelected = activeVersionId === version.id;
           return (
             <li key={version.id}>
               <button
@@ -58,9 +58,7 @@ export default function VersionHistoryPanel({ resourceId }: Props) {
                 <span className="font-medium">
                   {version.commit_message ?? "No commit message"}
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {authorName(version.author_id)}
-                </span>
+                <span className="text-xs text-muted-foreground">{version.author.name}</span>
               </button>
             </li>
           );
@@ -68,7 +66,9 @@ export default function VersionHistoryPanel({ resourceId }: Props) {
       </ul>
 
       <div className="rounded-md border border-border bg-surface p-4">
-        {selectedVersion ? (
+        {isDetailLoading ? (
+          <p className="text-sm text-muted-foreground">Loading version...</p>
+        ) : selectedVersion ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="font-medium">Version {selectedVersion.version_number}</h4>

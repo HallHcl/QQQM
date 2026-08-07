@@ -19,6 +19,16 @@ export async function findUserById(id: string): Promise<User | null> {
   return result.rows[0] ?? null;
 }
 
+export async function updateUserPassword(
+  userId: string,
+  passwordHash: string
+): Promise<void> {
+  await pool.query(
+    `UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2`,
+    [passwordHash, userId]
+  );
+}
+
 export async function findRoleNamesForUser(userId: string): Promise<string[]> {
   const result = await pool.query<{ name: string }>(
     `SELECT r.name

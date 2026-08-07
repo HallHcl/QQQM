@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import type { Schedule } from "@/types";
+import type { Paginated, Schedule, ScheduleStatus } from "@/types";
 
 const KEY = "schedules";
 
@@ -15,7 +15,7 @@ export function useSchedules(filters: ScheduleFilters = {}) {
   return useQuery({
     queryKey: [KEY, filters],
     queryFn: async () => {
-      const { data } = await api.get<Schedule[]>("/schedules", {
+      const { data } = await api.get<Paginated<Schedule>>("/schedules", {
         params: {
           project_id: filters.projectId,
           status: filters.status,
@@ -23,7 +23,7 @@ export function useSchedules(filters: ScheduleFilters = {}) {
           to: filters.to,
         },
       });
-      return data;
+      return data.data;
     },
   });
 }
@@ -53,8 +53,18 @@ export function useCreateSchedule() {
 export function useUpdateSchedule() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data: input }: { id: string; data: Partial<Schedule> }) => {
-      const { data } = await api.put<Schedule>(`/schedules/${id}`, input);
+    // Only status/notes are editable via this endpoint; status transitions
+    // are enforced server-side by a strict state machine, and started_at/
+    // completed_at are set automatically — never send them. updated_at is
+    // required for the API's optimistic lock.
+    mutationFn: async ({
+      id,
+      data: input,
+    }: {
+      id: string;
+      data: { status?: ScheduleStatus; notes?: string; updated_at: string };
+    }) => {
+      const { data } = await api.patch<Schedule>(`/schedules/${id}`, input);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),

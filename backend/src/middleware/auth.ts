@@ -13,7 +13,7 @@ export function auth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith("Bearer ")) {
-    return next(new ApiError(401, "Missing or invalid Authorization header"));
+    return next(new ApiError(401, "Missing or invalid Authorization header", "UNAUTHORIZED"));
   }
 
   const token = header.slice("Bearer ".length);
@@ -33,6 +33,6 @@ export function auth(req: Request, _res: Response, next: NextFunction) {
     req.user = user;
     next();
   } catch {
-    return next(new ApiError(401, "Invalid or expired token"));
+    return next(new ApiError(401, "Invalid or expired token", "UNAUTHORIZED"));
   }
 }

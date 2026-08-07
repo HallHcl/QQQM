@@ -10,7 +10,18 @@ export type EntityType =
   | "schedule"
   | "user";
 
-export type ActivityAction = "create" | "update" | "delete";
+export type ActivityAction = "create" | "update" | "delete" | "restore";
+
+/** Every list endpoint in the actual backend returns this envelope, not a bare array. */
+export interface Paginated<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+  };
+}
 
 export type ScheduleStatus = "pending" | "in_progress" | "done" | "cancelled";
 
@@ -113,8 +124,22 @@ export interface Environment {
   name: string;
   description: string | null;
   created_at: string;
+  updated_at: string;
   deleted_at: string | null;
+  vpn_resource_id: string | null;
 }
+
+export type ServiceType =
+  | "application"
+  | "database"
+  | "proxy"
+  | "monitoring"
+  | "repository"
+  | "metrics"
+  | "jump_host"
+  | "other";
+
+export type AccessMethod = "ssh" | "rdp" | "telnet" | "web" | "other";
 
 export interface Server {
   id: string;
@@ -127,6 +152,12 @@ export interface Server {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  display_name: string;
+  service_type: ServiceType | null;
+  access_method: AccessMethod | null;
+  access_host: string;
+  access_port: number | null;
+  access_path: string | null;
 }
 
 export interface CredentialReference {
@@ -134,6 +165,7 @@ export interface CredentialReference {
   server_id: string;
   label: string;
   reference_location: string;
+  applies_to_access_method: AccessMethod | null;
   notes: string | null;
   created_at: string;
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import type { Client } from "@/types";
+import type { Client, Paginated } from "@/types";
 
 const KEY = "clients";
 
@@ -8,8 +8,9 @@ export function useClients() {
   return useQuery({
     queryKey: [KEY],
     queryFn: async () => {
-      const { data } = await api.get<Client[]>("/clients");
-      return data;
+      // The real API wraps list responses as { data, pagination }, not a bare array.
+      const { data } = await api.get<Paginated<Client>>("/clients");
+      return data.data;
     },
   });
 }
@@ -39,8 +40,16 @@ export function useCreateClient() {
 export function useUpdateClient() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data: input }: { id: string; data: Partial<Client> }) => {
-      const { data } = await api.put<Client>(`/clients/${id}`, input);
+    // The API PATCHes (not PUTs) and requires updated_at for its optimistic
+    // lock — pass the value from the row you last fetched.
+    mutationFn: async ({
+      id,
+      data: input,
+    }: {
+      id: string;
+      data: Partial<Pick<Client, "name" | "status" | "description">> & { updated_at: string };
+    }) => {
+      const { data } = await api.patch<Client>(`/clients/${id}`, input);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),

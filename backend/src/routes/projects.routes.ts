@@ -1,12 +1,14 @@
 import { Router } from "express";
-import { create, getOne, list, remove, update } from "../controllers/projects.controller";
+import { requireRole } from "../middleware/rbac";
+import { create, getOne, list, remove, restore, update } from "../controllers/projects.controller";
 
 const router = Router();
 
 router.get("/", list);
-router.post("/", create);
+router.post("/", requireRole("admin"), create);
 router.get("/:id", getOne);
-router.put("/:id", update);
-router.delete("/:id", remove);
+router.patch("/:id", requireRole("admin"), update);
+router.delete("/:id", requireRole("admin"), remove);
+router.post("/:id/restore", requireRole("admin"), restore);
 
 export default router;

@@ -7,12 +7,14 @@ const ACTION_VARIANT: Record<ActivityLog["action"], "default" | "secondary" | "d
   create: "default",
   update: "secondary",
   delete: "destructive",
+  restore: "secondary",
 };
 
 const ACTION_DOT: Record<ActivityLog["action"], string> = {
   create: "bg-brand",
   update: "bg-warning",
   delete: "bg-danger",
+  restore: "bg-brand",
 };
 
 interface Props {
