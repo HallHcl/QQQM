@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import api from "@/lib/api";
-import type { Schedule } from "@/types";
+import type { Paginated, Schedule } from "@/types";
 
 const POLL_INTERVAL_MS = 60_000;
 
@@ -22,10 +22,10 @@ export default function NotificationBell() {
   const { data: schedules = [] } = useQuery({
     queryKey: ["schedules", { status: "pending" }],
     queryFn: async () => {
-      const { data } = await api.get<Schedule[]>("/schedules", {
+      const { data } = await api.get<Paginated<Schedule>>("/schedules", {
         params: { status: "pending" },
       });
-      return data;
+      return data.data;
     },
     refetchInterval: POLL_INTERVAL_MS,
   });
