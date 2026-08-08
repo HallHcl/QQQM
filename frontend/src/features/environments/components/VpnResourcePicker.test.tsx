@@ -5,9 +5,25 @@ import { VpnResourcePicker } from "./VpnResourcePicker";
 
 const getMock = vi.fn();
 
-vi.mock("@/lib/api", () => ({
-  default: { get: (...args: [string, unknown?]) => getMock(...args) },
-}));
+vi.mock("@/api/client", async () => {
+  const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
+  return {
+    ...actual,
+    apiClient: { GET: (...args: unknown[]) => getMock(...args) },
+  };
+});
+
+function ok<T>(data: T) {
+  return { data, error: undefined, response: new Response(null, { status: 200 }) };
+}
+
+function apiError(status: number) {
+  return {
+    data: undefined,
+    error: { error: { message: "failed" } },
+    response: new Response(null, { status }),
+  };
+}
 
 const RESOURCES = [
   {
@@ -21,6 +37,7 @@ const RESOURCES = [
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
     deleted_at: null,
+    current_version: null,
   },
   {
     id: "r2",
@@ -33,22 +50,26 @@ const RESOURCES = [
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
     deleted_at: null,
+    current_version: null,
   },
 ];
 
 function mockGet() {
-  getMock.mockImplementation((url: string, config?: { params?: { search?: string } }) => {
-    if (url === "/resources") {
-      const search = config?.params?.search;
+  getMock.mockImplementation((path: string, options?: { params?: { query?: { search?: string }; path?: { id?: string } } }) => {
+    if (path === "/api/resources") {
+      const search = options?.params?.query?.search;
       const data = search
         ? RESOURCES.filter((r) => r.title.toLowerCase().includes(search.toLowerCase()))
         : RESOURCES;
-      return Promise.resolve({ data: { data } });
+      return Promise.resolve(
+        ok({ data, pagination: { page: 1, per_page: 20, total: data.length, total_pages: 1 } })
+      );
     }
     // GET /resources/{id} for the trigger's own current-value lookup.
-    const match = RESOURCES.find((r) => url === `/resources/${r.id}`);
-    if (match) return Promise.resolve({ data: match });
-    return Promise.reject({ isAxiosError: true, response: { status: 404 } });
+    const id = options?.params?.path?.id;
+    const match = RESOURCES.find((r) => r.id === id);
+    if (match) return Promise.resolve(ok(match));
+    return Promise.resolve(apiError(404));
   });
 }
 
@@ -114,8 +135,10 @@ describe("VpnResourcePicker", () => {
     expect(await screen.findByText("Failover runbook")).toBeInTheDocument();
     expect(screen.queryByText("Corporate VPN")).not.toBeInTheDocument();
     expect(getMock).toHaveBeenCalledWith(
-      "/resources",
-      expect.objectContaining({ params: expect.objectContaining({ search: "runbook" }) })
+      "/api/resources",
+      expect.objectContaining({
+        params: expect.objectContaining({ query: expect.objectContaining({ search: "runbook" }) }),
+      })
     );
   });
 });

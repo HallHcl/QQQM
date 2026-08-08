@@ -43,7 +43,12 @@ const ENVIRONMENT_DETAIL = {
   project: { id: "p1", name: "Migration" },
 };
 
-function mockGetByPath(handlers: { environment?: unknown; servers?: unknown; projects?: unknown }) {
+function mockGetByPath(handlers: {
+  environment?: unknown;
+  servers?: unknown;
+  projects?: unknown;
+  resource?: unknown;
+}) {
   getMock.mockImplementation((path: string) => {
     if (path === "/api/environments/{id}") return Promise.resolve(handlers.environment ?? ok(ENVIRONMENT_DETAIL));
     if (path === "/api/servers")
@@ -51,23 +56,13 @@ function mockGetByPath(handlers: { environment?: unknown; servers?: unknown; pro
         handlers.servers ?? ok({ data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 1 } })
       );
     if (path === "/api/projects") return Promise.resolve(handlers.projects ?? ok({ data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 1 } }));
+    // useResource was migrated to apiClient in Part 24a — the VPN resource
+    // status lookup now goes through the same getMock as everything else.
+    // Default: 404 (no linked resource / soft-deleted, same as before).
+    if (path === "/api/resources/{id}") return Promise.resolve(handlers.resource ?? apiError(404, "NOT_FOUND", "Resource not found"));
     throw new Error(`Unexpected path in test: ${path}`);
   });
 }
-
-// useServers was migrated to apiClient in Part 23a — it's mocked above with
-// the other apiClient calls now. Only the VPN resource status lookup
-// (useResource, out of scope for this ticket) still hits the legacy axios
-// client (src/lib/api.ts) — mock that module directly for just that.
-const axiosGetMock = vi.fn(
-  (_url: string, _config?: unknown): Promise<unknown> => {
-    return Promise.reject({ isAxiosError: true, response: { status: 404 } });
-  }
-);
-
-vi.mock("@/lib/api", () => ({
-  default: { get: (...args: [string, unknown?]) => axiosGetMock(...args) },
-}));
 
 const VALID_RESOURCE = {
   id: "r1",
@@ -100,8 +95,6 @@ describe("EnvironmentDetailPage", () => {
     getMock.mockReset();
     useAuthMock.mockReset();
     useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
-    axiosGetMock.mockReset();
-    axiosGetMock.mockImplementation(() => Promise.reject({ isAxiosError: true, response: { status: 404 } }));
   });
 
   it("shows a loading state while the fetch is in flight", () => {
@@ -173,10 +166,9 @@ describe("EnvironmentDetailPage", () => {
     });
 
     it("shows the resource's name when vpn_resource_id references a live resource", async () => {
-      mockGetByPath({ environment: ok({ ...ENVIRONMENT_DETAIL, vpn_resource_id: "r1" }) });
-      axiosGetMock.mockImplementation((url: string) => {
-        if (url === "/resources/r1") return Promise.resolve({ data: VALID_RESOURCE });
-        return Promise.reject({ isAxiosError: true, response: { status: 404 } });
+      mockGetByPath({
+        environment: ok({ ...ENVIRONMENT_DETAIL, vpn_resource_id: "r1" }),
+        resource: ok(VALID_RESOURCE),
       });
 
       renderPage();
@@ -187,8 +179,8 @@ describe("EnvironmentDetailPage", () => {
     it("shows an orphan warning, not a broken/blank reference, when vpn_resource_id points at a soft-deleted resource", async () => {
       mockGetByPath({ environment: ok({ ...ENVIRONMENT_DETAIL, vpn_resource_id: "r-deleted" }) });
       // GET /resources/{id} 404s for a soft-deleted resource (the endpoint
-      // excludes deleted rows entirely) — the default axiosGetMock already
-      // rejects any unrecognized url with a 404, which is exactly that case.
+      // excludes deleted rows entirely) — mockGetByPath's default `resource`
+      // response is already a 404, which is exactly that case.
 
       renderPage();
 

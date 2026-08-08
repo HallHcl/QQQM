@@ -7,56 +7,54 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProjectPicker } from "@/components/ProjectPicker";
-import type { ResourceFilters } from "@/hooks/useResources";
-import type { ResourceType } from "@/types";
-
-const RESOURCE_TYPES: ResourceType[] = [
-  "runbook",
-  "sop",
-  "architecture",
-  "troubleshooting",
-  "faq",
-  "link",
-  "pdf",
-];
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/lib/resourceTypes";
 
 interface Props {
-  filters: ResourceFilters;
-  onChange: (filters: ResourceFilters) => void;
+  search: string;
+  onSearchChange: (search: string) => void;
+  type: string | undefined;
+  onTypeChange: (type: string | undefined) => void;
+  projectId: string | undefined;
+  onProjectIdChange: (projectId: string | undefined) => void;
 }
 
-export default function ResourceFilterBar({ filters, onChange }: Props) {
+export default function ResourceFilterBar({
+  search,
+  onSearchChange,
+  type,
+  onTypeChange,
+  projectId,
+  onProjectIdChange,
+}: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Input
         placeholder="Search resources..."
-        value={filters.search ?? ""}
-        onChange={(e) => onChange({ ...filters, search: e.target.value || undefined })}
+        value={search}
+        onChange={(e) => onSearchChange(e.target.value)}
         className="w-56"
       />
 
       <Select
-        value={filters.type ?? "all"}
-        onValueChange={(value) =>
-          onChange({ ...filters, type: value === "all" ? undefined : value })
-        }
+        value={type ?? "all"}
+        onValueChange={(value) => onTypeChange(value === "all" ? undefined : value)}
       >
         <SelectTrigger className="w-40">
           <SelectValue placeholder="Type" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All types</SelectItem>
-          {RESOURCE_TYPES.map((type) => (
-            <SelectItem key={type} value={type}>
-              {type.replace("_", " ")}
+          {RESOURCE_TYPES.map((t) => (
+            <SelectItem key={t} value={t}>
+              {RESOURCE_TYPE_LABELS[t]}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
       <ProjectPicker
-        value={filters.projectId}
-        onChange={(projectId) => onChange({ ...filters, projectId })}
+        value={projectId}
+        onChange={onProjectIdChange}
         includeAllOption
         allOptionLabel="All projects"
         placeholder="Project"

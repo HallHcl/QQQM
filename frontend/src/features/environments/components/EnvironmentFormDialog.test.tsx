@@ -19,19 +19,22 @@ vi.mock("@/api/client", async () => {
   };
 });
 
-// The VPN resource picker (edit-only) reads Resources via the legacy axios
-// client (useResources/useResource haven't been migrated) — mock that
-// separately from apiClient. Default: no resources, nothing linked.
-const resourcesGetMock = vi.fn(
-  (url: string, _config?: unknown): Promise<unknown> => {
-    if (url === "/resources") return Promise.resolve({ data: { data: [] } });
-    return Promise.reject({ isAxiosError: true, response: { status: 404 } });
+// The VPN resource picker (edit-only) reads Resources through apiClient
+// (useResources/useResource, migrated in Part 24a) alongside /api/projects
+// and /api/environments/{id} — all routed through the same getMock.
+// Default: empty resource list, 404 on single-resource lookup (nothing
+// linked).
+function defaultResourcePaths(path: string): Promise<unknown> | undefined {
+  if (path === "/api/resources") {
+    return Promise.resolve(
+      ok({ data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 1 } })
+    );
   }
-);
-
-vi.mock("@/lib/api", () => ({
-  default: { get: (...args: [string, unknown?]) => resourcesGetMock(...args) },
-}));
+  if (path === "/api/resources/{id}") {
+    return Promise.resolve(apiError(404, "NOT_FOUND", "Resource not found"));
+  }
+  return undefined;
+}
 
 const SAMPLE_PROJECT = {
   id: "p1",
@@ -88,11 +91,6 @@ describe("EnvironmentFormDialog — create", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
-    resourcesGetMock.mockReset();
-    resourcesGetMock.mockImplementation((url: string) => {
-      if (url === "/resources") return Promise.resolve({ data: { data: [] } });
-      return Promise.reject({ isAxiosError: true, response: { status: 404 } });
-    });
     // The project picker (`useProjects()`) hits GET /api/projects.
     getMock.mockResolvedValue(
       ok({ data: [SAMPLE_PROJECT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
@@ -159,11 +157,6 @@ describe("EnvironmentFormDialog — edit", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
-    resourcesGetMock.mockReset();
-    resourcesGetMock.mockImplementation((url: string) => {
-      if (url === "/resources") return Promise.resolve({ data: { data: [] } });
-      return Promise.reject({ isAxiosError: true, response: { status: 404 } });
-    });
     getMock.mockImplementation((path: string) => {
       if (path === "/api/projects") {
         return Promise.resolve(
@@ -173,6 +166,8 @@ describe("EnvironmentFormDialog — edit", () => {
       if (path === "/api/environments/{id}") {
         return Promise.resolve(ok(SAMPLE_ENVIRONMENT));
       }
+      const resourceResponse = defaultResourcePaths(path);
+      if (resourceResponse) return resourceResponse;
       throw new Error(`Unexpected path: ${path}`);
     });
   });
@@ -200,13 +195,26 @@ describe("EnvironmentFormDialog — edit", () => {
   });
 
   it("selecting a VPN resource sends its id in the PATCH body", async () => {
-    resourcesGetMock.mockImplementation((url: string) => {
-      if (url === "/resources") {
-        return Promise.resolve({
-          data: { data: [{ id: "r1", type: "link", title: "Corporate VPN" }] },
-        });
+    getMock.mockImplementation((path: string) => {
+      if (path === "/api/projects") {
+        return Promise.resolve(
+          ok({ data: [SAMPLE_PROJECT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
+        );
       }
-      return Promise.reject({ isAxiosError: true, response: { status: 404 } });
+      if (path === "/api/environments/{id}") {
+        return Promise.resolve(ok(SAMPLE_ENVIRONMENT));
+      }
+      if (path === "/api/resources") {
+        return Promise.resolve(
+          ok({
+            data: [{ id: "r1", type: "link", title: "Corporate VPN" }],
+            pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+          })
+        );
+      }
+      const resourceResponse = defaultResourcePaths(path);
+      if (resourceResponse) return resourceResponse;
+      throw new Error(`Unexpected path: ${path}`);
     });
     patchMock.mockResolvedValue(ok({ ...SAMPLE_ENVIRONMENT, vpn_resource_id: "r1" }));
     const { onOpenChange } = renderDialog(SAMPLE_ENVIRONMENT);
@@ -221,9 +229,8 @@ describe("EnvironmentFormDialog — edit", () => {
   });
 
   it("shows an orphan warning instead of a normal reference when vpn_resource_id points at a deleted resource", async () => {
-    resourcesGetMock.mockImplementation(() =>
-      Promise.reject({ isAxiosError: true, response: { status: 404 } })
-    );
+    // beforeEach's getMock implementation already 404s /api/resources/{id}
+    // by default (nothing linked) — that's exactly the soft-deleted case.
     renderDialog({ ...SAMPLE_ENVIRONMENT, vpn_resource_id: "r-deleted" });
 
     expect(await screen.findByText("Linked VPN resource has been deleted")).toBeInTheDocument();

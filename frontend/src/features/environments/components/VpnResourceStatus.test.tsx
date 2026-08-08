@@ -5,9 +5,25 @@ import { VpnResourceStatus } from "./VpnResourceStatus";
 
 const getMock = vi.fn();
 
-vi.mock("@/lib/api", () => ({
-  default: { get: (...args: [string, unknown?]) => getMock(...args) },
-}));
+vi.mock("@/api/client", async () => {
+  const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
+  return {
+    ...actual,
+    apiClient: { GET: (...args: unknown[]) => getMock(...args) },
+  };
+});
+
+function ok<T>(data: T) {
+  return { data, error: undefined, response: new Response(null, { status: 200 }) };
+}
+
+function apiError(status: number) {
+  return {
+    data: undefined,
+    error: { error: { message: "failed" } },
+    response: new Response(null, { status }),
+  };
+}
 
 const VALID_RESOURCE = {
   id: "r1",
@@ -20,6 +36,7 @@ const VALID_RESOURCE = {
   created_at: "2026-01-01T00:00:00.000Z",
   updated_at: "2026-01-01T00:00:00.000Z",
   deleted_at: null,
+  current_version: null,
 };
 
 function renderStatus(resourceId: string | null | undefined) {
@@ -43,17 +60,14 @@ describe("VpnResourceStatus", () => {
   });
 
   it("shows the resource's title when the reference resolves normally", async () => {
-    getMock.mockResolvedValue({ data: VALID_RESOURCE });
+    getMock.mockResolvedValue(ok(VALID_RESOURCE));
     renderStatus("r1");
 
     expect(await screen.findByText("Corporate VPN")).toBeInTheDocument();
   });
 
   it("shows an orphan warning (not stale/blank data) when GET /resources/{id} 404s — the only signal available for a soft-deleted resource, since that endpoint excludes soft-deleted rows entirely", async () => {
-    getMock.mockRejectedValue({
-      isAxiosError: true,
-      response: { status: 404 },
-    });
+    getMock.mockResolvedValue(apiError(404));
     renderStatus("r-deleted");
 
     expect(await screen.findByText("Linked VPN resource has been deleted")).toBeInTheDocument();
@@ -61,10 +75,7 @@ describe("VpnResourceStatus", () => {
   });
 
   it("shows a generic can't-verify warning for a non-404 failure", async () => {
-    getMock.mockRejectedValue({
-      isAxiosError: true,
-      response: { status: 500 },
-    });
+    getMock.mockResolvedValue(apiError(500));
     renderStatus("r1");
 
     expect(await screen.findByText("Couldn't verify linked VPN resource")).toBeInTheDocument();

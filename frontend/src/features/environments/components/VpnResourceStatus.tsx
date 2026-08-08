@@ -1,4 +1,4 @@
-import axios from "axios";
+import { ApiError } from "@/api/errors";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useResource } from "@/hooks/useResources";
@@ -9,7 +9,7 @@ interface Props {
 }
 
 function isNotFoundError(error: unknown): boolean {
-  return axios.isAxiosError(error) && error.response?.status === 404;
+  return error instanceof ApiError && error.status === 404;
 }
 
 /**

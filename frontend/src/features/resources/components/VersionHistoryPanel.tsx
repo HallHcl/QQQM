@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { format } from "date-fns";
+import { RequireRole } from "@/components/auth/RequireRole";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useResourceVersion, useResourceVersions } from "@/hooks/useResourceVersions";
 
 interface Props {
   resourceId: string;
+  /**
+   * Called when the user clicks "Revert to this version" on a historical
+   * (non-HEAD) version. This is a UI affordance only — it opens the same
+   * new-version form used by "Add version", pre-filled with that version's
+   * content, and results in an ordinary POST /:id/versions call. No
+   * distinct backend action exists for "revert".
+   */
+  onRevert?: (versionId: string) => void;
 }
 
-export default function VersionHistoryPanel({ resourceId }: Props) {
+export default function VersionHistoryPanel({ resourceId, onRevert }: Props) {
   const { data: versions = [], isLoading } = useResourceVersions(resourceId);
   const [selectedVersionId, setSelectedVersionId] = useState<string | undefined>(undefined);
 
@@ -60,6 +70,21 @@ export default function VersionHistoryPanel({ resourceId }: Props) {
                 </span>
                 <span className="text-xs text-muted-foreground">{version.author.name}</span>
               </button>
+              {/* Reverting to the current version doesn't make sense, so this
+                  only ever appears on historical (non-HEAD) versions. */}
+              {!isHead && onRevert && (
+                <RequireRole roles={["admin", "member"]}>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 pl-3 text-xs"
+                    onClick={() => onRevert(version.id)}
+                  >
+                    Revert to this version
+                  </Button>
+                </RequireRole>
+              )}
             </li>
           );
         })}
