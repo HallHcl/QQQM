@@ -1,27 +1,54 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import api from "@/lib/api";
-import type { Paginated, Project } from "@/types";
+import { apiClient, unwrapApiResult } from "@/api/client";
+import type { PaginationParams } from "./usePagination";
 
 const KEY = "projects";
 
-export function useProjects(clientId?: string) {
-  return useQuery({
-    queryKey: [KEY, { clientId }],
+/** Matches the `sort` values GET /projects actually accepts. */
+export type ProjectSort = "name" | "created_at" | "updated_at";
+
+// clientId stays a separate positional arg (not folded into params) because
+// OverviewPage, InfrastructurePage, ResourceEditor, ResourceFilterBar, and
+// ScheduleFormDialog all call this today as either useProjects(clientId) or
+// useProjects() — that call shape must keep compiling and behaving the same
+// (no pagination params sent) since those five files are out of scope here.
+export function useProjects(clientId?: string, params: Partial<PaginationParams> = {}) {
+  const query = useQuery({
+    queryKey: [KEY, { clientId, ...params }],
     queryFn: async () => {
-      const { data } = await api.get<Paginated<Project>>("/projects", {
-        params: clientId ? { client_id: clientId } : undefined,
+      const result = await apiClient.GET("/api/projects", {
+        params: {
+          query: {
+            client_id: clientId,
+            page: params.page,
+            per_page: params.per_page,
+            sort: params.sort as ProjectSort | undefined,
+            order: params.order,
+            search: params.search,
+            // Existing zero/one-arg callers don't pass `deleted` — default
+            // to the non-deleted set for them, same as before.
+            deleted: params.deleted ?? "false",
+          },
+        },
       });
-      return data.data;
+      return unwrapApiResult(result);
     },
   });
+
+  // `data` stays a flat Project[] — the same shape the old hook returned —
+  // since the five out-of-scope pickers all destructure `{ data: projects = [] }`.
+  // Pagination metadata is exposed as a sibling field for the new list page.
+  return { ...query, data: query.data?.data, pagination: query.data?.pagination };
 }
 
 export function useProject(id: string | undefined) {
   return useQuery({
     queryKey: [KEY, id],
     queryFn: async () => {
-      const { data } = await api.get<Project>(`/projects/${id}`);
-      return data;
+      const result = await apiClient.GET("/api/projects/{id}", {
+        params: { path: { id: id as string } },
+      });
+      return unwrapApiResult(result);
     },
     enabled: Boolean(id),
   });
@@ -30,9 +57,14 @@ export function useProject(id: string | undefined) {
 export function useCreateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Partial<Project>) => {
-      const { data } = await api.post<Project>("/projects", input);
-      return data;
+    mutationFn: async (input: {
+      client_id: string;
+      name: string;
+      description?: string;
+      owner_status?: string;
+    }) => {
+      const result = await apiClient.POST("/api/projects", { body: input });
+      return unwrapApiResult(result);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),
   });
@@ -41,19 +73,21 @@ export function useCreateProject() {
 export function useUpdateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    // client_id is not re-parentable via this endpoint; updated_at is
-    // required for the API's optimistic lock.
+    // The API PATCHes (not PUTs), rejects client_id entirely (a project
+    // can't be re-parented via this endpoint), and requires updated_at for
+    // its optimistic lock — pass the value from the row you last fetched.
     mutationFn: async ({
       id,
-      data: input,
+      data,
     }: {
       id: string;
-      data: Partial<Pick<Project, "name" | "description" | "owner_status">> & {
-        updated_at: string;
-      };
+      data: { name?: string; description?: string; owner_status?: string; updated_at: string };
     }) => {
-      const { data } = await api.patch<Project>(`/projects/${id}`, input);
-      return data;
+      const result = await apiClient.PATCH("/api/projects/{id}", {
+        params: { path: { id } },
+        body: data,
+      });
+      return unwrapApiResult(result);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),
   });
@@ -63,8 +97,23 @@ export function useDeleteProject() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data } = await api.delete<Project>(`/projects/${id}`);
-      return data;
+      const result = await apiClient.DELETE("/api/projects/{id}", {
+        params: { path: { id } },
+      });
+      return unwrapApiResult(result);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+export function useRestoreProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const result = await apiClient.POST("/api/projects/{id}/restore", {
+        params: { path: { id } },
+      });
+      return unwrapApiResult(result);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),
   });

@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProjectPicker } from "@/components/ProjectPicker";
 import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
 import { useEnvironments } from "@/hooks/useEnvironments";
@@ -54,18 +55,13 @@ export default function InfrastructurePage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={projectId} onValueChange={setProjectId}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Project" />
-            </SelectTrigger>
-            <SelectContent>
-              {projects.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ProjectPicker
+            value={projectId}
+            onChange={setProjectId}
+            clientId={clientId}
+            placeholder="Project"
+            className="w-48"
+          />
         </div>
       </div>
 

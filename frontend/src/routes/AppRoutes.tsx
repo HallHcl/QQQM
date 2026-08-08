@@ -1,7 +1,14 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
-import { useAuth } from "@/features/auth/useAuth";
+import { RequireAuth } from "@/components/auth/RequireAuth";
 import LoginPage from "@/features/auth/LoginPage";
+import ClientsPage from "@/features/clients/ClientsPage";
+import ProjectsPage from "@/features/projects/ProjectsPage";
+import ProjectDetailPage from "@/features/projects/ProjectDetailPage";
+import EnvironmentsPage from "@/features/environments/EnvironmentsPage";
+import EnvironmentDetailPage from "@/features/environments/EnvironmentDetailPage";
+import ServersPage from "@/features/servers/ServersPage";
+import ServerDetailPage from "@/features/servers/ServerDetailPage";
 import OverviewPage from "@/features/overview/OverviewPage";
 import InfrastructurePage from "@/features/infrastructure/InfrastructurePage";
 import ResourcesPage from "@/features/resources/ResourcesPage";
@@ -10,32 +17,21 @@ import SchedulePage from "@/features/schedule/SchedulePage";
 import ActivityPage from "@/features/activity/ActivityPage";
 import ManageUsersPage from "@/features/settings/ManageUsersPage";
 
-function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
-        Loading...
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <Outlet />;
-}
-
 export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
 
-      <Route path="/" element={<ProtectedRoute />}>
+      <Route path="/" element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/overview" replace />} />
+          <Route path="clients" element={<ClientsPage />} />
+          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="projects/:id" element={<ProjectDetailPage />} />
+          <Route path="environments" element={<EnvironmentsPage />} />
+          <Route path="environments/:id" element={<EnvironmentDetailPage />} />
+          <Route path="servers" element={<ServersPage />} />
+          <Route path="servers/:id" element={<ServerDetailPage />} />
           <Route path="overview" element={<OverviewPage />} />
           <Route path="infrastructure" element={<InfrastructurePage />} />
           <Route path="resources" element={<ResourcesPage />} />

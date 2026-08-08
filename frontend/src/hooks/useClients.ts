@@ -1,26 +1,54 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import api from "@/lib/api";
-import type { Client, Paginated } from "@/types";
+import { apiClient, unwrapApiResult } from "@/api/client";
+import type { PaginationParams } from "./usePagination";
 
 const KEY = "clients";
 
-export function useClients() {
-  return useQuery({
-    queryKey: [KEY],
+/** Matches the `sort` values GET /clients actually accepts. */
+export type ClientSort = "name" | "status" | "created_at" | "updated_at";
+
+// Partial, not the full PaginationParams shape: OverviewPage, InfrastructurePage,
+// and PersonDetailDialog still call this with no arguments at all (out of scope
+// for this ticket) to get an unfiltered client list for their pickers — that
+// call pattern must keep compiling and behaving the same (no query params sent).
+export function useClients(params: Partial<PaginationParams> = {}) {
+  const query = useQuery({
+    queryKey: [KEY, params],
     queryFn: async () => {
-      // The real API wraps list responses as { data, pagination }, not a bare array.
-      const { data } = await api.get<Paginated<Client>>("/clients");
-      return data.data;
+      const result = await apiClient.GET("/api/clients", {
+        params: {
+          query: {
+            page: params.page,
+            per_page: params.per_page,
+            sort: params.sort as ClientSort | undefined,
+            order: params.order,
+            search: params.search,
+            // Zero-arg callers (OverviewPage, InfrastructurePage,
+            // PersonDetailDialog pickers) don't pass `deleted` at all —
+            // default to the non-deleted set for them, same as before.
+            deleted: params.deleted ?? "false",
+          },
+        },
+      });
+      return unwrapApiResult(result);
     },
   });
+
+  // `data` stays a flat Client[] — the same shape the old hook returned —
+  // since OverviewPage, InfrastructurePage, and PersonDetailDialog all
+  // destructure `{ data: clients = [] }` and are out of scope to touch here.
+  // Pagination metadata is exposed as a sibling field for the new list page.
+  return { ...query, data: query.data?.data, pagination: query.data?.pagination };
 }
 
 export function useClient(id: string | undefined) {
   return useQuery({
     queryKey: [KEY, id],
     queryFn: async () => {
-      const { data } = await api.get<Client>(`/clients/${id}`);
-      return data;
+      const result = await apiClient.GET("/api/clients/{id}", {
+        params: { path: { id: id as string } },
+      });
+      return unwrapApiResult(result);
     },
     enabled: Boolean(id),
   });
@@ -29,9 +57,9 @@ export function useClient(id: string | undefined) {
 export function useCreateClient() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Partial<Client>) => {
-      const { data } = await api.post<Client>("/clients", input);
-      return data;
+    mutationFn: async (input: { name: string; status?: string; description?: string }) => {
+      const result = await apiClient.POST("/api/clients", { body: input });
+      return unwrapApiResult(result);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),
   });
@@ -44,13 +72,16 @@ export function useUpdateClient() {
     // lock — pass the value from the row you last fetched.
     mutationFn: async ({
       id,
-      data: input,
+      data,
     }: {
       id: string;
-      data: Partial<Pick<Client, "name" | "status" | "description">> & { updated_at: string };
+      data: { name?: string; status?: string; description?: string; updated_at: string };
     }) => {
-      const { data } = await api.patch<Client>(`/clients/${id}`, input);
-      return data;
+      const result = await apiClient.PATCH("/api/clients/{id}", {
+        params: { path: { id } },
+        body: data,
+      });
+      return unwrapApiResult(result);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),
   });
@@ -60,9 +91,45 @@ export function useDeleteClient() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data } = await api.delete<Client>(`/clients/${id}`);
-      return data;
+      const result = await apiClient.DELETE("/api/clients/{id}", {
+        params: { path: { id } },
+      });
+      return unwrapApiResult(result);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+export function useRestoreClient() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const result = await apiClient.POST("/api/clients/{id}/restore", {
+        params: { path: { id } },
+      });
+      return unwrapApiResult(result);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY] }),
+  });
+}
+
+/**
+ * People linked to a client (reverse of the Person -> Clients direction
+ * `usePersonClients` in usePeople.ts already covers). Used to scope who can
+ * be newly assigned to one of the client's projects — per the project
+ * roster feature, only people already linked to the project's client are
+ * assignable, mirroring the real Project -> Client -> people_clients ->
+ * People relationship chain.
+ */
+export function useClientPeople(clientId: string | undefined) {
+  return useQuery({
+    queryKey: [KEY, clientId, "people"],
+    queryFn: async () => {
+      const result = await apiClient.GET("/api/clients/{id}/people", {
+        params: { path: { id: clientId as string } },
+      });
+      return unwrapApiResult(result);
+    },
+    enabled: Boolean(clientId),
   });
 }

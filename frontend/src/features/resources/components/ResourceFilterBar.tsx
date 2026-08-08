@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useProjects } from "@/hooks/useProjects";
+import { ProjectPicker } from "@/components/ProjectPicker";
 import type { ResourceFilters } from "@/hooks/useResources";
 import type { ResourceType } from "@/types";
 
@@ -26,8 +26,6 @@ interface Props {
 }
 
 export default function ResourceFilterBar({ filters, onChange }: Props) {
-  const { data: projects = [] } = useProjects();
-
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Input
@@ -56,24 +54,14 @@ export default function ResourceFilterBar({ filters, onChange }: Props) {
         </SelectContent>
       </Select>
 
-      <Select
-        value={filters.projectId ?? "all"}
-        onValueChange={(value) =>
-          onChange({ ...filters, projectId: value === "all" ? undefined : value })
-        }
-      >
-        <SelectTrigger className="w-48">
-          <SelectValue placeholder="Project" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All projects</SelectItem>
-          {projects.map((project) => (
-            <SelectItem key={project.id} value={project.id}>
-              {project.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <ProjectPicker
+        value={filters.projectId}
+        onChange={(projectId) => onChange({ ...filters, projectId })}
+        includeAllOption
+        allOptionLabel="All projects"
+        placeholder="Project"
+        className="w-48"
+      />
     </div>
   );
 }

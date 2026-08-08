@@ -1,9 +1,29 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Server } from "@/types";
 import CredentialRefList from "./CredentialRefList";
+
+const SERVICE_TYPE_LABELS: Record<string, string> = {
+  application: "Application",
+  database: "Database",
+  proxy: "Proxy",
+  monitoring: "Monitoring",
+  repository: "Repository",
+  metrics: "Metrics",
+  jump_host: "Jump host",
+  other: "Other",
+};
+
+const ACCESS_METHOD_LABELS: Record<string, string> = {
+  ssh: "SSH",
+  rdp: "RDP",
+  telnet: "Telnet",
+  web: "Web",
+  other: "Other",
+};
 
 interface Props {
   server: Server;
@@ -17,7 +37,12 @@ export default function ServerCard({ server }: Props) {
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-2">
         <div>
-          <CardTitle className="text-base">{server.hostname}</CardTitle>
+          <CardTitle className="text-base">
+            <Link to={`/servers/${server.id}`} className="hover:underline">
+              {server.display_name}
+            </Link>
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">{server.hostname}</p>
           {server.ip_address && (
             <p className="text-xs text-muted-foreground">{server.ip_address}</p>
           )}
@@ -36,6 +61,20 @@ export default function ServerCard({ server }: Props) {
             ))}
           </div>
         )}
+
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          {server.service_type && <span>{SERVICE_TYPE_LABELS[server.service_type] ?? server.service_type}</span>}
+          {server.access_method && (
+            <span>
+              {ACCESS_METHOD_LABELS[server.access_method] ?? server.access_method}
+              {" · "}
+              {server.access_host}
+              {server.access_port ? `:${server.access_port}` : ""}
+              {server.access_path ?? ""}
+            </span>
+          )}
+        </div>
+
         {server.monitoring_url && (
           <a
             href={server.monitoring_url}

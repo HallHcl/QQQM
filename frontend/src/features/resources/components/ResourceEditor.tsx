@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useProjects } from "@/hooks/useProjects";
+import { ProjectPicker } from "@/components/ProjectPicker";
 import { useCreateResource } from "@/hooks/useResources";
 import { useCreateResourceVersion } from "@/hooks/useResourceVersions";
 import type { ResourceType } from "@/types";
@@ -42,7 +42,6 @@ interface Props {
 }
 
 export default function ResourceEditor({ open, onOpenChange, mode, resourceId }: Props) {
-  const { data: projects = [] } = useProjects();
   const createResource = useCreateResource();
   const createVersion = useCreateResourceVersion(resourceId ?? "");
 
@@ -131,18 +130,7 @@ export default function ResourceEditor({ open, onOpenChange, mode, resourceId }:
                 </div>
                 <div className="space-y-1">
                   <Label>Project</Label>
-                  <Select value={projectId} onValueChange={setProjectId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="None" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ProjectPicker value={projectId} onChange={setProjectId} placeholder="None" />
                 </div>
               </div>
 
