@@ -73,32 +73,6 @@ export interface Person {
   deleted_at: string | null;
 }
 
-export interface User {
-  id: string;
-  people_id: string | null;
-  username: string;
-  email: string;
-  password_hash: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface UserRole {
-  id: string;
-  user_id: string;
-  role_id: string;
-  created_at: string;
-}
-
-export interface PeopleClient {
-  id: string;
-  people_id: string;
-  client_id: string;
-  relationship_type: string | null;
-  created_at: string;
-}
-
 export interface Project {
   id: string;
   client_id: string;
