@@ -1,9 +1,8 @@
-import { startOfDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
-import type { Schedule } from "@/types";
+import type { ScheduleListItem } from "@/hooks/useSchedules";
 
 interface Props {
-  schedules: Schedule[];
+  schedules: ScheduleListItem[];
   selected: Date | undefined;
   onSelect: (date: Date | undefined) => void;
 }
@@ -12,13 +11,13 @@ const DOT_BASE =
   "relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full";
 
 export default function ScheduleCalendar({ schedules, selected, onSelect }: Props) {
-  const today = startOfDay(new Date());
-
-  const isOverdue = (schedule: Schedule) =>
-    schedule.status === "pending" && startOfDay(new Date(schedule.scheduled_date)) < today;
-
-  const scheduledDates = schedules.filter((s) => !isOverdue(s)).map((s) => new Date(s.scheduled_date));
-  const overdueDates = schedules.filter(isOverdue).map((s) => new Date(s.scheduled_date));
+  // is_overdue is computed server-side (schedules.service.ts's overdueExpr:
+  // status IN (pending, in_progress) AND scheduled_date < CURRENT_DATE) and
+  // returned on every list/detail response — read it directly rather than
+  // reimplementing the same logic client-side (a prior version only checked
+  // status === "pending", silently missing in_progress schedules).
+  const scheduledDates = schedules.filter((s) => !s.is_overdue).map((s) => new Date(s.scheduled_date));
+  const overdueDates = schedules.filter((s) => s.is_overdue).map((s) => new Date(s.scheduled_date));
 
   return (
     <Calendar
