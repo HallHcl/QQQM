@@ -51,7 +51,13 @@ export default function ClientsPage() {
     isError,
     error,
     refetch,
-  } = useClients(pagination.params);
+  } = useClients({
+    ...pagination.params,
+    // Clients' deleted filter is boolean-only server-side (no "all" mode —
+    // see useClients.ts) — narrow the shared three-state pagination value
+    // down regardless of what it currently holds.
+    deleted: pagination.deleted === "true" ? "true" : "false",
+  });
 
   const totalPages = pageInfo?.total_pages ?? 1;
 
@@ -125,6 +131,8 @@ export default function ClientsPage() {
             <SelectItem value="desc">Descending</SelectItem>
           </SelectContent>
         </Select>
+        {/* No "All" option: clients.controller.ts:35 only recognizes deleted=true,
+            unlike every other soft-deletable module's three-state filter. */}
         <Select
           value={pagination.deleted}
           onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
@@ -135,7 +143,6 @@ export default function ClientsPage() {
           <SelectContent>
             <SelectItem value="false">Active</SelectItem>
             <SelectItem value="true">Deleted</SelectItem>
-            <SelectItem value="all">All</SelectItem>
           </SelectContent>
         </Select>
       </div>

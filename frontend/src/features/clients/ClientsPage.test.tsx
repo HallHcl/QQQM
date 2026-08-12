@@ -231,5 +231,20 @@ describe("ClientsPage", () => {
       const [, initialOptions] = getMock.mock.calls[0];
       expect(initialOptions.params.query.deleted).toBe("false");
     });
+
+    it('offers only Active/Deleted — no "All" option (backend only recognizes deleted=true, clients.controller.ts:35)', async () => {
+      getMock.mockResolvedValue(okResult([ACTIVE_CLIENT]));
+      renderPage();
+      await screen.findByText("Acme Corp");
+
+      // The 3rd combobox in the filter row is the deleted-status select
+      // (sort, order, deleted — in that DOM order).
+      const deletedSelect = screen.getAllByRole("combobox")[2];
+      fireEvent.click(deletedSelect);
+
+      expect(screen.getByRole("option", { name: "Active" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Deleted" })).toBeInTheDocument();
+      expect(screen.queryByRole("option", { name: "All" })).not.toBeInTheDocument();
+    });
   });
 });

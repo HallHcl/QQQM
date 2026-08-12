@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useClients } from "./useClients";
+import { useClients, type ClientsListParams } from "./useClients";
 
 const getMock = vi.fn();
 
@@ -71,7 +71,7 @@ describe("useClients", () => {
     });
   });
 
-  it.each(["false", "true", "all"] as const)(
+  it.each(["false", "true"] as const)(
     "passes deleted=%s through to the request",
     async (deleted) => {
       const { result } = renderHook(() => useClients({ page: 1, per_page: 20, deleted }), {
@@ -84,6 +84,31 @@ describe("useClients", () => {
       expect(options.params.query.deleted).toBe(deleted);
     }
   );
+
+  describe('deleted="all" is unsupported (clients.controller.ts:35 only recognizes "true")', () => {
+    // @ts-expect-error "all" is not assignable to ClientsListParams["deleted"] —
+    // Clients' backend has no three-state filter, unlike every other module.
+    const _rejectsAll: ClientsListParams = { deleted: "all" };
+    void _rejectsAll;
+
+    it("never sends deleted=all even if a caller bypasses the type with a cast", async () => {
+      const { result } = renderHook(
+        () =>
+          useClients({
+            page: 1,
+            per_page: 20,
+            deleted: "all" as unknown as ClientsListParams["deleted"],
+          }),
+        { wrapper }
+      );
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      const [, options] = getMock.mock.calls[0];
+      expect(options.params.query.deleted).not.toBe("all");
+      expect(options.params.query.deleted).toBe("false");
+    });
+  });
 
   it("sends no query params when called with no arguments (existing picker usage)", async () => {
     const { result } = renderHook(() => useClients(), { wrapper });

@@ -1,17 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient, unwrapApiResult } from "@/api/client";
-import type { PaginationParams } from "./usePagination";
+import type { DeletedFilter, PaginationParams } from "./usePagination";
 
 const KEY = "clients";
 
 /** Matches the `sort` values GET /clients actually accepts. */
 export type ClientSort = "name" | "status" | "created_at" | "updated_at";
 
+/**
+ * Clients' `deleted` list filter is boolean-only server-side
+ * (clients.controller.ts:35 only recognizes "true"; anything else, including
+ * "all", is treated as "false") — unlike every other soft-deletable module,
+ * which supports the standard three-state filter. Narrowed here so it's
+ * impossible to send "all" for Clients, regardless of caller.
+ */
+export type ClientsListParams = Omit<Partial<PaginationParams>, "deleted"> & {
+  deleted?: Exclude<DeletedFilter, "all">;
+};
+
 // Partial, not the full PaginationParams shape: OverviewPage, InfrastructurePage,
 // and PersonDetailDialog still call this with no arguments at all (out of scope
 // for this ticket) to get an unfiltered client list for their pickers — that
 // call pattern must keep compiling and behaving the same (no query params sent).
-export function useClients(params: Partial<PaginationParams> = {}) {
+export function useClients(params: ClientsListParams = {}) {
   const query = useQuery({
     queryKey: [KEY, params],
     queryFn: async () => {
@@ -26,7 +37,10 @@ export function useClients(params: Partial<PaginationParams> = {}) {
             // Zero-arg callers (OverviewPage, InfrastructurePage,
             // PersonDetailDialog pickers) don't pass `deleted` at all —
             // default to the non-deleted set for them, same as before.
-            deleted: params.deleted ?? "false",
+            // Runtime guard (not just the ClientsListParams type) so "all"
+            // can never reach the backend even if a caller bypasses the type
+            // (e.g. a plain-JS call site or an `as` cast).
+            deleted: params.deleted === "true" ? "true" : "false",
           },
         },
       });
