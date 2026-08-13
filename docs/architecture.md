@@ -286,11 +286,42 @@ generated `apiClient`. Both read the same token from `lib/authToken.ts`.
 | `ServerPicker` | `frontend/src/components/ServerPicker.tsx` |
 
 All eleven exist at the paths `decisions.md` #4 and `development-guide.md` §4 describe them by
-name at (no path drift found). `usePagination` is actively consumed by seven list pages
+name at (no path drift found). `usePagination` is actively consumed by eight list pages
 (`ClientsPage`, `ProjectsPage`, `EnvironmentsPage`, `ServersPage`, `ResourcesPage`, `PeoplePage`,
-`SchedulePage` — verified by grep) — note its own header comment ("Not wired into any page yet",
-`usePagination.ts:27-31`) is stale relative to current usage; flagged here since it's a
-source-code claim, not a `decisions.md`/`progress.md` one, so it isn't in the Discrepancies section.
+`SchedulePage`, `ActivityPage` — verified by grep) — note its own header comment ("Not wired into
+any page yet", `usePagination.ts:27-31`) is stale relative to current usage; flagged here since
+it's a source-code claim, not a `decisions.md`/`progress.md` one, so it isn't in the Discrepancies
+section.
+
+### 3.5 Activity module — frontend wiring (added 2026-08-13, Part 27b)
+
+Activity is the last of the 8 modules to be migrated off the original scaffold; it now follows the
+same patterns as every other module rather than being a documented exception:
+
+- **Generated `apiClient`, not legacy axios**: `useActivityLogs.ts:1-2,30-45` calls
+  `apiClient.GET("/api/activity-logs", { params: { query: {...} } })` and unwraps the result via
+  `unwrapApiResult`, the same shape as `useClients.ts` (§3.3) — it no longer uses the hand-written
+  `frontend/src/lib/api.ts` axios instance.
+- **Full 9-filter set exposed**, matching every live backend query param (`api-spec.md`'s Activity
+  section): `page, per_page, order, entity_type, entity_id, action, changed_by, from, to`
+  (`useActivityLogs.ts:13-24`, `ActivityLogFilters` interface). `sort` is deliberately never sent —
+  the hook's own header comment (`useActivityLogs.ts:8-12`) documents that it's dead at the
+  controller layer.
+- **`usePagination` wired, but only its `page`/`perPage`/`order` pieces**: `ActivityPage.tsx:26`
+  calls `usePagination({ initialOrder: "desc" })` and ignores `deleted`/`search`/`sort` — Activity
+  has no soft-delete concept (append-only table) and its list endpoint has no `search` param
+  (matches `api-spec.md`'s cross-cutting pagination notes). Page-size and next/prev controls render
+  at `ActivityPage.tsx:120-161`.
+- **`ActivityFilterBar.tsx`** (`frontend/src/features/activity/components/ActivityFilterBar.tsx`,
+  new component) renders the entity-type/action selects and entity-ID/changed-by/from/to inputs,
+  replacing the old page's single hardcoded entity-type-only `<Select>`.
+- **`changed_by_person` is now rendered**: `ActivityTimeline.tsx:44` displays `` `by
+  ${log.changed_by_person.name}` ``. This was fetched but never shown before Part 27b — the
+  hand-rolled `ActivityLog` type (`frontend/src/types/index.ts:190-202`) now includes
+  `changed_by_person: { id: string; name: string }`, matching the generated schema and the API's
+  actual response shape.
+- **`old_value`/`new_value` remain unrendered** — a deliberate scope decision, not an oversight; see
+  `decisions.md` for the dated entry recording this and Activity's other explicitly deferred items.
 
 ---
 

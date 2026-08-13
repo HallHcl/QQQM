@@ -193,9 +193,12 @@ export interface ActivityLog {
   entity_id: string;
   action: ActivityAction;
   changed_by: string;
-  old_value: unknown;
-  new_value: unknown;
+  /** Full pre-mutation row snapshot, not a computed diff. Nullable on create. */
+  old_value?: unknown;
+  /** Full post-mutation row snapshot, not a computed diff. Nullable on delete-adjacent unlink actions. */
+  new_value?: unknown;
   created_at: string;
+  changed_by_person: { id: string; name: string };
 }
 
 export interface AuthenticatedUser {

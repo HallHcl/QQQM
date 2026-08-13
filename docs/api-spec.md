@@ -230,11 +230,25 @@ Verified from each controller's `parseListQuery()` and the matching Zod `list*Qu
   `development-guide.md` §3's claim. It's the only list endpoint with a `from`/`to` date range
   filter besides Activity.
 - **Activity's list params are a different shape entirely**: `page`, `per_page`, `order`,
-  `entity_type`, `entity_id`, `action`, `changed_by`, `from`, `to`
-  (`backend/src/validators/activityLogs.validator.ts:18-29`). Its validator also accepts a `sort`
-  param restricted to the single literal `"created_at"`, but the service
-  (`backend/src/services/activityLogs.service.ts`) never reads `params.sort` at all — results are
-  always ordered by `created_at`, so `sort` is validated but has no effect.
+  `entity_type`, `entity_id`, `action`, `changed_by`, `from`, `to` — these 9 are the actual, live
+  filters, verified directly from the controller's own hand-parsing
+  (`backend/src/controllers/activityLogs.controller.ts:4-27`), not from the validator. **The
+  validator (`listActivityLogsQuerySchema`, `backend/src/validators/activityLogs.validator.ts:18-29`)
+  is dead code, not just its `sort` field**: it's never imported anywhere else in the backend
+  (confirmed by project-wide grep — zero references outside its own declaration file), and
+  `activityLogs.routes.ts` attaches no validation middleware at all. The controller hand-parses
+  every param itself with no `.parse()`/`.safeParse()` call against this schema.
+  `entity_type`/`entity_id`/`action`/`changed_by` are therefore passed through as raw,
+  unvalidated strings (parameterized into SQL, so not an injection risk — just no 400 on malformed
+  input, e.g. a non-UUID `entity_id` or an unknown `entity_type` silently returns zero rows instead
+  of rejecting).
+  `sort` is a clear example of the gap between the (unenforced) validator/OpenAPI spec and actual
+  behavior: it's documented in `backend/openapi.yaml` (`sort`, enum `["created_at"]`, "Only
+  sortable field") and defined in the dead validator, but the controller never reads
+  `req.query.sort` at all (`activityLogs.controller.ts:4-27`, no `sort` parsing), and the service
+  (`backend/src/services/activityLogs.service.ts:83`) unconditionally `ORDER BY al.created_at` —
+  so `sort` is not merely "ignored," it is inert two layers deep (dead validator, dead controller
+  read) even though the OpenAPI contract implies it's a real, working parameter.
 
 ### Standard error envelope
 

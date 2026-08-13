@@ -373,6 +373,85 @@ missed.
 
 ---
 
+## 13. Known gap: `usePagination` has no URL-state persistence (2026-08-13, found during Activity build, Part 27b)
+
+**Status:** Known gap, deferred — cross-cutting, affects all 8 modules identically.
+
+`frontend/src/hooks/usePagination.ts` holds `page`/`per_page`/`sort`/`order`/`search`/`deleted` in
+plain React `useState`, with no read from or write to the URL. Confirmed by a project-wide grep for
+`useSearchParams`/`URLSearchParams` across `frontend/src` during the Activity build ticket: **zero
+matches in any module.** Refreshing a list page, or sharing/bookmarking a filtered/paginated URL,
+silently resets every list back to its defaults everywhere in the app — this was true before
+Activity and remains true after it; Activity did not introduce it and does not fix it.
+
+This surfaced during Activity's build (Part 27b) specifically because Activity was the first module
+where the full param set (9 filters + pagination) made the lack of shareable/refresh-safe URLs
+obvious, but the gap is in the shared hook, not anything Activity-specific.
+
+**Decision: defer to a dedicated future Polish/Foundation ticket, not a per-module patch.** Fixing
+it properly means changing `usePagination.ts` once (e.g. syncing its state to `useSearchParams`)
+and then re-verifying all 8 downstream consumers (`ClientsPage`, `ProjectsPage`,
+`EnvironmentsPage`, `ServersPage`, `ResourcesPage`, `PeoplePage`, `SchedulePage`, `ActivityPage`)
+plus their test suites together — patching module-by-module would both duplicate the work 8 times
+and risk inconsistent URL-param shapes between modules.
+
+## 14. Deferred: Activity diff viewer — `old_value`/`new_value` not rendered (2026-08-13, Part 27a/27b)
+
+**Status:** Deferred, intentionally out of scope for the initial Activity build.
+
+`old_value`/`new_value` are full before/after JSON row snapshots (not a computed diff — see
+`architecture.md` §2.3/§2.4 and the schema itself), and the Activity build ticket confirmed the
+frontend has everything it needs to compute a field-level diff, but the API does not ship one.
+Three options were identified during the audit (Part 27a), with no clear winner:
+- Omit entirely from the timeline (current behavior).
+- Client-side field-by-field diff — doable with no backend change, but the objects are raw DB rows
+  (snake_case columns, bare foreign-key UUIDs, no per-entity-type label formatting), so a naive diff
+  would be technically correct but not very readable.
+- Raw JSON dump behind a "show details" expander — cheap, always correct, not pretty.
+
+**Decision:** ship the lowest-scope option (omit) for the initial build; `ActivityTimeline.tsx`
+renders `action`, `entity_type`, `changed_by_person`, `created_at`, and `entity_id` only. Revisit
+in a future ticket if a real need for change-detail visibility emerges.
+
+## 15. Deferred: cross-module "view history" links into Activity (2026-08-13, Part 27a)
+
+**Status:** Deferred, explicitly scoped out of the Activity build ticket.
+
+Activity's `entity_id` filter (live, tested — `backend/src/__tests__/activityLogs.test.ts:147-165,
+246-322`) already supports "show me all activity for this one record" with **no backend work
+needed** — `GET /api/activity-logs?entity_id={id}` alone returns the complete, correctly-ordered
+history for any entity. What's missing is purely frontend: a "View history" link/button on other
+modules' detail pages (Clients, Projects, Environments, Servers, Resources, People, Schedule) that
+navigates to `ActivityPage` with `entity_id` preset.
+
+**Decision:** not built as part of Activity's own ticket (Part 27b) — `ActivityPage.tsx` does not
+currently accept an incoming `entity_id` query param either. This was explicitly scoped out during
+the audit's Open Design Questions (Part 27a) as touching five-plus already-frozen reference modules,
+which is a larger, separate decision than Activity's own filter surface. Whoever picks this up next
+should note both halves are needed: (1) Activity accepting a preset filter from the URL, and (2)
+each detail page adding its own link — currently neither exists.
+
+## 16. Deferred: no `PersonPicker`/`EntityPicker` component exists yet (2026-08-13, Part 27a/27b)
+
+**Status:** Deferred — new component design work, not migration, correctly out of scope for the
+Activity build.
+
+Activity's `changed_by` (a `people.id`) and `entity_id` filters (`ActivityFilterBar.tsx:91-103`)
+currently take raw UUID text input with no picker/autocomplete UI. Confirmed by grep: no
+`PersonPicker` or `EntityPicker` component exists anywhere in `frontend/src` today — only
+`ProjectPicker`, `EnvironmentPicker`, and `ServerPicker` (decision #4), all single-entity-type
+pickers for a specific known type, not a general "any entity, any type" picker `entity_id` would
+need.
+
+**Decision:** not built — this is new component design work (a `PersonPicker` for `changed_by` is
+straightforward and mirrors existing pickers; an `EntityPicker` spanning all 10 `entity_type`
+values is a genuinely novel design problem, not a mechanical extension of the existing picker
+pattern). This remains open regardless of whether Users CRUD (decision #7, BLOCKED/FUTURE) is ever
+built — the two are unrelated: `changed_by` filters by `people.id`, never `users.id` (verified,
+`001_init.sql:201`).
+
+---
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -382,3 +461,7 @@ missed.
 | Third role tier ("viewer") | ⏭️ Not scheduled | See decision #8 |
 | UI/UX visual polish phase | ⏭️ Not started | Starts after Frontend Functional Complete (all 8 modules) |
 | `architecture.md` / `api-spec.md` | ✅ Generated and verified by coding agent | Every `decisions.md`/`progress.md` claim checked against source — no errors found; see decision #11 for newly-discovered inconsistencies |
+| `usePagination` URL-state persistence | ⏭️ Not scheduled | Cross-cutting, all 8 modules — see decision #13 |
+| Activity diff viewer (`old_value`/`new_value` rendering) | ⏭️ Deferred | See decision #14 |
+| Cross-module "view history" links into Activity | ⏭️ Deferred | See decision #15 |
+| `PersonPicker` / `EntityPicker` components | ⏭️ Deferred | See decision #16 |

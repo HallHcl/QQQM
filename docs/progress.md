@@ -1,6 +1,6 @@
 # QQM — Progress Tracker
 
-Last updated: after Part 26f (Schedule module complete).
+Last updated: after Part 27b (Activity module complete) — Frontend Functional Complete, 8/8 modules, 2026-08-13.
 
 See `decisions.md` for the reasoning behind blocked/skipped items, and
 `development-guide.md` for the rules every ticket follows.
@@ -10,8 +10,8 @@ See `decisions.md` for the reasoning behind blocked/skipped items, and
 ## Current status
 
 ```
-Current:  Schedule module COMPLETE (26a-26f)
-Next:     Part 27a — Activity Audit
+Current:  Activity module COMPLETE (27a-27b) — Frontend Functional Complete, 8/8 modules
+Next:     UI/UX Visual Polish phase (not yet scoped — see decisions.md #9)
 ```
 
 ---
@@ -102,10 +102,11 @@ Next:     Part 27a — Activity Audit
 | 26e | Built `ServerPicker` (composed client-side from Environments+Servers, since no backend project-level server filter exists); wired into create form for Project-only / Server-only / both linkage |
 | 26f | Status-transition action buttons (Start/Complete/Cancel) replacing the old unconstrained status dropdown; legal-only by construction, no client-side state-machine duplication needed |
 
-### Activity — ⬜ NOT STARTED
+### Activity — ✅ COMPLETE (2 parts)
 | Part | Scope |
 |---|---|
-| 27a | Audit — next up |
+| 27a | Audit — confirmed genuinely simple (no CRUD, no RBAC-gated write, no cascade behavior of its own); found: `useActivityLogs.ts` still on legacy axios (not migrated), `usePagination` not wired into `ActivityPage.tsx`, hand-rolled `ActivityLog` type missing `changed_by_person`, zero test coverage. Full findings in `activity-module-audit.md` (repo root). |
+| 27b | Build — migrated `useActivityLogs.ts` to the generated `apiClient` pattern; exposed the full 9-filter set (`page, per_page, order, entity_type, entity_id, action, changed_by, from, to`) via new `ActivityFilterBar.tsx`; wired `usePagination` (page/perPage/order only — no `deleted`/`search`, neither applies to this append-only, non-searchable table); adopted `LoadingState`/`EmptyState`/`ErrorState`; `changed_by_person` now rendered in `ActivityTimeline.tsx`; added `useActivityLogs.test.tsx` + `ActivityPage.test.tsx` (previously zero coverage). |
 
 ---
 
@@ -126,8 +127,8 @@ Next:     Part 27a — Activity Audit
 | Backend complete + frozen | ✅ |
 | OpenAPI + generated client | ✅ |
 | Frontend Foundation (19, 19.1, 19.2) | ✅ |
-| 7 of 8 modules functionally complete | ✅ (Clients, Projects, Environments, Servers, Resources, People, Schedule) |
-| **Frontend Functional Complete** (all 8 modules) | ⬜ — blocked on Activity module only |
+| 8 of 8 modules functionally complete | ✅ (Clients, Projects, Environments, Servers, Resources, People, Schedule, Activity) |
+| **Frontend Functional Complete — 8/8 modules** | ✅ 2026-08-13 |
 | `docs/` central documentation (`decisions.md`, `progress.md`, `development-guide.md`, `architecture.md`, `api-spec.md`) | ✅ complete — all 5 files exist; `architecture.md`/`api-spec.md` generated + verified from source by the coding agent, then independently spot-checked by a separate Verifier AI pass (see `decisions.md` #12) |
 | UI/UX Visual Polish phase | ⬜ Not started — begins after Frontend Functional Complete |
 
@@ -146,3 +147,4 @@ Next:     Part 27a — Activity Audit
 | After Resources complete (24d) | 320 |
 | After People complete (25b) | 343 |
 | After Schedule complete (26f) | 410 |
+| After Activity complete (27b) | 424 (49 test files) |

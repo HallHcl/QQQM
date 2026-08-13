@@ -41,6 +41,7 @@ export default function ActivityTimeline({ logs }: Props) {
             <span className="text-sm font-medium capitalize">
               {log.entity_type.replace("_", " ")}
             </span>
+            <span className="text-sm text-muted-foreground">by {log.changed_by_person.name}</span>
             <span className="font-mono text-xs text-subtle">
               {format(new Date(log.created_at), "PPp")}
             </span>
