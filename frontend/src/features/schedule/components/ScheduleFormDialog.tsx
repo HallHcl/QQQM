@@ -160,6 +160,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
         });
       }
 
+      toast({ title: schedule ? "Schedule updated" : "Schedule created" });
       onOpenChange(false);
     } catch (err) {
       // A stale-write 409 goes to the conflict primitive; everything else
@@ -206,6 +207,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
         id: schedule.id,
         data: { notes: notes || undefined, updated_at: freshUpdatedAt },
       });
+      toast({ title: "Schedule updated" });
       onOpenChange(false);
     } catch (err) {
       if (err instanceof ApiError && captureConflict(err)) return;
@@ -256,12 +258,12 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>Type</Label>
+                <Label htmlFor="type">Type</Label>
                 {isEdit ? (
-                  <Input value={schedule?.type ?? ""} disabled readOnly />
+                  <Input id="type" value={schedule?.type ?? ""} disabled readOnly />
                 ) : (
                   <Select value={type} onValueChange={(v) => setType(v as ScheduleType)}>
-                    <SelectTrigger>
+                    <SelectTrigger id="type">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -297,12 +299,12 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>Assigned to</Label>
+                <Label htmlFor="assignedTo">Assigned to</Label>
                 {isEdit ? (
-                  <Input value={assigneeName} disabled readOnly />
+                  <Input id="assignedTo" value={assigneeName} disabled readOnly />
                 ) : (
                   <Select value={assignedTo} onValueChange={setAssignedTo}>
-                    <SelectTrigger>
+                    <SelectTrigger id="assignedTo">
                       <SelectValue placeholder="Select person" />
                     </SelectTrigger>
                     <SelectContent>
@@ -316,26 +318,32 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
                 )}
               </div>
               <div className="space-y-1">
-                <Label>Project</Label>
+                <Label htmlFor="project">Project</Label>
                 {isEdit ? (
-                  <Input value={projectName} disabled readOnly />
+                  <Input id="project" value={projectName} disabled readOnly />
                 ) : (
-                  <ProjectPicker value={projectId} onChange={handleProjectChange} placeholder="None" />
+                  <ProjectPicker
+                    id="project"
+                    value={projectId}
+                    onChange={handleProjectChange}
+                    placeholder="None"
+                  />
                 )}
               </div>
             </div>
 
             {isEdit && serverName && (
               <div className="space-y-1">
-                <Label>Server</Label>
-                <Input value={serverName} disabled readOnly />
+                <Label htmlFor="server">Server</Label>
+                <Input id="server" value={serverName} disabled readOnly />
               </div>
             )}
 
             {!isEdit && (
               <div className="space-y-1">
-                <Label>Server</Label>
+                <Label htmlFor="server">Server</Label>
                 <ServerPicker
+                  id="server"
                   value={serverId}
                   onChange={setServerId}
                   projectId={projectId}
@@ -368,16 +376,18 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
             {isEdit && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label>Started</Label>
+                  <Label htmlFor="startedAt">Started</Label>
                   <Input
+                    id="startedAt"
                     value={startedAt ? format(new Date(startedAt), "PPp") : "Not started yet"}
                     disabled
                     readOnly
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label>Completed</Label>
+                  <Label htmlFor="completedAt">Completed</Label>
                   <Input
+                    id="completedAt"
                     value={completedAt ? format(new Date(completedAt), "PPp") : "Not completed yet"}
                     disabled
                     readOnly

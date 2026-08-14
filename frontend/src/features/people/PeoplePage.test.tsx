@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PeoplePage from "./PeoplePage";
 
@@ -72,12 +73,14 @@ function mockGetByPath(handlers: { people?: unknown; personClients?: unknown; cl
   });
 }
 
-function renderPage() {
+function renderPage(initialEntries = ["/people"]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   const { unmount } = render(
     <QueryClientProvider client={queryClient}>
-      <PeoplePage />
+      <MemoryRouter initialEntries={initialEntries}>
+        <PeoplePage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return { invalidateSpy, unmount };
@@ -160,6 +163,41 @@ describe("PeoplePage", () => {
 
       await waitFor(() => {
         const call = getMock.mock.calls.find(([path]) => path === "/api/people");
+        expect(call?.[1].params.query.page).toBe(2);
+      });
+    });
+
+    it("initializes the role filter from the URL on load (bookmarked/shared URL support)", async () => {
+      mockGetByPath({ people: ok(paginated([])) });
+      renderPage(["/people?type=vendor&search=alex"]);
+
+      await waitFor(() => expect(getMock).toHaveBeenCalled());
+      const call = getMock.mock.calls.find(([path]) => path === "/api/people");
+      expect(call?.[1].params.query).toMatchObject({ type: "vendor", search: "alex" });
+    });
+
+    it("writes the role filter to the URL when changed, without resetting the page", async () => {
+      mockGetByPath({ people: ok(paginated([ACTIVE_PERSON], 2)) });
+      renderPage();
+      await screen.findByText("Alex Rivera");
+      getMock.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: /next/i }));
+      await waitFor(() => {
+        const call = getMock.mock.calls.find(([path]) => path === "/api/people");
+        expect(call?.[1].params.query.page).toBe(2);
+      });
+      getMock.mockClear();
+
+      const vendorsTab = screen.getByRole("tab", { name: "Vendors" });
+      fireEvent.mouseDown(vendorsTab);
+      fireEvent.click(vendorsTab);
+
+      await waitFor(() => {
+        const call = getMock.mock.calls
+          .filter(([path]) => path === "/api/people")
+          .at(-1);
+        expect(call?.[1].params.query.type).toBe("vendor");
+        // Role change never reset the page pre-migration either — preserved.
         expect(call?.[1].params.query.page).toBe(2);
       });
     });

@@ -1,6 +1,6 @@
 # QQM — Progress Tracker
 
-Last updated: after Part 27b (Activity module complete) — Frontend Functional Complete, 8/8 modules, 2026-08-13.
+Last updated: after URL-State Persistence ticket (closes `decisions.md` #13) — 2026-08-15.
 
 See `decisions.md` for the reasoning behind blocked/skipped items, and
 `development-guide.md` for the rules every ticket follows.
@@ -10,8 +10,8 @@ See `decisions.md` for the reasoning behind blocked/skipped items, and
 ## Current status
 
 ```
-Current:  Activity module COMPLETE (27a-27b) — Frontend Functional Complete, 8/8 modules
-Next:     UI/UX Visual Polish phase (not yet scoped — see decisions.md #9)
+Current:  UI/UX Polish — Phase 1 (Shared Foundations) COMPLETE (28a-28f)
+Next:     UI/UX Polish — Phase 2 (module-by-module) — not yet scoped
 ```
 
 ---
@@ -110,6 +110,47 @@ Next:     UI/UX Visual Polish phase (not yet scoped — see decisions.md #9)
 
 ---
 
+## UI/UX Polish — Phase 1: Shared Foundations — ✅ COMPLETE (6 parts, 28a-28f)
+
+Following the Polish Discovery & Shared Foundations Audit (pre-28a), this phase built and
+adopted the shared components every later module-by-module polish pass will reuse, per
+decision #4's "build once, reuse everywhere" pattern. **Backend untouched** (confirmed —
+zero files under `backend/` changed by any Part 28 sub-ticket).
+
+| Part | Scope |
+|---|---|
+| 28a | Responsive mobile navigation — built `MobileNav.tsx` (a slide-in `Sheet`, new shadcn/ui primitive `ui/sheet.tsx`) and extracted the nav item list into shared `layout/nav-items.ts`, consumed by both `Sidebar.tsx` (desktop, `md:flex`) and the new mobile trigger in `Topbar.tsx`. `AppLayout.tsx`'s main content area also gained a responsive padding/overflow fix (`min-w-0`, `p-4 sm:p-6`). |
+| 28b | Form-field label/control association pass — added `id`/`aria-label` passthrough props to the three shared pickers (`ProjectPicker`, `EnvironmentPicker`, `ServerPicker`) and wired `<Label htmlFor>`/`<SelectTrigger id>` (or `aria-label` where no visible `<Label>` exists) across every form dialog and filter bar in the app, fixing screen-reader/click-target label association that was previously missing on nearly every `<Select>`. |
+| 28c | `InfrastructurePage`/`EnvironmentTabs` state consistency — brought the one remaining page still using ad hoc "Loading servers…"/"No servers…" text (a leftover from before `LoadingState`/`EmptyState`/`ErrorState` existed) into the same shared-state-component pattern every other module already used; added `InfrastructurePage.test.tsx` (previously zero coverage for this page). |
+| 28d | Post-mutation feedback contract — added `apiErrorMessage()` to `api/errors.ts` and used it to give every mutation across the app both an `onSuccess` and an `onError` toast (previously several mutations, e.g. `ProjectRoster`'s add/remove-person and `PersonDetailDialog`'s add/remove-client, only had `onSuccess`). This is now the standing contract for all future mutations — see `decisions.md`. |
+| 28e | Shared `FilterBar.tsx` layout wrapper — a single consistent wrap/gap container for filter-row controls, adopted by Activity, Resources, and a new `PeopleFilterBar.tsx` (which also consolidated People's previously page-level search input and role tabs into one component). |
+| 28f | Shared `PaginationControls.tsx` — Previous/Next + "Page X of Y" + per-page `Select`, replacing the same hand-rolled block that was independently duplicated across all 8 `usePagination`-consuming list pages (Clients, Projects, Environments, Servers, Resources, People, Schedule, Activity). |
+
+**UI/UX Polish — Phase 1 (Shared Foundations) Complete.**
+
+---
+
+## URL-State Persistence (closes `decisions.md` #13) — ✅ COMPLETE (2026-08-15)
+
+Closed the cross-cutting gap tracked since Part 27b: `usePagination.ts` now syncs
+page/per_page/sort/order/search/deleted bidirectionally with the URL query string via
+`react-router-dom`'s `useSearchParams`, and each of the 3 modules with additional local
+filter state (Resources' type/project, People's role, Schedule's status/calendar-day,
+Activity's 6 filters) was migrated to URL-derived state through the same hook instance's
+new `getParam`/`setParams` escape hatch, rather than a separate `useSearchParams()` call
+per page (see `usePagination.ts`'s doc comment for why: independent calls in the same
+event handler race and clobber each other). Clients/Projects/Environments/Servers needed
+**zero** page-level changes — every filter they have is already one of `usePagination`'s
+own fields, so the hook rewrite alone covers them (confirmed: their 63 existing tests
+pass unmodified). Backend untouched. All 8 pages' existing behavior — page-1-reset on
+search/per_page change, no reset on sort/order change, and each module's pre-existing
+(inconsistent) reset-on-filter-change behavior — was preserved exactly, not "fixed."
+See `decisions.md` #13 for the full writeup including the `replace`-always navigation
+decision and the known pre-existing filter-reset inconsistency across modules that was
+intentionally left as-is.
+
+---
+
 ## Blocked / Deferred (not part of the linear module sequence)
 
 | Item | Status | See |
@@ -130,7 +171,9 @@ Next:     UI/UX Visual Polish phase (not yet scoped — see decisions.md #9)
 | 8 of 8 modules functionally complete | ✅ (Clients, Projects, Environments, Servers, Resources, People, Schedule, Activity) |
 | **Frontend Functional Complete — 8/8 modules** | ✅ 2026-08-13 |
 | `docs/` central documentation (`decisions.md`, `progress.md`, `development-guide.md`, `architecture.md`, `api-spec.md`) | ✅ complete — all 5 files exist; `architecture.md`/`api-spec.md` generated + verified from source by the coding agent, then independently spot-checked by a separate Verifier AI pass (see `decisions.md` #12) |
-| UI/UX Visual Polish phase | ⬜ Not started — begins after Frontend Functional Complete |
+| UI/UX Polish — Phase 1 (Shared Foundations) | ✅ 2026-08-14 (Parts 28a-28f) |
+| `usePagination` URL-state persistence (`decisions.md` #13) | ✅ 2026-08-15 |
+| UI/UX Polish — Phase 2 (module-by-module) | ⬜ Not started — not yet scoped |
 
 ---
 
@@ -148,3 +191,5 @@ Next:     UI/UX Visual Polish phase (not yet scoped — see decisions.md #9)
 | After People complete (25b) | 343 |
 | After Schedule complete (26f) | 410 |
 | After Activity complete (27b) | 424 (49 test files) |
+| After Shared Foundations Polish complete (28f) | 475 (55 test files) — **milestone: +51 tests / +6 test files across Part 28**, driven by 6 new test files (`FilterBar.test.tsx`, `PaginationControls.test.tsx`, `MobileNav.test.tsx`, `InfrastructurePage.test.tsx`, `PeopleFilterBar.test.tsx`, `PersonDetailDialog.test.tsx`) plus expanded coverage in existing suites for the new label-association and toast-contract behavior. Verified by running the full suite: 474 passed, 1 failed — the failure is a `ServerFormDialog.test.tsx` timeout that occurs intermittently under full-suite/parallel execution; running that file in isolation passes 9/9, confirming it's a known flake, not a regression. |
+| After URL-State Persistence complete | 494 (55 test files) — **+19 tests, 0 new test files**, all added to existing suites (`usePagination.test.ts` 9→19, `ActivityPage.test.tsx` 10→12, `ResourcesPage.test.tsx` 18→20, `PeoplePage.test.tsx` 15→17, `SchedulePage.test.tsx` 13→16). Verified by running the full suite twice: 494/494 passed both times, no flakes observed. |

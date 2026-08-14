@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SchedulePage from "./SchedulePage";
 
@@ -78,12 +79,14 @@ function mockGetByPath(handlers: { schedules?: unknown; people?: unknown; projec
   });
 }
 
-function renderPage() {
+function renderPage(initialEntries = ["/schedule"]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   const { unmount } = render(
     <QueryClientProvider client={queryClient}>
-      <SchedulePage />
+      <MemoryRouter initialEntries={initialEntries}>
+        <SchedulePage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return { invalidateSpy, unmount };
@@ -175,6 +178,49 @@ describe("SchedulePage", () => {
         const call = getMock.mock.calls.find(([path]) => path === "/api/schedules");
         expect(call?.[1].params.query.deleted).toBe("true");
       });
+    });
+
+    it("initializes the status filter from the URL on load (bookmarked/shared URL support)", async () => {
+      mockGetByPath({ schedules: ok(paginated([])) });
+      renderPage(["/schedule?status=pending"]);
+
+      await waitFor(() => expect(getMock).toHaveBeenCalled());
+      const call = getMock.mock.calls.find(([path]) => path === "/api/schedules");
+      expect(call?.[1].params.query.status).toBe("pending");
+    });
+
+    it("writes the status filter to the URL when changed, without resetting the page", async () => {
+      mockGetByPath({ schedules: ok(paginated([ACTIVE_SCHEDULE], 2)) });
+      renderPage();
+      await screen.findByText("Quarterly PM");
+      getMock.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
+      await waitFor(() => {
+        const call = getMock.mock.calls.find(([path]) => path === "/api/schedules");
+        expect(call?.[1].params.query.page).toBe(2);
+      });
+      getMock.mockClear();
+
+      const statusSelect = screen.getAllByRole("combobox")[0];
+      fireEvent.click(statusSelect);
+      fireEvent.click(await screen.findByRole("option", { name: "Pending" }));
+
+      await waitFor(() => {
+        const call = getMock.mock.calls
+          .filter(([path]) => path === "/api/schedules")
+          .at(-1);
+        expect(call?.[1].params.query.status).toBe("pending");
+        // Status change never reset the page pre-migration either — preserved.
+        expect(call?.[1].params.query.page).toBe(2);
+      });
+    });
+
+    it("falls back gracefully when the URL's date param is malformed (no crash, no day filter applied)", async () => {
+      mockGetByPath({ schedules: ok(paginated([ACTIVE_SCHEDULE])) });
+      renderPage(["/schedule?date=not-a-date"]);
+
+      expect(await screen.findByText("Quarterly PM")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /clear date filter/i })).not.toBeInTheDocument();
     });
   });
 

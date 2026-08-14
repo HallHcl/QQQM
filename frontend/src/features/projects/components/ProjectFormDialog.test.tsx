@@ -7,6 +7,7 @@ import type { Client } from "@/types";
 const getMock = vi.fn();
 const postMock = vi.fn();
 const patchMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -19,6 +20,10 @@ vi.mock("@/api/client", async () => {
     },
   };
 });
+
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
 
 const SAMPLE_CLIENT: Client = {
   id: "c1",
@@ -74,8 +79,14 @@ describe("ProjectFormDialog — create", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
     // The client picker (`useClients()`) hits GET /api/clients.
     getMock.mockResolvedValue(ok({ data: [SAMPLE_CLIENT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } }));
+  });
+
+  it("associates the Client label with its select trigger for screen readers", async () => {
+    renderDialog();
+    expect(await screen.findByLabelText("Client")).toHaveAttribute("role", "combobox");
   });
 
   it("blocks submit with client-side errors when name and client are empty", async () => {
@@ -108,6 +119,7 @@ describe("ProjectFormDialog — create", () => {
     expect(path).toBe("/api/projects");
     expect(options.body).toMatchObject({ name: "New Project", client_id: "c1" });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["projects"] });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Project created" });
   });
 
   it("surfaces a server-side validation error against the relevant field", async () => {
@@ -129,6 +141,11 @@ describe("ProjectFormDialog — create", () => {
     expect(
       await screen.findByText("String must contain at least 1 character(s)")
     ).toBeInTheDocument();
+    expect(toastMock).toHaveBeenCalledWith({
+      title: "Couldn't create project",
+      description: "Check the highlighted fields below.",
+      variant: "destructive",
+    });
   });
 });
 
@@ -137,6 +154,7 @@ describe("ProjectFormDialog — edit", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
     getMock.mockImplementation((path: string) => {
       if (path === "/api/clients") {
         return Promise.resolve(
@@ -189,6 +207,7 @@ describe("ProjectFormDialog — edit", () => {
     expect(
       screen.getByText("Project was modified by someone else; refresh and try again")
     ).toBeInTheDocument();
+    expect(toastMock).not.toHaveBeenCalled();
 
     const freshRecord = { ...SAMPLE_PROJECT, updated_at: "2026-01-03T00:00:00.000Z" };
     getMock.mockImplementation((path: string) => {
@@ -222,5 +241,26 @@ describe("ProjectFormDialog — edit", () => {
       await screen.findByText("A project with this name already exists for this client")
     ).toBeInTheDocument();
     expect(screen.queryByText("This record changed")).not.toBeInTheDocument();
+    expect(toastMock).toHaveBeenCalledWith({
+      title: "Couldn't update project",
+      description: "A project with this name already exists for this client",
+      variant: "destructive",
+    });
+  });
+
+  it("shows an error toast for an unexpected (non-field, non-conflict) failure", async () => {
+    patchMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
+    renderDialog(SAMPLE_PROJECT);
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Migration v2" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith({
+        title: "Couldn't update project",
+        description: "boom",
+        variant: "destructive",
+      });
+    });
   });
 });

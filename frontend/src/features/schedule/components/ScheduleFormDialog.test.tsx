@@ -7,6 +7,7 @@ import type { Schedule } from "@/types";
 const getMock = vi.fn();
 const postMock = vi.fn();
 const patchMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -19,6 +20,10 @@ vi.mock("@/api/client", async () => {
     },
   };
 });
+
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
 
 function ok<T>(data: T) {
   return { data, error: undefined, response: new Response(null, { status: 200 }) };
@@ -111,6 +116,7 @@ describe("ScheduleFormDialog", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
     mockGetByPath();
   });
 
@@ -134,6 +140,7 @@ describe("ScheduleFormDialog", () => {
         updated_at: "2026-01-01T00:00:00.000Z",
       });
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["schedules"] });
+      expect(toastMock).toHaveBeenCalledWith({ title: "Schedule updated" });
     });
 
     it("renders title/type/date/assignee/project as read-only (disabled) inputs showing the current values, and Notes as the only enabled input", async () => {
@@ -234,6 +241,7 @@ describe("ScheduleFormDialog", () => {
       expect(
         screen.getByText("Schedule was modified by someone else; refresh and try again")
       ).toBeInTheDocument();
+      expect(toastMock).not.toHaveBeenCalled();
 
       const freshSchedule = { ...SAMPLE_SCHEDULE, updated_at: "2026-01-03T00:00:00.000Z" };
       mockGetByPath({ schedule: ok(scheduleDetail(freshSchedule)) });
@@ -284,6 +292,13 @@ describe("ScheduleFormDialog", () => {
 
       await waitFor(() => expect(patchMock).toHaveBeenCalledTimes(1));
       expect(screen.queryByText("This record changed")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(toastMock).toHaveBeenCalledWith({
+          title: "Couldn't update schedule",
+          description: "Something else went wrong",
+          variant: "destructive",
+        });
+      });
     });
   });
 
@@ -342,6 +357,7 @@ describe("ScheduleFormDialog", () => {
         notes: undefined,
       });
       expect(options.body.status).toBeUndefined();
+      expect(toastMock).toHaveBeenCalledWith({ title: "Schedule created" });
     });
 
     it("submits with a server selected and no project (server-only linkage)", async () => {

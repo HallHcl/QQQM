@@ -1,4 +1,5 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmptyState } from "@/components/state/EmptyState";
 import type { Environment } from "@/types";
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
 
 export default function EnvironmentTabs({ environments, value, onValueChange }: Props) {
   if (environments.length === 0) {
-    return <p className="text-sm text-muted-foreground">No environments yet.</p>;
+    return <EmptyState title="No environments yet" />;
   }
 
   return (

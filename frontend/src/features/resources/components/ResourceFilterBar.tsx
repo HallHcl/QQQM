@@ -1,3 +1,4 @@
+import { FilterBar } from "@/components/FilterBar";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -27,7 +28,7 @@ export default function ResourceFilterBar({
   onProjectIdChange,
 }: Props) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <FilterBar>
       <Input
         placeholder="Search resources..."
         value={search}
@@ -39,7 +40,7 @@ export default function ResourceFilterBar({
         value={type ?? "all"}
         onValueChange={(value) => onTypeChange(value === "all" ? undefined : value)}
       >
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-40" aria-label="Resource type">
           <SelectValue placeholder="Type" />
         </SelectTrigger>
         <SelectContent>
@@ -59,7 +60,8 @@ export default function ResourceFilterBar({
         allOptionLabel="All projects"
         placeholder="Project"
         className="w-48"
+        aria-label="Project"
       />
-    </div>
+    </FilterBar>
   );
 }

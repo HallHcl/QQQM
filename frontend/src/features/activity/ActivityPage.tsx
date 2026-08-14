@@ -1,22 +1,27 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PaginationControls } from "@/components/PaginationControls";
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
-import { usePagination, type SortOrder } from "@/hooks/usePagination";
+import { usePagination } from "@/hooks/usePagination";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import type { ActivityAction, EntityType } from "@/types";
 import ActivityFilterBar from "./components/ActivityFilterBar";
 import ActivityTimeline from "./components/ActivityTimeline";
 
-const PER_PAGE_OPTIONS = [10, 20, 50, 100];
+const ENTITY_TYPES: EntityType[] = [
+  "client",
+  "project",
+  "environment",
+  "server",
+  "credential_reference",
+  "people",
+  "resource",
+  "resource_version",
+  "schedule",
+  "user",
+];
+
+const ACTIONS: ActivityAction[] = ["create", "update", "delete", "restore"];
 
 export default function ActivityPage() {
   // Activity has no `deleted`/`search`/`sort` concept of its own (append-only
@@ -24,12 +29,51 @@ export default function ActivityPage() {
   // useActivityLogs.ts) — only the page/perPage/order pieces of
   // usePagination are used here.
   const pagination = usePagination({ initialOrder: "desc" });
-  const [entityType, setEntityType] = useState<EntityType | undefined>(undefined);
-  const [entityId, setEntityId] = useState("");
-  const [action, setAction] = useState<ActivityAction | undefined>(undefined);
-  const [changedBy, setChangedBy] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  // URL-synced via pagination.getParam/setParams (see usePagination.ts)
+  // rather than local useState, so a refresh/shared URL reproduces the same
+  // filter set. Each raw URL value is validated against its known enum (or
+  // just read as free text for entityId/changedBy/from/to) and falls back to
+  // "unset" rather than crashing on a malformed value. Every change here
+  // goes through a single combined setParams call (filter + resetPage
+  // together) rather than a separate pagination.setPage(1) call, since two
+  // independent URL writes in the same handler would race — see
+  // usePagination.ts's doc comment.
+  const rawEntityType = pagination.getParam("entity_type");
+  const entityType = (
+    rawEntityType && (ENTITY_TYPES as string[]).includes(rawEntityType) ? rawEntityType : undefined
+  ) as EntityType | undefined;
+  const entityId = pagination.getParam("entity_id") ?? "";
+  const rawAction = pagination.getParam("action");
+  const action = (
+    rawAction && (ACTIONS as string[]).includes(rawAction) ? rawAction : undefined
+  ) as ActivityAction | undefined;
+  const changedBy = pagination.getParam("changed_by") ?? "";
+  const from = pagination.getParam("from") ?? "";
+  const to = pagination.getParam("to") ?? "";
+
+  function setEntityType(value: EntityType | undefined) {
+    pagination.setParams({ entity_type: value }, { resetPage: true });
+  }
+
+  function setEntityId(value: string) {
+    pagination.setParams({ entity_id: value }, { resetPage: true });
+  }
+
+  function setAction(value: ActivityAction | undefined) {
+    pagination.setParams({ action: value }, { resetPage: true });
+  }
+
+  function setChangedBy(value: string) {
+    pagination.setParams({ changed_by: value }, { resetPage: true });
+  }
+
+  function setFrom(value: string) {
+    pagination.setParams({ from: value }, { resetPage: true });
+  }
+
+  function setTo(value: string) {
+    pagination.setParams({ to: value }, { resetPage: true });
+  }
 
   const {
     data: logs = [],
@@ -61,48 +105,20 @@ export default function ActivityPage() {
       <div className="space-y-4">
         <ActivityFilterBar
           entityType={entityType}
-          onEntityTypeChange={(value) => {
-            setEntityType(value);
-            pagination.setPage(1);
-          }}
+          onEntityTypeChange={setEntityType}
           entityId={entityId}
-          onEntityIdChange={(value) => {
-            setEntityId(value);
-            pagination.setPage(1);
-          }}
+          onEntityIdChange={setEntityId}
           action={action}
-          onActionChange={(value) => {
-            setAction(value);
-            pagination.setPage(1);
-          }}
+          onActionChange={setAction}
           changedBy={changedBy}
-          onChangedByChange={(value) => {
-            setChangedBy(value);
-            pagination.setPage(1);
-          }}
+          onChangedByChange={setChangedBy}
           from={from}
-          onFromChange={(value) => {
-            setFrom(value);
-            pagination.setPage(1);
-          }}
+          onFromChange={setFrom}
           to={to}
-          onToChange={(value) => {
-            setTo(value);
-            pagination.setPage(1);
-          }}
+          onToChange={setTo}
+          order={pagination.order}
+          onOrderChange={pagination.setOrder}
         />
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={pagination.order} onValueChange={(v) => pagination.setOrder(v as SortOrder)}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Order" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="asc">Oldest first</SelectItem>
-              <SelectItem value="desc">Newest first</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
         {isLoading ? (
           <LoadingState message="Loading activity..." />
@@ -117,48 +133,14 @@ export default function ActivityPage() {
           <>
             <ActivityTimeline logs={logs} />
 
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <span>Rows per page</span>
-                <Select
-                  value={String(pagination.perPage)}
-                  onValueChange={(v) => pagination.setPerPage(Number(v))}
-                >
-                  <SelectTrigger className="w-16">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PER_PAGE_OPTIONS.map((size) => (
-                      <SelectItem key={size} value={String(size)}>
-                        {size}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={pagination.prevPage}
-                  disabled={pagination.page <= 1}
-                >
-                  Previous
-                </Button>
-                <span>
-                  Page {pagination.page} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={pagination.nextPage}
-                  disabled={pagination.page >= totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+            <PaginationControls
+              page={pagination.page}
+              totalPages={totalPages}
+              perPage={pagination.perPage}
+              onPrevPage={pagination.prevPage}
+              onNextPage={pagination.nextPage}
+              onPerPageChange={pagination.setPerPage}
+            />
           </>
         )}
       </div>

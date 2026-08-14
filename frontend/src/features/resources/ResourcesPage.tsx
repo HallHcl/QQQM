@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import {
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
-import { ApiError } from "@/api/errors";
+import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { usePagination, type DeletedFilter, type SortOrder } from "@/hooks/usePagination";
 import {
@@ -36,16 +37,23 @@ const SORT_OPTIONS: { value: ResourceSort; label: string }[] = [
   { value: "updated_at", label: "Updated" },
 ];
 
-const PER_PAGE_OPTIONS = [10, 20, 50, 100];
-
-function apiErrorMessage(err: unknown): string {
-  return err instanceof ApiError ? err.message : "Something went wrong. Please try again.";
-}
 
 export default function ResourcesPage() {
   const pagination = usePagination({ initialSort: "title", initialOrder: "asc" });
-  const [projectId, setProjectId] = useState<string | undefined>(undefined);
-  const [type, setType] = useState<string | undefined>(undefined);
+  // URL-synced the same way as pagination's own fields (see usePagination.ts)
+  // rather than local useState, so a refresh/shared URL reproduces the same
+  // filtered view. Matches pre-migration behavior exactly: neither filter
+  // resets the page on change (only pagination.setSearch does that).
+  const projectId = pagination.getParam("project_id") ?? undefined;
+  const type = pagination.getParam("type") ?? undefined;
+
+  function setProjectId(value: string | undefined) {
+    pagination.setParams({ project_id: value });
+  }
+
+  function setType(value: string | undefined) {
+    pagination.setParams({ type: value });
+  }
 
   const {
     data: resources = [],
@@ -149,7 +157,7 @@ export default function ResourcesPage() {
 
       <div className="flex flex-wrap items-center gap-2">
         <Select value={pagination.sort} onValueChange={pagination.setSort}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40" aria-label="Sort by">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
@@ -161,7 +169,7 @@ export default function ResourcesPage() {
           </SelectContent>
         </Select>
         <Select value={pagination.order} onValueChange={(v) => pagination.setOrder(v as SortOrder)}>
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-32" aria-label="Sort order">
             <SelectValue placeholder="Order" />
           </SelectTrigger>
           <SelectContent>
@@ -173,7 +181,7 @@ export default function ResourcesPage() {
           value={pagination.deleted}
           onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
         >
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-32" aria-label="Status filter">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -201,48 +209,14 @@ export default function ResourcesPage() {
             <>
               <ResourceList resources={resources} selectedId={selected?.id} onSelect={setSelected} />
 
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <span>Per page</span>
-                  <Select
-                    value={String(pagination.perPage)}
-                    onValueChange={(v) => pagination.setPerPage(Number(v))}
-                  >
-                    <SelectTrigger className="w-16">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PER_PAGE_OPTIONS.map((size) => (
-                        <SelectItem key={size} value={String(size)}>
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={pagination.prevPage}
-                    disabled={pagination.page <= 1}
-                  >
-                    Previous
-                  </Button>
-                  <span>
-                    Page {pagination.page} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={pagination.nextPage}
-                    disabled={pagination.page >= totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
+              <PaginationControls
+                page={pagination.page}
+                totalPages={totalPages}
+                perPage={pagination.perPage}
+                onPrevPage={pagination.prevPage}
+                onNextPage={pagination.nextPage}
+                onPerPageChange={pagination.setPerPage}
+              />
             </>
           )}
         </div>

@@ -23,6 +23,8 @@ interface Props {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  id?: string;
+  "aria-label"?: string;
 }
 
 export function ProjectPicker({
@@ -34,6 +36,8 @@ export function ProjectPicker({
   placeholder = "Project",
   className,
   disabled,
+  id,
+  "aria-label": ariaLabel,
 }: Props) {
   const { data: projects = [] } = useProjects(clientId);
 
@@ -43,7 +47,7 @@ export function ProjectPicker({
       onValueChange={(v) => onChange(includeAllOption && v === "all" ? undefined : v)}
       disabled={disabled}
     >
-      <SelectTrigger className={className}>
+      <SelectTrigger id={id} aria-label={ariaLabel} className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

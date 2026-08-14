@@ -6,6 +6,7 @@ import EnvironmentFormDialog from "./EnvironmentFormDialog";
 const getMock = vi.fn();
 const postMock = vi.fn();
 const patchMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -18,6 +19,10 @@ vi.mock("@/api/client", async () => {
     },
   };
 });
+
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
 
 // The VPN resource picker (edit-only) reads Resources through apiClient
 // (useResources/useResource, migrated in Part 24a) alongside /api/projects
@@ -91,6 +96,7 @@ describe("EnvironmentFormDialog — create", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
     // The project picker (`useProjects()`) hits GET /api/projects.
     getMock.mockResolvedValue(
       ok({ data: [SAMPLE_PROJECT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
@@ -128,6 +134,7 @@ describe("EnvironmentFormDialog — create", () => {
     expect(options.body).toEqual({ name: "New Environment", project_id: "p1", description: undefined });
     expect(options.body.vpn_resource_id).toBeUndefined();
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["environments"] });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Environment created" });
   });
 
   it("surfaces a server-side validation error against the relevant field", async () => {
@@ -149,6 +156,11 @@ describe("EnvironmentFormDialog — create", () => {
     expect(
       await screen.findByText("String must contain at least 1 character(s)")
     ).toBeInTheDocument();
+    expect(toastMock).toHaveBeenCalledWith({
+      title: "Couldn't create environment",
+      description: "Check the highlighted fields below.",
+      variant: "destructive",
+    });
   });
 });
 
@@ -157,6 +169,7 @@ describe("EnvironmentFormDialog — edit", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
     getMock.mockImplementation((path: string) => {
       if (path === "/api/projects") {
         return Promise.resolve(
@@ -271,6 +284,7 @@ describe("EnvironmentFormDialog — edit", () => {
     expect(
       screen.getByText("Environment was modified by someone else; refresh and try again")
     ).toBeInTheDocument();
+    expect(toastMock).not.toHaveBeenCalled();
 
     const freshRecord = { ...SAMPLE_ENVIRONMENT, updated_at: "2026-01-03T00:00:00.000Z" };
     getMock.mockImplementation((path: string) => {
@@ -304,5 +318,26 @@ describe("EnvironmentFormDialog — edit", () => {
       await screen.findByText("An environment with this name already exists for this project")
     ).toBeInTheDocument();
     expect(screen.queryByText("This record changed")).not.toBeInTheDocument();
+    expect(toastMock).toHaveBeenCalledWith({
+      title: "Couldn't update environment",
+      description: "An environment with this name already exists for this project",
+      variant: "destructive",
+    });
+  });
+
+  it("shows an error toast for an unexpected (non-field, non-conflict) failure", async () => {
+    patchMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
+    renderDialog(SAMPLE_ENVIRONMENT);
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Production v2" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith({
+        title: "Couldn't update environment",
+        description: "boom",
+        variant: "destructive",
+      });
+    });
   });
 });

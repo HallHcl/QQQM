@@ -6,6 +6,7 @@ import ServerFormDialog from "./ServerFormDialog";
 const getMock = vi.fn();
 const postMock = vi.fn();
 const patchMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -18,6 +19,10 @@ vi.mock("@/api/client", async () => {
     },
   };
 });
+
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
 
 const SAMPLE_ENVIRONMENT = {
   id: "e1",
@@ -82,6 +87,7 @@ describe("ServerFormDialog — create", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
     // The environment picker (`useEnvironments()`) hits GET /api/environments.
     getMock.mockResolvedValue(
       ok({ data: [SAMPLE_ENVIRONMENT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
@@ -179,6 +185,7 @@ describe("ServerFormDialog — create", () => {
       notes: "Primary web node",
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["servers"] });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Server created" });
   });
 
   it("surfaces a server-side validation error against the relevant field", async () => {
@@ -208,6 +215,11 @@ describe("ServerFormDialog — create", () => {
     expect(
       await screen.findByText("String must contain at least 1 character(s)")
     ).toBeInTheDocument();
+    expect(toastMock).toHaveBeenCalledWith({
+      title: "Couldn't create server",
+      description: "Check the highlighted fields below.",
+      variant: "destructive",
+    });
   });
 });
 
@@ -216,6 +228,7 @@ describe("ServerFormDialog — edit", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
     getMock.mockImplementation((path: string) => {
       if (path === "/api/environments") {
         return Promise.resolve(
@@ -277,6 +290,7 @@ describe("ServerFormDialog — edit", () => {
     expect(
       screen.getByText("Server was modified by someone else; refresh and try again")
     ).toBeInTheDocument();
+    expect(toastMock).not.toHaveBeenCalled();
 
     const freshRecord = { ...SAMPLE_SERVER, updated_at: "2026-01-03T00:00:00.000Z" };
     getMock.mockImplementation((path: string) => {
@@ -305,5 +319,21 @@ describe("ServerFormDialog — edit", () => {
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     expect(await screen.findByText("This record changed")).toBeInTheDocument();
+  });
+
+  it("shows an error toast for an unexpected (non-conflict) failure", async () => {
+    patchMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
+    renderDialog(SAMPLE_SERVER);
+
+    await screen.findByDisplayValue("web-01");
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith({
+        title: "Couldn't update server",
+        description: "boom",
+        variant: "destructive",
+      });
+    });
   });
 });

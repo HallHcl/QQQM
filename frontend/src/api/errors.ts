@@ -53,3 +53,8 @@ export function parseApiError(status: number, body: unknown): ApiError {
 function isApiErrorBody(body: unknown): body is ApiErrorBody {
   return typeof body === "object" && body !== null && "error" in body;
 }
+
+/** Extracts a user-facing message from a caught mutation error, for toast descriptions. */
+export function apiErrorMessage(err: unknown): string {
+  return err instanceof ApiError ? err.message : "Something went wrong. Please try again.";
+}

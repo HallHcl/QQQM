@@ -14,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { apiErrorMessage } from "@/api/errors";
+import { toast } from "@/hooks/use-toast";
 import { useClients } from "@/hooks/useClients";
 import {
   useAddPersonClient,
@@ -92,7 +94,19 @@ export default function PersonDetailDialog({ person, open, onOpenChange }: Props
                       variant="ghost"
                       size="sm"
                       onClick={() =>
-                        removeClient.mutate({ personId: person.id, clientId: rel.id })
+                        removeClient.mutate(
+                          { personId: person.id, clientId: rel.id },
+                          {
+                            onSuccess: () => toast({ title: "Client removed" }),
+                            onError: (err) => {
+                              toast({
+                                title: "Couldn't remove client",
+                                description: apiErrorMessage(err),
+                                variant: "destructive",
+                              });
+                            },
+                          }
+                        )
                       }
                     >
                       Remove
@@ -105,7 +119,7 @@ export default function PersonDetailDialog({ person, open, onOpenChange }: Props
             {availableClients.length > 0 && (
               <div className="mt-3 flex gap-2">
                 <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                  <SelectTrigger className="flex-1">
+                  <SelectTrigger className="flex-1" aria-label="Add a client to this person">
                     <SelectValue placeholder="Add client..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -120,7 +134,19 @@ export default function PersonDetailDialog({ person, open, onOpenChange }: Props
                   disabled={!selectedClientId}
                   onClick={() => {
                     if (selectedClientId) {
-                      addClient.mutate({ personId: person.id, clientId: selectedClientId });
+                      addClient.mutate(
+                        { personId: person.id, clientId: selectedClientId },
+                        {
+                          onSuccess: () => toast({ title: "Client added" }),
+                          onError: (err) => {
+                            toast({
+                              title: "Couldn't add client",
+                              description: apiErrorMessage(err),
+                              variant: "destructive",
+                            });
+                          },
+                        }
+                      );
                       setSelectedClientId(undefined);
                     }
                   }}

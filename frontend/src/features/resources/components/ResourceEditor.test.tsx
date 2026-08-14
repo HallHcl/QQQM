@@ -27,6 +27,14 @@ function ok<T>(data: T) {
   return { data, error: undefined, response: new Response(null, { status: 200 }) };
 }
 
+function apiError(status: number, message: string) {
+  return {
+    data: undefined,
+    error: { error: { message } },
+    response: new Response(null, { status }),
+  };
+}
+
 function renderEditor() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onOpenChange = vi.fn();
@@ -42,6 +50,7 @@ describe("ResourceEditor — create mode", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
+    toastMock.mockClear();
     getMock.mockResolvedValue(
       ok({ data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 1 } })
     );
@@ -82,7 +91,7 @@ describe("ResourceEditor — create mode", () => {
     expect(postMock).not.toHaveBeenCalled();
   });
 
-  it("submits when a content-required type has content", async () => {
+  it("submits when a content-required type has content, and shows a success toast", async () => {
     postMock.mockResolvedValue(ok({ id: "r1" }));
     const { onOpenChange } = renderEditor();
 
@@ -92,6 +101,25 @@ describe("ResourceEditor — create mode", () => {
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(postMock).toHaveBeenCalledTimes(1);
+    expect(toastMock).toHaveBeenCalledWith({ title: "Resource created" });
+  });
+
+  it("shows an error toast and keeps the dialog open when the create mutation fails", async () => {
+    postMock.mockResolvedValue(apiError(500, "boom"));
+    const { onOpenChange } = renderEditor();
+
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Deploy guide" } });
+    fireEvent.change(screen.getByLabelText("Content"), { target: { value: "Step 1..." } });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith({
+        title: "Couldn't create resource",
+        description: "boom",
+        variant: "destructive",
+      });
+    });
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 });
 
@@ -216,7 +244,7 @@ describe("ResourceEditor — new-version mode", () => {
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(postMock).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/identical to the current version/i)).not.toBeInTheDocument();
-    expect(toastMock).not.toHaveBeenCalled();
+    expect(toastMock).toHaveBeenCalledWith({ title: "New version added" });
   });
 
   it("blocks submit with a confirmation step when content is unchanged from the current version", async () => {

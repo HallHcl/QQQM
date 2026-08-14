@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ApiError } from "@/api/errors";
+import { ApiError, apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import {
   useCreateCredentialReference,
@@ -132,8 +132,11 @@ export default function CredentialReferenceFormDialog({
    * else mid-edit) becomes a form-level message.
    */
   function applyServerError(err: unknown): void {
+    const title = isEdit ? "Couldn't update credential reference" : "Couldn't add credential reference";
+
     if (!(err instanceof ApiError)) {
       setFormError("Something went wrong. Please try again.");
+      toast({ title, description: apiErrorMessage(err), variant: "destructive" });
       return;
     }
 
@@ -147,11 +150,13 @@ export default function CredentialReferenceFormDialog({
       }
       if (Object.keys(nextErrors).length > 0) {
         setFieldErrors(nextErrors);
+        toast({ title, description: "Check the highlighted fields below.", variant: "destructive" });
         return;
       }
     }
 
     setFormError(err.message);
+    toast({ title, description: err.message, variant: "destructive" });
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -223,14 +228,14 @@ export default function CredentialReferenceFormDialog({
           </div>
 
           <div className="space-y-1">
-            <Label>Applies to access method</Label>
+            <Label htmlFor="applies_to_access_method">Applies to access method</Label>
             <Select
               value={appliesToAccessMethod ?? UNSET}
               onValueChange={(v) =>
                 setAppliesToAccessMethod(v === UNSET ? undefined : (v as (typeof ACCESS_METHODS)[number]))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger id="applies_to_access_method">
                 <SelectValue placeholder="Not set" />
               </SelectTrigger>
               <SelectContent>

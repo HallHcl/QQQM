@@ -26,6 +26,8 @@ interface Props {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  id?: string;
+  "aria-label"?: string;
 }
 
 export function ServerPicker({
@@ -35,6 +37,8 @@ export function ServerPicker({
   placeholder = "Server",
   className,
   disabled,
+  id,
+  "aria-label": ariaLabel,
 }: Props) {
   const { data: environments = [] } = useEnvironments(projectId);
   // Unscoped (environment_id undefined) — there's no project-level filter
@@ -49,7 +53,7 @@ export function ServerPicker({
 
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={className}>
+      <SelectTrigger id={id} aria-label={ariaLabel} className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

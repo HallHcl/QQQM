@@ -8,6 +8,7 @@ const postMock = vi.fn();
 const patchMock = vi.fn();
 const deleteMock = vi.fn();
 const useAuthMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -24,6 +25,10 @@ vi.mock("@/api/client", async () => {
 
 vi.mock("@/features/auth/useAuth", () => ({
   useAuth: () => useAuthMock(),
+}));
+
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
 }));
 
 function ok<T>(data: T) {
@@ -96,6 +101,7 @@ describe("CredentialRefList — manageable mode (ServerDetailPage)", () => {
     patchMock.mockReset();
     deleteMock.mockReset();
     useAuthMock.mockReset();
+    toastMock.mockClear();
   });
 
   describe("RBAC: create/update = admin+member, delete = admin-only (a stricter, distinct gate — verified against credentialReferences.routes.ts)", () => {
@@ -171,6 +177,7 @@ describe("CredentialRefList — manageable mode (ServerDetailPage)", () => {
       await waitFor(() =>
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["credentialReferences"] })
       );
+      expect(toastMock).toHaveBeenCalledWith({ title: "Credential reference added" });
     });
 
     it("allows leaving applies_to_access_method unset", async () => {
@@ -207,6 +214,32 @@ describe("CredentialRefList — manageable mode (ServerDetailPage)", () => {
       expect(
         await screen.findByText("String must contain at least 1 character(s)")
       ).toBeInTheDocument();
+      expect(toastMock).toHaveBeenCalledWith({
+        title: "Couldn't add credential reference",
+        description: "Check the highlighted fields below.",
+        variant: "destructive",
+      });
+    });
+
+    it("shows an error toast for an unexpected failure", async () => {
+      postMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
+      renderList(true, []);
+      await screen.findByText("No credential references.");
+
+      fireEvent.click(screen.getByRole("button", { name: /add credential reference/i }));
+      fireEvent.change(await screen.findByLabelText("Label"), { target: { value: "Vault path" } });
+      fireEvent.change(screen.getByLabelText("Reference location"), {
+        target: { value: "secret/servers/web-01" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => {
+        expect(toastMock).toHaveBeenCalledWith({
+          title: "Couldn't add credential reference",
+          description: "boom",
+          variant: "destructive",
+        });
+      });
     });
   });
 
@@ -248,6 +281,24 @@ describe("CredentialRefList — manageable mode (ServerDetailPage)", () => {
         notes: "Rotate quarterly",
       });
       expect("updated_at" in options.body).toBe(false);
+      expect(toastMock).toHaveBeenCalledWith({ title: "Credential reference updated" });
+    });
+
+    it("shows an error toast for an unexpected failure", async () => {
+      patchMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
+      renderList(true);
+      await screen.findByText("Vault path");
+
+      fireEvent.click(screen.getByRole("button", { name: /^edit$/i }));
+      fireEvent.click(await screen.findByRole("button", { name: /save/i }));
+
+      await waitFor(() => {
+        expect(toastMock).toHaveBeenCalledWith({
+          title: "Couldn't update credential reference",
+          description: "boom",
+          variant: "destructive",
+        });
+      });
     });
   });
 
@@ -293,6 +344,25 @@ describe("CredentialRefList — manageable mode (ServerDetailPage)", () => {
       await waitFor(() =>
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["credentialReferences"] })
       );
+      expect(toastMock).toHaveBeenCalledWith({ title: "Credential reference deleted" });
+    });
+
+    it("shows an error toast when delete fails", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      deleteMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
+      renderList(true);
+      await screen.findByText("Vault path");
+
+      fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+      await waitFor(() => {
+        expect(toastMock).toHaveBeenCalledWith({
+          title: "Couldn't delete credential reference",
+          description: "boom",
+          variant: "destructive",
+        });
+      });
     });
 
     it("does not call the delete mutation when the confirmation is cancelled", async () => {

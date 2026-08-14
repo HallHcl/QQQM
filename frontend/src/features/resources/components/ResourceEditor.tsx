@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProjectPicker } from "@/components/ProjectPicker";
+import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { useCreateResource } from "@/hooks/useResources";
 import { useCreateResourceVersion, useResourceVersion } from "@/hooks/useResourceVersions";
@@ -155,21 +156,30 @@ export default function ResourceEditor({
   }
 
   async function submitNewVersion() {
-    const result = await createVersion.mutateAsync({
-      content: content || undefined,
-      external_url: externalUrl || undefined,
-      commit_message: commitMessage || undefined,
-    });
-    // Belt-and-suspenders: the client-side check above should already have
-    // caught an identical-content submission before this point, but if it
-    // somehow didn't (edge case), the backend's own warning still fires —
-    // surfaced here since the version is already created and can't be
-    // un-submitted at this point.
-    if (result.warning) {
-      toast({ title: "Heads up", description: result.warning });
+    try {
+      const result = await createVersion.mutateAsync({
+        content: content || undefined,
+        external_url: externalUrl || undefined,
+        commit_message: commitMessage || undefined,
+      });
+      toast({ title: isReverting ? "Reverted to a previous version" : "New version added" });
+      // Belt-and-suspenders: the client-side check above should already have
+      // caught an identical-content submission before this point, but if it
+      // somehow didn't (edge case), the backend's own warning still fires —
+      // surfaced here since the version is already created and can't be
+      // un-submitted at this point.
+      if (result.warning) {
+        toast({ title: "Heads up", description: result.warning });
+      }
+      reset();
+      onOpenChange(false);
+    } catch (err) {
+      toast({
+        title: "Couldn't add new version",
+        description: apiErrorMessage(err),
+        variant: "destructive",
+      });
     }
-    reset();
-    onOpenChange(false);
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -183,17 +193,26 @@ export default function ResourceEditor({
       }
       setFieldErrors({});
 
-      await createResource.mutateAsync({
-        title,
-        type,
-        project_id: projectId,
-        category: category || undefined,
-        content: content || undefined,
-        external_url: externalUrl || undefined,
-        commit_message: commitMessage || undefined,
-      });
-      reset();
-      onOpenChange(false);
+      try {
+        await createResource.mutateAsync({
+          title,
+          type,
+          project_id: projectId,
+          category: category || undefined,
+          content: content || undefined,
+          external_url: externalUrl || undefined,
+          commit_message: commitMessage || undefined,
+        });
+        toast({ title: "Resource created" });
+        reset();
+        onOpenChange(false);
+      } catch (err) {
+        toast({
+          title: "Couldn't create resource",
+          description: apiErrorMessage(err),
+          variant: "destructive",
+        });
+      }
     } else if (resourceId) {
       const errors = validateResourceContentFields(resourceType ?? "runbook", content, externalUrl);
       if (errors.content || errors.external_url) {
@@ -259,9 +278,9 @@ export default function ResourceEditor({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label>Type</Label>
+                    <Label htmlFor="type">Type</Label>
                     <Select value={type} onValueChange={(v) => setType(v as ResourceType)}>
-                      <SelectTrigger>
+                      <SelectTrigger id="type">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -274,8 +293,8 @@ export default function ResourceEditor({
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label>Project</Label>
-                    <ProjectPicker value={projectId} onChange={setProjectId} placeholder="None" />
+                    <Label htmlFor="project">Project</Label>
+                    <ProjectPicker id="project" value={projectId} onChange={setProjectId} placeholder="None" />
                   </div>
                 </div>
 

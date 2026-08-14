@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/state/EmptyState";
 import { LoadingState } from "@/components/state/LoadingState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -19,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { useClientPeople } from "@/hooks/useClients";
 import {
@@ -72,6 +74,13 @@ export default function ProjectRoster({ projectId, clientId }: Props) {
           setSelectedPersonId(undefined);
           setRoleInProject("");
         },
+        onError: (err) => {
+          toast({
+            title: "Couldn't assign person",
+            description: apiErrorMessage(err),
+            variant: "destructive",
+          });
+        },
       }
     );
   }
@@ -80,7 +89,16 @@ export default function ProjectRoster({ projectId, clientId }: Props) {
     if (!removalTarget) return;
     removePerson.mutate(
       { projectId, peopleId: removalTarget.peopleId },
-      { onSuccess: () => toast({ title: "Person removed from project" }) }
+      {
+        onSuccess: () => toast({ title: "Person removed from project" }),
+        onError: (err) => {
+          toast({
+            title: "Couldn't remove person",
+            description: apiErrorMessage(err),
+            variant: "destructive",
+          });
+        },
+      }
     );
   }
 
@@ -125,11 +143,11 @@ export default function ProjectRoster({ projectId, clientId }: Props) {
 
       <div className="flex flex-wrap items-end gap-2 border-t border-border pt-4">
         <div className="space-y-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <Label htmlFor="roster-person" className="text-muted-foreground">
             Person
-          </label>
+          </Label>
           <Select value={selectedPersonId} onValueChange={setSelectedPersonId}>
-            <SelectTrigger className="w-56">
+            <SelectTrigger id="roster-person" className="w-56">
               <SelectValue placeholder="Select a person" />
             </SelectTrigger>
             <SelectContent>
@@ -143,10 +161,11 @@ export default function ProjectRoster({ projectId, clientId }: Props) {
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <Label htmlFor="roster-role" className="text-muted-foreground">
             Role
-          </label>
+          </Label>
           <Input
+            id="roster-role"
             value={roleInProject}
             onChange={(e) => setRoleInProject(e.target.value)}
             placeholder="e.g. Lead engineer"

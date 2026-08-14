@@ -21,10 +21,6 @@ interface Props {
 }
 
 export default function PeopleTable({ people, onSelect, onEdit, onDelete, onRestore }: Props) {
-  if (people.length === 0) {
-    return <p className="text-sm text-muted-foreground">No people found.</p>;
-  }
-
   return (
     <Table>
       <TableHeader>

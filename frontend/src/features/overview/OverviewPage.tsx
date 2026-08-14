@@ -39,7 +39,7 @@ export default function OverviewPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Overview</h1>
         <Select value={clientId} onValueChange={setClientId}>
-          <SelectTrigger className="w-64">
+          <SelectTrigger className="w-64" aria-label="Client">
             <SelectValue placeholder="Select a client" />
           </SelectTrigger>
           <SelectContent>

@@ -1,19 +1,12 @@
 import { useState } from "react";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
-import { ApiError } from "@/api/errors";
+import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { usePagination, type DeletedFilter, type SortOrder } from "@/hooks/usePagination";
 import {
@@ -23,26 +16,22 @@ import {
   type PeopleSort,
 } from "@/hooks/usePeople";
 import type { Person } from "@/types";
-import RoleFilterTabs from "./components/RoleFilterTabs";
+import PeopleFilterBar from "./components/PeopleFilterBar";
 import PeopleTable from "./components/PeopleTable";
 import PersonDetailDialog from "./components/PersonDetailDialog";
 import PersonFormDialog from "./components/PersonFormDialog";
 
-const SORT_OPTIONS: { value: PeopleSort; label: string }[] = [
-  { value: "name", label: "Name" },
-  { value: "created_at", label: "Created" },
-  { value: "updated_at", label: "Updated" },
-];
-
-const PER_PAGE_OPTIONS = [10, 20, 50, 100];
-
-function apiErrorMessage(err: unknown): string {
-  return err instanceof ApiError ? err.message : "Something went wrong. Please try again.";
-}
-
 export default function PeoplePage() {
   const pagination = usePagination({ initialSort: "name", initialOrder: "asc" });
-  const [typeFilter, setTypeFilter] = useState("all");
+  // URL-synced via pagination.getParam/setParams (see usePagination.ts)
+  // rather than local useState, so a refresh/shared URL reproduces the same
+  // role filter. Matches pre-migration behavior exactly: changing the role
+  // tab does not reset the page (only pagination.setSearch does that).
+  const typeFilter = pagination.getParam("type") ?? "all";
+
+  function setTypeFilter(value: string) {
+    pagination.setParams({ type: value === "all" ? undefined : value });
+  }
 
   const {
     data: people = [],
@@ -126,57 +115,23 @@ export default function PeoplePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">People</h1>
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Search people..."
-            value={pagination.search}
-            onChange={(e) => pagination.setSearch(e.target.value)}
-            className="w-64"
-          />
-          <RequireRole roles={["admin", "member"]}>
-            <Button onClick={openCreateForm}>New person</Button>
-          </RequireRole>
-        </div>
+        <RequireRole roles={["admin", "member"]}>
+          <Button onClick={openCreateForm}>New person</Button>
+        </RequireRole>
       </div>
 
-      <RoleFilterTabs value={typeFilter} onValueChange={setTypeFilter} />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Select value={pagination.sort} onValueChange={pagination.setSort}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={pagination.order} onValueChange={(v) => pagination.setOrder(v as SortOrder)}>
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Order" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="asc">Ascending</SelectItem>
-            <SelectItem value="desc">Descending</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={pagination.deleted}
-          onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="false">Active</SelectItem>
-            <SelectItem value="true">Deleted</SelectItem>
-            <SelectItem value="all">All</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <PeopleFilterBar
+        typeFilter={typeFilter}
+        onTypeFilterChange={setTypeFilter}
+        search={pagination.search}
+        onSearchChange={pagination.setSearch}
+        sort={pagination.sort}
+        onSortChange={pagination.setSort}
+        order={pagination.order}
+        onOrderChange={(v: SortOrder) => pagination.setOrder(v)}
+        deleted={pagination.deleted}
+        onDeletedChange={(v: DeletedFilter) => pagination.setDeleted(v)}
+      />
 
       {isLoading ? (
         <LoadingState message="Loading people..." />
@@ -199,48 +154,14 @@ export default function PeoplePage() {
             onRestore={handleRestore}
           />
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <span>Rows per page</span>
-              <Select
-                value={String(pagination.perPage)}
-                onValueChange={(v) => pagination.setPerPage(Number(v))}
-              >
-                <SelectTrigger className="w-16">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PER_PAGE_OPTIONS.map((size) => (
-                    <SelectItem key={size} value={String(size)}>
-                      {size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={pagination.prevPage}
-                disabled={pagination.page <= 1}
-              >
-                Previous
-              </Button>
-              <span>
-                Page {pagination.page} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={pagination.nextPage}
-                disabled={pagination.page >= totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <PaginationControls
+            page={pagination.page}
+            totalPages={totalPages}
+            perPage={pagination.perPage}
+            onPrevPage={pagination.prevPage}
+            onNextPage={pagination.nextPage}
+            onPerPageChange={pagination.setPerPage}
+          />
         </>
       )}
 

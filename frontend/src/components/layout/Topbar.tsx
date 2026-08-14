@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/features/auth/useAuth";
+import MobileNav from "./MobileNav";
 import NotificationBell from "./NotificationBell";
 
 function initials(username: string) {
@@ -28,7 +29,7 @@ export default function Topbar() {
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4 shadow-none">
-      <div />
+      <MobileNav />
       <div className="flex items-center gap-2">
         <NotificationBell />
         <DropdownMenu>
@@ -39,7 +40,9 @@ export default function Topbar() {
                   {user ? initials(user.username) : "?"}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium">{user?.username ?? "Account"}</span>
+              <span className="hidden text-sm font-medium sm:inline">
+                {user?.username ?? "Account"}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">

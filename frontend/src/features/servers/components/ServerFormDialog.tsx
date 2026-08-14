@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { EnvironmentPicker } from "@/components/EnvironmentPicker";
 import { ConflictState } from "@/components/state/ConflictState";
-import { ApiError } from "@/api/errors";
+import { ApiError, apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { useEnvironments } from "@/hooks/useEnvironments";
 import { useCreateServer, useServer, useUpdateServer, type Server } from "@/hooks/useServers";
@@ -226,8 +226,11 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
    * visible to the user.
    */
   function applyServerError(err: unknown): void {
+    const title = isEdit ? "Couldn't update server" : "Couldn't create server";
+
     if (!(err instanceof ApiError)) {
       setFormError("Something went wrong. Please try again.");
+      toast({ title, description: apiErrorMessage(err), variant: "destructive" });
       return;
     }
 
@@ -246,11 +249,13 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
       }
       if (Object.keys(nextErrors).length > 0) {
         setFieldErrors(nextErrors);
+        toast({ title, description: "Check the highlighted fields below.", variant: "destructive" });
         return;
       }
     }
 
     setFormError(err.message);
+    toast({ title, description: err.message, variant: "destructive" });
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -391,15 +396,17 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
             </div>
 
             <div className="space-y-1">
-              <Label>Environment</Label>
+              <Label htmlFor="environment">Environment</Label>
               {isEdit ? (
                 <Input
+                  id="environment"
                   value={environments.find((e) => e.id === environmentId)?.name ?? "—"}
                   disabled
                   readOnly
                 />
               ) : (
                 <EnvironmentPicker
+                  id="environment"
                   value={environmentId}
                   onChange={setEnvironmentId}
                   placeholder="Select an environment"
@@ -449,12 +456,12 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label>Service type</Label>
+                  <Label htmlFor="service_type">Service type</Label>
                   <Select
                     value={serviceType}
                     onValueChange={(v) => setServiceType(v as (typeof SERVICE_TYPES)[number])}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="service_type">
                       <SelectValue placeholder="Select..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -470,12 +477,12 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
                   )}
                 </div>
                 <div className="space-y-1">
-                  <Label>Access method</Label>
+                  <Label htmlFor="access_method">Access method</Label>
                   <Select
                     value={accessMethod}
                     onValueChange={(v) => setAccessMethod(v as (typeof ACCESS_METHODS)[number])}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="access_method">
                       <SelectValue placeholder="Select..." />
                     </SelectTrigger>
                     <SelectContent>

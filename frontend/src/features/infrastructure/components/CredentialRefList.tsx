@@ -2,6 +2,7 @@ import { useState } from "react";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
+import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import {
   useCredentialReferences,
@@ -51,6 +52,13 @@ export default function CredentialRefList({ serverId, manageable = false }: Prop
     if (!deletingReference) return;
     deleteCredentialReference.mutate(deletingReference.id, {
       onSuccess: () => toast({ title: "Credential reference deleted" }),
+      onError: (err) => {
+        toast({
+          title: "Couldn't delete credential reference",
+          description: apiErrorMessage(err),
+          variant: "destructive",
+        });
+      },
     });
   }
 

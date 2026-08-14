@@ -291,7 +291,91 @@ name at (no path drift found). `usePagination` is actively consumed by eight lis
 `SchedulePage`, `ActivityPage` — verified by grep) — note its own header comment ("Not wired into
 any page yet", `usePagination.ts:27-31`) is stale relative to current usage; flagged here since
 it's a source-code claim, not a `decisions.md`/`progress.md` one, so it isn't in the Discrepancies
-section.
+section. **Still stale as of Part 28** — no Part 28 sub-ticket touched `usePagination.ts` itself
+(confirmed: not in the Part 28 diff), so this comment remains inaccurate; unrelated to decision #13's
+separate URL-state gap.
+
+### 3.4.1 Part 28 shared foundation pieces (added 2026-08-14, Parts 28a/28d/28e/28f)
+
+Six shared pieces were added during UI/UX Polish Phase 1 (Shared Foundations), following the
+same "build once, reuse everywhere" pattern as §3.4's foundation table:
+
+| Piece | File | Built in |
+|---|---|---|
+| `MobileNav` | `frontend/src/components/layout/MobileNav.tsx` | Part 28a |
+| `Sheet` (shadcn/ui primitive) | `frontend/src/components/ui/sheet.tsx` | Part 28a |
+| `NAV_ITEMS` (shared nav list) | `frontend/src/components/layout/nav-items.ts` | Part 28a |
+| `FilterBar` | `frontend/src/components/FilterBar.tsx` | Part 28e |
+| `PaginationControls` | `frontend/src/components/PaginationControls.tsx` | Part 28f |
+| `apiErrorMessage()` | `frontend/src/api/errors.ts:58-60` | Part 28d |
+
+**`MobileNav`/`Sheet` — responsive navigation** (`frontend/src/components/layout/MobileNav.tsx:1-66`):
+`Sidebar.tsx` is desktop-only (`hidden ... md:flex`, `frontend/src/components/layout/Sidebar.tsx:7`);
+below the `md` breakpoint, `Topbar.tsx:32` renders `<MobileNav />` instead, which opens a left-side
+`Sheet` (`MobileNav.tsx:20-38`, built on `@radix-ui/react-dialog` via the new
+`frontend/src/components/ui/sheet.tsx` primitive — the same Radix-primitive pattern as every other
+shadcn/ui component in `components/ui/`, per §1's "Radix primitives" claim). Both `Sidebar.tsx:3` and
+`MobileNav.tsx:14` import the same `NAV_ITEMS` array from the new
+`frontend/src/components/layout/nav-items.ts:21-32` — previously `Sidebar.tsx` hardcoded this list
+inline; it's now the single source of both nav surfaces, matching decision #4's dedup pattern.
+
+**`FilterBar` — shared filter-row layout** (`frontend/src/components/FilterBar.tsx:10-15`): a thin
+`forwardRef` wrapper applying one consistent `flex flex-wrap items-center gap-2` container, not a new
+control type — callers compose their own `Select`/`Input`/picker children, the same
+composition style as `Card`/`CardContent` (component's own doc-comment,
+`FilterBar.tsx:4-9`). Adopted by three call sites: `ActivityFilterBar.tsx:58` (Activity),
+`ResourceFilterBar.tsx:31` (Resources), and the new `PeopleFilterBar.tsx:57` (People — see below).
+Clients, Projects, Environments, and Servers' filter rows were **not** migrated to `FilterBar` in
+Part 28 — they still render their own inline `<div className="flex flex-wrap items-center gap-2">`
+wrapper (e.g. unchanged in `ClientsPage.tsx`), so `FilterBar` adoption is partial, not universal, as
+of Part 28f. A future polish ticket could finish this consolidation; not claimed as done here.
+
+**`PaginationControls` — shared pagination footer** (`frontend/src/components/PaginationControls.tsx:28-68`):
+Previous/Next buttons + "Page X of Y" + a per-page `Select` (default options `[10, 20, 50, 100]`,
+`PaginationControls.tsx:10,19`), consuming `usePagination`'s return shape directly as props. Adopted
+by all eight `usePagination`-consuming list pages named in §3.4 above (verified by grep,
+`frontend/src/features/{clients,projects,environments,servers,resources,people,schedule,activity}/*Page.tsx`
+each now import `PaginationControls` from `@/components/PaginationControls`) — each previously
+hand-rolled its own copy of this same Previous/Next/per-page block inline (e.g.
+`PeoplePage.tsx` before Part 28 had ~40 lines of inline `Select`/`Button` markup for this, per the
+Part 28 diff; now a single `<PaginationControls .../>` call).
+
+**`apiErrorMessage()` — centralized error-to-toast-description helper**
+(`frontend/src/api/errors.ts:57-60`): `err instanceof ApiError ? err.message : "Something went wrong.
+Please try again."` — a one-line normalizer so every mutation's `onError` toast gets the same
+fallback wording instead of each call site (or, before Part 28, `PeoplePage.tsx` alone) redefining an
+identical local function. Verified by grep: imported in 18 feature files plus its own declaration
+file, covering every form dialog (`ClientFormDialog.tsx`, `ProjectFormDialog.tsx`,
+`EnvironmentFormDialog.tsx`, `ServerFormDialog.tsx`, `PersonFormDialog.tsx`, `ScheduleFormDialog.tsx`,
+`ResourceEditor.tsx`, `ResourceMetadataDialog.tsx`, `CredentialReferenceFormDialog.tsx`) and every
+list/detail page with delete/restore or roster-style mutations (`ClientsPage.tsx`, `ProjectsPage.tsx`,
+`EnvironmentsPage.tsx`, `ServersPage.tsx`, `ResourcesPage.tsx`, `PeoplePage.tsx`, `SchedulePage.tsx`,
+`ProjectRoster.tsx`, `CredentialRefList.tsx`, `PersonDetailDialog.tsx`). See `decisions.md` for the
+"every mutation gets onSuccess + onError" contract this helper supports.
+
+### 3.4.2 Label/control association fixes to the shared pickers (Part 28b)
+
+`ProjectPicker`, `EnvironmentPicker`, and `ServerPicker` (§3.4's foundation table) each gained two
+new optional passthrough props — `id?: string` and `"aria-label"?: string` — forwarded straight onto
+the underlying `SelectTrigger`:
+
+- `ProjectPicker.tsx:26-27,39-40,50`
+- `EnvironmentPicker.tsx:18-19,30-31,37`
+- `ServerPicker.tsx:29-30,40-41,56`
+
+Before Part 28, none of the three pickers' `SelectTrigger` accepted an `id` or `aria-label`, so a
+`<Label htmlFor="...">` pointing at one (or a bare `aria-label` where no visible `<Label>` exists, as
+in filter bars) had no element to actually associate with — a real, fixed accessibility defect, not
+a cosmetic one. This is the specific, narrow fix `decisions.md`'s dated 2026-08-14 correction entry
+refers to as the one genuine Tier-1 finding from the original Polish Discovery Audit's contrast/label
+group (that same entry's *contrast* findings did not reproduce on re-verification — see
+`decisions.md`). The same
+`id`/`aria-label` pattern was then applied at each call site across every form dialog and filter bar
+that renders one of these three pickers or its own inline `<Select>` (e.g.
+`ServerFormDialog.tsx:399-409,459-464,480-485`, `ResourceEditor.tsx:281-297`) — this call-site-level
+work is not itself a change to a documented shared component, so it is not separately cited
+file-by-file here; grep `aria-label=` / `htmlFor=` across `frontend/src/features/**` to see the full
+set.
 
 ### 3.5 Activity module — frontend wiring (added 2026-08-13, Part 27b)
 

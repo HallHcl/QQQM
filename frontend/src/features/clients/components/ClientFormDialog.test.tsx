@@ -7,6 +7,7 @@ import type { Client } from "@/types";
 const getMock = vi.fn();
 const postMock = vi.fn();
 const patchMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -19,6 +20,10 @@ vi.mock("@/api/client", async () => {
     },
   };
 });
+
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
 
 const SAMPLE_CLIENT: Client = {
   id: "1",
@@ -63,6 +68,7 @@ describe("ClientFormDialog — create", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
   });
 
   it("blocks submit with a client-side error when name is empty", async () => {
@@ -73,6 +79,11 @@ describe("ClientFormDialog — create", () => {
     expect(await screen.findByText("Name is required.")).toBeInTheDocument();
     expect(postMock).not.toHaveBeenCalled();
     expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("associates the Status label with its select trigger for screen readers", () => {
+    renderDialog();
+    expect(screen.getByLabelText("Status")).toHaveAttribute("role", "combobox");
   });
 
   it("submits the mutation with the entered values and invalidates the clients query on success", async () => {
@@ -89,6 +100,7 @@ describe("ClientFormDialog — create", () => {
     expect(path).toBe("/api/clients");
     expect(options.body).toMatchObject({ name: "New Co", status: "active" });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["clients"] });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Client created" });
   });
 
   it("surfaces a server-side validation error against the relevant field", async () => {
@@ -104,6 +116,27 @@ describe("ClientFormDialog — create", () => {
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     expect(await screen.findByText("Name already in use")).toBeInTheDocument();
+    expect(toastMock).toHaveBeenCalledWith({
+      title: "Couldn't create client",
+      description: "Check the highlighted fields below.",
+      variant: "destructive",
+    });
+  });
+
+  it("shows an error toast for an unexpected (non-field) failure", async () => {
+    postMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
+    renderDialog();
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "New Co" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith({
+        title: "Couldn't create client",
+        description: "boom",
+        variant: "destructive",
+      });
+    });
   });
 });
 
@@ -112,6 +145,7 @@ describe("ClientFormDialog — edit", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
     getMock.mockResolvedValue(ok(SAMPLE_CLIENT));
   });
 
@@ -153,6 +187,9 @@ describe("ClientFormDialog — edit", () => {
       screen.getByText("Client was modified by someone else; refresh and try again")
     ).toBeInTheDocument();
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
+    // A stale-write conflict routes to the dedicated ConflictState UI instead
+    // of a toast — matches the Schedule reference pattern's own carve-out.
+    expect(toastMock).not.toHaveBeenCalled();
 
     // "Keep my changes & retry" resubmits with the SAME name the user typed —
     // proving the in-progress edit survived the conflict rather than being

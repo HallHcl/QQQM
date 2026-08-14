@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ProjectPicker } from "@/components/ProjectPicker";
 import { ConflictState } from "@/components/state/ConflictState";
 import { VpnResourcePicker } from "./VpnResourcePicker";
-import { ApiError } from "@/api/errors";
+import { ApiError, apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { useProjects } from "@/hooks/useProjects";
 import {
@@ -130,14 +130,18 @@ export default function EnvironmentFormDialog({ open, onOpenChange, environment 
    * branch leaves something visible to the user.
    */
   function applyServerError(err: unknown): void {
+    const title = isEdit ? "Couldn't update environment" : "Couldn't create environment";
+
     if (!(err instanceof ApiError)) {
       setFormError("Something went wrong. Please try again.");
+      toast({ title, description: apiErrorMessage(err), variant: "destructive" });
       return;
     }
 
     if (err.status === 409) {
       if (err.message === DUPLICATE_NAME_MESSAGE) {
         setFieldErrors({ name: err.message });
+        toast({ title, description: err.message, variant: "destructive" });
         return;
       }
       captureConflict(err);
@@ -154,11 +158,13 @@ export default function EnvironmentFormDialog({ open, onOpenChange, environment 
       }
       if (Object.keys(nextErrors).length > 0) {
         setFieldErrors(nextErrors);
+        toast({ title, description: "Check the highlighted fields below.", variant: "destructive" });
         return;
       }
     }
 
     setFormError(err.message);
+    toast({ title, description: err.message, variant: "destructive" });
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -257,15 +263,17 @@ export default function EnvironmentFormDialog({ open, onOpenChange, environment 
             </div>
 
             <div className="space-y-1">
-              <Label>Project</Label>
+              <Label htmlFor="project">Project</Label>
               {isEdit ? (
                 <Input
+                  id="project"
                   value={projects.find((p) => p.id === projectId)?.name ?? "—"}
                   disabled
                   readOnly
                 />
               ) : (
                 <ProjectPicker
+                  id="project"
                   value={projectId}
                   onChange={setProjectId}
                   placeholder="Select a project"

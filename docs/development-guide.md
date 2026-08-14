@@ -1,10 +1,12 @@
 # QQM — Development Guide (Rules for the Coding Agent)
 
-This document is a checklist of rules distilled from ~26 parts of this project's
-actual practice. It is written FOR the coding agent (VSCode Agent / whichever
-assistant implements tickets), not as project history — for the "why," see
-`decisions.md`. For system structure, see `architecture.md`. For the API contract,
-see `api-spec.md`. For what's done and what's next, see `progress.md`.
+This document is a checklist of rules distilled from this project's actual
+practice, through Part 28f (Shared UX Foundations Polish complete) — Frontend
+Functional Complete (8/8 modules) plus UI/UX Polish Phase 1. It is written FOR the
+coding agent (VSCode Agent / whichever assistant implements tickets), not as
+project history — for the "why," see `decisions.md`. For system structure, see
+`architecture.md`. For the API contract, see `api-spec.md`. For what's done and
+what's next, see `progress.md`.
 
 If any instruction in a specific ticket conflicts with this guide, the ticket's
 explicit instruction wins for that ticket — but flag the conflict in your report
@@ -80,9 +82,17 @@ spread further.
 Razer-inspired dark theme: near-black `#0A0A0A` background, `#44D62C` green accent,
 sharp corners, Inter font, no shadows, existing shadcn/ui primitives and Tailwind
 semantic tokens. Match the layout/interaction pattern of the most similar
-already-completed module rather than inventing new UI structure. This phase is
-functional wiring, not visual polish (see `decisions.md` #3 and #9) — that comes
-later, as its own separate phase, with different agent instructions.
+already-completed module rather than inventing new UI structure.
+
+**Note on phase**: this rule was written during the Frontend Functional Complete
+phase (Parts 19-27), when polish was explicitly out of scope (see `decisions.md` #3
+and #9). UI/UX Polish Phase 1 (Shared Foundations, Parts 28a-28f) has since
+completed — see `progress.md` — and did make deliberate, scoped visual/UX changes
+(new shared components, label/aria fixes, a responsive mobile nav). If your ticket
+is a Phase 2 module-polish ticket, follow that ticket's own instructions on what
+"redesign" latitude you have rather than this rule's original functional-wiring-only
+framing; if your ticket is ordinary functional/bugfix work outside the polish track,
+this rule's original intent (don't redesign incidentally) still applies.
 
 ## 6. Verify every downstream consumer before changing a hook's shape or signature.
 

@@ -6,6 +6,7 @@ import ProjectRoster from "./ProjectRoster";
 const getMock = vi.fn();
 const postMock = vi.fn();
 const deleteMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -19,8 +20,20 @@ vi.mock("@/api/client", async () => {
   };
 });
 
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
+
 function ok<T>(data: T) {
   return { data, error: undefined, response: new Response(null, { status: 200 }) };
+}
+
+function apiError(status: number, message: string) {
+  return {
+    data: undefined,
+    error: { error: { message } },
+    response: new Response(null, { status }),
+  };
 }
 
 const ROSTER_ENTRY = {
@@ -83,6 +96,19 @@ describe("ProjectRoster", () => {
     getMock.mockReset();
     postMock.mockReset();
     deleteMock.mockReset();
+    toastMock.mockClear();
+  });
+
+  it("associates the Person and Role labels with their controls for screen readers", async () => {
+    mockGetByPath({
+      roster: ok([]),
+      clientPeople: ok([CLIENT_PERSON_1, CLIENT_PERSON_3]),
+    });
+
+    renderRoster();
+
+    expect(await screen.findByLabelText("Person")).toHaveAttribute("role", "combobox");
+    expect(screen.getByLabelText("Role")).toBeInTheDocument();
   });
 
   it("renders the current roster with each person's role", async () => {
@@ -160,6 +186,33 @@ describe("ProjectRoster", () => {
       params: { path: { id: "p1" } },
       body: { people_id: "person3", role_in_project: "QA" },
     });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Person assigned" });
+  });
+
+  it("shows an error toast when assigning fails", async () => {
+    mockGetByPath({
+      roster: ok([]),
+      clientPeople: ok([CLIENT_PERSON_3]),
+    });
+    postMock.mockResolvedValue(apiError(500, "boom"));
+
+    renderRoster();
+    await waitFor(() => expect(getMock).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByRole("option", { name: "Margaret Hamilton" }));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Lead engineer"), {
+      target: { value: "QA" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^assign$/i }));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith({
+        title: "Couldn't assign person",
+        description: "boom",
+        variant: "destructive",
+      });
+    });
   });
 
   it("removes a person only after confirming, not immediately on click", async () => {
@@ -183,6 +236,30 @@ describe("ProjectRoster", () => {
     await waitFor(() => expect(deleteMock).toHaveBeenCalledTimes(1));
     expect(deleteMock).toHaveBeenCalledWith("/api/projects/{id}/people/{peopleId}", {
       params: { path: { id: "p1", peopleId: "person1" } },
+    });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Person removed from project" });
+  });
+
+  it("shows an error toast when removal fails", async () => {
+    mockGetByPath({
+      roster: ok([ROSTER_ENTRY]),
+      clientPeople: ok([CLIENT_PERSON_1]),
+    });
+    deleteMock.mockResolvedValue(apiError(500, "boom"));
+
+    renderRoster();
+    await screen.findByText("Ada Lovelace");
+
+    fireEvent.click(screen.getByRole("button", { name: /remove/i }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove" }));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith({
+        title: "Couldn't remove person",
+        description: "boom",
+        variant: "destructive",
+      });
     });
   });
 });

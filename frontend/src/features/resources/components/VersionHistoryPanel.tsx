@@ -2,6 +2,8 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/state/EmptyState";
+import { LoadingState } from "@/components/state/LoadingState";
 import { cn } from "@/lib/utils";
 import { useResourceVersion, useResourceVersions } from "@/hooks/useResourceVersions";
 
@@ -33,11 +35,11 @@ export default function VersionHistoryPanel({ resourceId, onRevert }: Props) {
   );
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading version history...</p>;
+    return <LoadingState message="Loading version history..." />;
   }
 
   if (versions.length === 0) {
-    return <p className="text-sm text-muted-foreground">No versions yet.</p>;
+    return <EmptyState title="No versions yet" />;
   }
 
   return (
@@ -92,7 +94,7 @@ export default function VersionHistoryPanel({ resourceId, onRevert }: Props) {
 
       <div className="rounded-md border border-border bg-surface p-4">
         {isDetailLoading ? (
-          <p className="text-sm text-muted-foreground">Loading version...</p>
+          <LoadingState message="Loading version..." />
         ) : selectedVersion ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">

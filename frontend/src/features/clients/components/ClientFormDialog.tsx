@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConflictState } from "@/components/state/ConflictState";
-import { ApiError } from "@/api/errors";
+import { ApiError, apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { useClient, useCreateClient, useUpdateClient } from "@/hooks/useClients";
 import { useConflictResolution } from "@/hooks/useConflictResolution";
@@ -125,14 +125,18 @@ export default function ClientFormDialog({ open, onOpenChange, client }: Props) 
    * branch leaves something visible to the user.
    */
   function applyServerError(err: unknown): void {
+    const title = isEdit ? "Couldn't update client" : "Couldn't create client";
+
     if (!(err instanceof ApiError)) {
       setFormError("Something went wrong. Please try again.");
+      toast({ title, description: apiErrorMessage(err), variant: "destructive" });
       return;
     }
 
     if (err.status === 409) {
       if (err.message === DUPLICATE_NAME_MESSAGE) {
         setFieldErrors({ name: err.message });
+        toast({ title, description: err.message, variant: "destructive" });
         return;
       }
       captureConflict(err);
@@ -149,11 +153,13 @@ export default function ClientFormDialog({ open, onOpenChange, client }: Props) 
       }
       if (Object.keys(nextErrors).length > 0) {
         setFieldErrors(nextErrors);
+        toast({ title, description: "Check the highlighted fields below.", variant: "destructive" });
         return;
       }
     }
 
     setFormError(err.message);
+    toast({ title, description: err.message, variant: "destructive" });
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -245,9 +251,9 @@ export default function ClientFormDialog({ open, onOpenChange, client }: Props) 
             </div>
 
             <div className="space-y-1">
-              <Label>Status</Label>
+              <Label htmlFor="status">Status</Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger>
+                <SelectTrigger id="status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

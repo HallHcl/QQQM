@@ -6,6 +6,7 @@ import type { ResourceListItem } from "@/hooks/useResources";
 
 const getMock = vi.fn();
 const patchMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -17,6 +18,10 @@ vi.mock("@/api/client", async () => {
     },
   };
 });
+
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
 
 const SAMPLE_RESOURCE: ResourceListItem = {
   id: "r1",
@@ -65,6 +70,7 @@ describe("ResourceMetadataDialog", () => {
   beforeEach(() => {
     getMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
     getMock.mockResolvedValue(ok(SAMPLE_RESOURCE));
   });
 
@@ -110,6 +116,7 @@ describe("ResourceMetadataDialog", () => {
       updated_at: "2026-01-02T00:00:00.000Z",
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["resources"] });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Resource updated" });
   });
 
   it("shows the conflict UI (not a generic error) on a stale-write 409, and does not lose the user's edit", async () => {
@@ -125,6 +132,7 @@ describe("ResourceMetadataDialog", () => {
     expect(
       screen.getByText("Resource was modified by someone else; refresh and try again")
     ).toBeInTheDocument();
+    expect(toastMock).not.toHaveBeenCalled();
 
     const freshResource = { ...SAMPLE_RESOURCE, updated_at: "2026-01-03T00:00:00.000Z" };
     getMock.mockResolvedValue(ok(freshResource));
@@ -152,5 +160,21 @@ describe("ResourceMetadataDialog", () => {
 
     expect(await screen.findByText("This record changed")).toBeInTheDocument();
     expect(screen.getByText("Some other 409 message")).toBeInTheDocument();
+  });
+
+  it("shows an error toast for an unexpected (non-conflict) failure", async () => {
+    patchMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
+    renderDialog();
+
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Deploy guide v2" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith({
+        title: "Couldn't update resource",
+        description: "boom",
+        variant: "destructive",
+      });
+    });
   });
 });

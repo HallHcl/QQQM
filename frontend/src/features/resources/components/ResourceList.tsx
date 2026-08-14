@@ -9,10 +9,6 @@ interface Props {
 }
 
 export default function ResourceList({ resources, selectedId, onSelect }: Props) {
-  if (resources.length === 0) {
-    return <p className="text-sm text-muted-foreground">No resources found.</p>;
-  }
-
   return (
     <ul className="space-y-1">
       {resources.map((resource) => {

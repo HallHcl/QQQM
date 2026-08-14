@@ -8,6 +8,7 @@ const getMock = vi.fn();
 const postMock = vi.fn();
 const deleteMock = vi.fn();
 const useAuthMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -24,6 +25,18 @@ vi.mock("@/api/client", async () => {
 vi.mock("@/features/auth/useAuth", () => ({
   useAuth: () => useAuthMock(),
 }));
+
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
+
+function apiError(status: number, message: string) {
+  return {
+    data: undefined,
+    error: { error: { message } },
+    response: new Response(null, { status }),
+  };
+}
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -91,6 +104,7 @@ describe("EnvironmentsPage", () => {
     postMock.mockReset();
     deleteMock.mockReset();
     useAuthMock.mockReset();
+    toastMock.mockClear();
     useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
   });
 
@@ -237,6 +251,27 @@ describe("EnvironmentsPage", () => {
       await waitFor(() =>
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["environments"] })
       );
+      expect(toastMock).toHaveBeenCalledWith({ title: "Environment deleted" });
+    });
+
+    it("shows an error toast when delete fails", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      mockGetByPath({ environments: okResult([SAMPLE_ENVIRONMENT]), projects: okResult([SAMPLE_PROJECT]) });
+      deleteMock.mockResolvedValue(apiError(500, "boom"));
+
+      renderPage();
+      await screen.findByText("Production");
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+      await waitFor(() => {
+        expect(toastMock).toHaveBeenCalledWith({
+          title: "Couldn't delete environment",
+          description: "boom",
+          variant: "destructive",
+        });
+      });
     });
 
     it("does not call the delete mutation when the confirmation is cancelled", async () => {
@@ -282,6 +317,27 @@ describe("EnvironmentsPage", () => {
       await waitFor(() =>
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["environments"] })
       );
+      expect(toastMock).toHaveBeenCalledWith({ title: "Environment restored" });
+    });
+
+    it("shows an error toast when restore fails", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      mockGetByPath({ environments: okResult([DELETED_ENVIRONMENT]), projects: okResult([SAMPLE_PROJECT]) });
+      postMock.mockResolvedValue(apiError(500, "boom"));
+
+      renderPage();
+      await screen.findByText("Staging");
+
+      fireEvent.click(screen.getByRole("button", { name: /restore/i }));
+      fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+
+      await waitFor(() => {
+        expect(toastMock).toHaveBeenCalledWith({
+          title: "Couldn't restore environment",
+          description: "boom",
+          variant: "destructive",
+        });
+      });
     });
 
     it("does not call the restore mutation when the confirmation is cancelled", async () => {

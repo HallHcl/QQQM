@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ResourcesPage from "./ResourcesPage";
 
@@ -104,12 +105,14 @@ function mockGetByPath(handlers: { resources?: unknown; versions?: unknown; reso
   });
 }
 
-function renderPage() {
+function renderPage(initialEntries = ["/resources"]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   const { unmount } = render(
     <QueryClientProvider client={queryClient}>
-      <ResourcesPage />
+      <MemoryRouter initialEntries={initialEntries}>
+        <ResourcesPage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return { invalidateSpy, unmount };
@@ -198,6 +201,35 @@ describe("ResourcesPage", () => {
       await waitFor(() => {
         const call = getMock.mock.calls.find(([path]) => path === "/api/resources");
         expect(call?.[1].params.query.page).toBe(2);
+      });
+    });
+
+    it("initializes type/project filters from the URL on load (bookmarked/shared URL support)", async () => {
+      mockGetByPath({ resources: ok(paginated([])) });
+      renderPage(["/resources?type=runbook&project_id=proj-1&search=deploy"]);
+
+      await waitFor(() => expect(getMock).toHaveBeenCalled());
+      const call = getMock.mock.calls.find(([path]) => path === "/api/resources");
+      expect(call?.[1].params.query).toMatchObject({
+        type: "runbook",
+        project_id: "proj-1",
+        search: "deploy",
+      });
+    });
+
+    it("writes the type filter to the URL when changed", async () => {
+      mockGetByPath({ resources: ok(paginated([])) });
+      renderPage();
+      await waitFor(() => expect(getMock).toHaveBeenCalled());
+
+      fireEvent.click(screen.getByRole("combobox", { name: /resource type/i }));
+      fireEvent.click(await screen.findByRole("option", { name: "Runbook" }));
+
+      await waitFor(() => {
+        const call = getMock.mock.calls
+          .filter(([path]) => path === "/api/resources")
+          .at(-1);
+        expect(call?.[1].params.query.type).toBe("runbook");
       });
     });
   });

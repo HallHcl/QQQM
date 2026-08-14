@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConflictState } from "@/components/state/ConflictState";
-import { ApiError } from "@/api/errors";
+import { ApiError, apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { usePerson, useCreatePerson, useUpdatePerson } from "@/hooks/usePeople";
 import { useConflictResolution } from "@/hooks/useConflictResolution";
@@ -127,8 +127,11 @@ export default function PersonFormDialog({ open, onOpenChange, person }: Props) 
    * shape supports it, everything else becomes a form-level message.
    */
   function applyServerError(err: unknown): void {
+    const title = isEdit ? "Couldn't update person" : "Couldn't create person";
+
     if (!(err instanceof ApiError)) {
       setFormError("Something went wrong. Please try again.");
+      toast({ title, description: apiErrorMessage(err), variant: "destructive" });
       return;
     }
 
@@ -147,11 +150,13 @@ export default function PersonFormDialog({ open, onOpenChange, person }: Props) 
       }
       if (Object.keys(nextErrors).length > 0) {
         setFieldErrors(nextErrors);
+        toast({ title, description: "Check the highlighted fields below.", variant: "destructive" });
         return;
       }
     }
 
     setFormError(err.message);
+    toast({ title, description: err.message, variant: "destructive" });
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -244,9 +249,9 @@ export default function PersonFormDialog({ open, onOpenChange, person }: Props) 
             </div>
 
             <div className="space-y-1">
-              <Label>Type</Label>
+              <Label htmlFor="type">Type</Label>
               <Select value={type} onValueChange={(v) => setType(v as PeopleType)}>
-                <SelectTrigger>
+                <SelectTrigger id="type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

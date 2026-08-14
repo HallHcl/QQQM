@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import {
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
+import { apiErrorMessage } from "@/api/errors";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import ServerFormDialog from "./components/ServerFormDialog";
@@ -60,8 +62,6 @@ const ACCESS_METHOD_LABELS: Record<string, string> = {
   web: "Web",
   other: "Other",
 };
-
-const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
 export default function ServersPage() {
   const pagination = usePagination({ initialSort: "display_name", initialOrder: "asc" });
@@ -105,6 +105,13 @@ export default function ServersPage() {
     if (!deletingServer) return;
     deleteServer.mutate(deletingServer.id, {
       onSuccess: () => toast({ title: "Server deleted" }),
+      onError: (err) => {
+        toast({
+          title: "Couldn't delete server",
+          description: apiErrorMessage(err),
+          variant: "destructive",
+        });
+      },
     });
   }
 
@@ -112,6 +119,13 @@ export default function ServersPage() {
     if (!restoringServer) return;
     restoreServer.mutate(restoringServer.id, {
       onSuccess: () => toast({ title: "Server restored" }),
+      onError: (err) => {
+        toast({
+          title: "Couldn't restore server",
+          description: apiErrorMessage(err),
+          variant: "destructive",
+        });
+      },
     });
   }
 
@@ -137,7 +151,7 @@ export default function ServersPage() {
 
       <div className="flex flex-wrap items-center gap-2">
         <Select value={pagination.sort} onValueChange={pagination.setSort}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40" aria-label="Sort by">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
@@ -152,7 +166,7 @@ export default function ServersPage() {
           value={pagination.order}
           onValueChange={(v) => pagination.setOrder(v as SortOrder)}
         >
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-32" aria-label="Sort order">
             <SelectValue placeholder="Order" />
           </SelectTrigger>
           <SelectContent>
@@ -164,7 +178,7 @@ export default function ServersPage() {
           value={pagination.deleted}
           onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
         >
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-32" aria-label="Status filter">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -259,48 +273,14 @@ export default function ServersPage() {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Rows per page</span>
-              <Select
-                value={String(pagination.perPage)}
-                onValueChange={(v) => pagination.setPerPage(Number(v))}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PER_PAGE_OPTIONS.map((size) => (
-                    <SelectItem key={size} value={String(size)}>
-                      {size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={pagination.prevPage}
-                disabled={pagination.page <= 1}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {pagination.page} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={pagination.nextPage}
-                disabled={pagination.page >= totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <PaginationControls
+            page={pagination.page}
+            totalPages={totalPages}
+            perPage={pagination.perPage}
+            onPrevPage={pagination.prevPage}
+            onNextPage={pagination.nextPage}
+            onPerPageChange={pagination.setPerPage}
+          />
         </>
       )}
 

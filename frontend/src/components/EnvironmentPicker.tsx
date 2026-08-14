@@ -15,6 +15,8 @@ interface Props {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  id?: string;
+  "aria-label"?: string;
 }
 
 /** Mirrors ProjectPicker's shape for the Server-create environment field. */
@@ -25,12 +27,14 @@ export function EnvironmentPicker({
   placeholder = "Environment",
   className,
   disabled,
+  id,
+  "aria-label": ariaLabel,
 }: Props) {
   const { data: environments = [] } = useEnvironments(projectId);
 
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={className}>
+      <SelectTrigger id={id} aria-label={ariaLabel} className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

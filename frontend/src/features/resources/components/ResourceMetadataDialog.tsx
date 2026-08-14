@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConflictState } from "@/components/state/ConflictState";
-import { ApiError } from "@/api/errors";
+import { ApiError, apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { useResource, useUpdateResource, type ResourceListItem } from "@/hooks/useResources";
 import { useConflictResolution } from "@/hooks/useConflictResolution";
@@ -79,8 +79,11 @@ export default function ResourceMetadataDialog({ open, onOpenChange, resource }:
    * always routed to ConflictState, no field-error branching needed.
    */
   function applyServerError(err: unknown): void {
+    const toastTitle = "Couldn't update resource";
+
     if (!(err instanceof ApiError)) {
       setFormError("Something went wrong. Please try again.");
+      toast({ title: toastTitle, description: apiErrorMessage(err), variant: "destructive" });
       return;
     }
 
@@ -94,11 +97,13 @@ export default function ResourceMetadataDialog({ open, onOpenChange, resource }:
       const messages = details?.fieldErrors?.title;
       if (messages?.length) {
         setFieldErrors({ title: messages[0] });
+        toast({ title: toastTitle, description: "Check the highlighted fields below.", variant: "destructive" });
         return;
       }
     }
 
     setFormError(err.message);
+    toast({ title: toastTitle, description: err.message, variant: "destructive" });
   }
 
   async function handleSubmit(event: FormEvent) {

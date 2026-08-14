@@ -7,6 +7,7 @@ import type { Person } from "@/types";
 const getMock = vi.fn();
 const postMock = vi.fn();
 const patchMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -19,6 +20,10 @@ vi.mock("@/api/client", async () => {
     },
   };
 });
+
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
 
 const SAMPLE_PERSON: Person = {
   id: "1",
@@ -65,6 +70,12 @@ describe("PersonFormDialog — create", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
+  });
+
+  it("associates the Type label with its select trigger for screen readers", () => {
+    renderDialog();
+    expect(screen.getByLabelText("Type")).toHaveAttribute("role", "combobox");
   });
 
   it("blocks submit with a client-side error when name is empty", async () => {
@@ -100,6 +111,7 @@ describe("PersonFormDialog — create", () => {
       notes: "Some notes",
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["people"] });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Person created" });
   });
 
   it("sends the selected type from the dropdown", async () => {
@@ -128,6 +140,11 @@ describe("PersonFormDialog — create", () => {
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     expect(await screen.findByText("Invalid email")).toBeInTheDocument();
+    expect(toastMock).toHaveBeenCalledWith({
+      title: "Couldn't create person",
+      description: "Check the highlighted fields below.",
+      variant: "destructive",
+    });
   });
 });
 
@@ -136,6 +153,7 @@ describe("PersonFormDialog — edit", () => {
     getMock.mockReset();
     postMock.mockReset();
     patchMock.mockReset();
+    toastMock.mockClear();
     getMock.mockResolvedValue(ok(SAMPLE_PERSON));
   });
 
@@ -180,6 +198,7 @@ describe("PersonFormDialog — edit", () => {
       screen.getByText("Person was modified by someone else; refresh and try again")
     ).toBeInTheDocument();
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
+    expect(toastMock).not.toHaveBeenCalled();
 
     const freshRecord = { ...SAMPLE_PERSON, updated_at: "2026-01-03T00:00:00.000Z" };
     getMock.mockResolvedValueOnce(ok(freshRecord));
@@ -217,5 +236,21 @@ describe("PersonFormDialog — edit", () => {
 
     await waitFor(() => expect(screen.queryByText("This record changed")).not.toBeInTheDocument());
     expect(screen.getByLabelText("Name")).toHaveValue("Alex Rivera (renamed by someone else)");
+  });
+
+  it("shows an error toast for an unexpected (non-conflict) failure", async () => {
+    patchMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
+    renderDialog(SAMPLE_PERSON);
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Alex Rivera Jr." } });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith({
+        title: "Couldn't update person",
+        description: "boom",
+        variant: "destructive",
+      });
+    });
   });
 });

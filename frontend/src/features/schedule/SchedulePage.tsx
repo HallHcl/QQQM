@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -13,7 +14,7 @@ import {
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
-import { ApiError } from "@/api/errors";
+import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { usePagination, type DeletedFilter, type SortOrder } from "@/hooks/usePagination";
 import {
@@ -33,16 +34,25 @@ const SORT_OPTIONS: { value: ScheduleSort; label: string }[] = [
   { value: "updated_at", label: "Updated" },
 ];
 
-const PER_PAGE_OPTIONS = [10, 20, 50, 100];
-
-function apiErrorMessage(err: unknown): string {
-  return err instanceof ApiError ? err.message : "Something went wrong. Please try again.";
-}
-
 export default function SchedulePage() {
   const pagination = usePagination({ initialSort: "scheduled_date", initialOrder: "asc" });
-  const [status, setStatus] = useState<string>("all");
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  // URL-synced the same way as pagination's own fields (see usePagination.ts)
+  // rather than local useState, so a refresh/shared URL reproduces the same
+  // status filter and calendar-day selection. Matches pre-migration behavior
+  // exactly: neither one resets the page on change. A malformed `date` value
+  // in the URL (unparseable as yyyy-MM-dd) falls back to "no day selected"
+  // rather than crashing.
+  const status = pagination.getParam("status") ?? "all";
+  const selectedDate = parseDateParam(pagination.getParam("date"));
+
+  function setStatus(value: string) {
+    pagination.setParams({ status: value === "all" ? undefined : value });
+  }
+
+  function setSelectedDate(value: Date | undefined) {
+    pagination.setParams({ date: value ? format(value, "yyyy-MM-dd") : undefined });
+  }
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<Schedule | undefined>(undefined);
@@ -151,7 +161,7 @@ export default function SchedulePage() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-40" aria-label="Schedule status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -164,7 +174,7 @@ export default function SchedulePage() {
             </Select>
 
             <Select value={pagination.sort} onValueChange={pagination.setSort}>
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="w-44" aria-label="Sort by">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -177,7 +187,7 @@ export default function SchedulePage() {
             </Select>
 
             <Select value={pagination.order} onValueChange={(v) => pagination.setOrder(v as SortOrder)}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-32" aria-label="Sort order">
                 <SelectValue placeholder="Order" />
               </SelectTrigger>
               <SelectContent>
@@ -190,7 +200,7 @@ export default function SchedulePage() {
               value={pagination.deleted}
               onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-32" aria-label="Status filter">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -229,48 +239,14 @@ export default function SchedulePage() {
                 onRestore={handleRestore}
               />
 
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <span>Rows per page</span>
-                  <Select
-                    value={String(pagination.perPage)}
-                    onValueChange={(v) => pagination.setPerPage(Number(v))}
-                  >
-                    <SelectTrigger className="w-16">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PER_PAGE_OPTIONS.map((size) => (
-                        <SelectItem key={size} value={String(size)}>
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={pagination.prevPage}
-                    disabled={pagination.page <= 1}
-                  >
-                    Previous
-                  </Button>
-                  <span>
-                    Page {pagination.page} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={pagination.nextPage}
-                    disabled={pagination.page >= totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
+              <PaginationControls
+                page={pagination.page}
+                totalPages={totalPages}
+                perPage={pagination.perPage}
+                onPrevPage={pagination.prevPage}
+                onNextPage={pagination.nextPage}
+                onPerPageChange={pagination.setPerPage}
+              />
             </>
           )}
         </div>
@@ -293,4 +269,10 @@ export default function SchedulePage() {
       />
     </div>
   );
+}
+
+function parseDateParam(raw: string | null): Date | undefined {
+  if (!raw) return undefined;
+  const parsed = parse(raw, "yyyy-MM-dd", new Date());
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }

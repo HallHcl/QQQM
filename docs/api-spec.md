@@ -222,8 +222,9 @@ Verified from each controller's `parseListQuery()` and the matching Zod `list*Qu
     Schedules) uses a **three-state** `deletedMode: "false" | "true" | "all"`
     (e.g. `backend/src/controllers/environments.controller.ts:33-37`), where `"all"` omits the
     `deleted_at` condition entirely and returns both.
-  - This is a real, verified asymmetry that neither `decisions.md` nor `progress.md` documents —
-    see the Needs Claude's attention note in the reporting summary.
+  - This is a real, verified asymmetry, and it **is** documented in both `decisions.md` (#11) and
+    `progress.md` (deleted-filter fix entry) — see those files for the frontend-side fix and
+    remaining backend-frozen caveat.
 - **Schedule's list is narrower in filters but wider in date range**: it has `project_id`,
   `status`, `from`, `to`, `deleted` — confirmed **no `search`, no `type`, no `assigned_to`
   filter** (`backend/src/validators/schedules.validator.ts:36-46`), consistent with

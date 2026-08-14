@@ -8,6 +8,7 @@ const getMock = vi.fn();
 const postMock = vi.fn();
 const deleteMock = vi.fn();
 const useAuthMock = vi.fn();
+const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -24,6 +25,18 @@ vi.mock("@/api/client", async () => {
 vi.mock("@/features/auth/useAuth", () => ({
   useAuth: () => useAuthMock(),
 }));
+
+vi.mock("@/hooks/use-toast", () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
+
+function apiError(status: number, message: string) {
+  return {
+    data: undefined,
+    error: { error: { message } },
+    response: new Response(null, { status }),
+  };
+}
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -72,6 +85,7 @@ describe("ClientsPage", () => {
     postMock.mockReset();
     deleteMock.mockReset();
     useAuthMock.mockReset();
+    toastMock.mockClear();
     useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
   });
 
@@ -161,6 +175,26 @@ describe("ClientsPage", () => {
       await waitFor(() =>
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["clients"] })
       );
+      expect(toastMock).toHaveBeenCalledWith({ title: "Client deleted" });
+    });
+
+    it("shows an error toast when delete fails", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      getMock.mockResolvedValue(okResult([ACTIVE_CLIENT]));
+      deleteMock.mockResolvedValue(apiError(500, "boom"));
+
+      renderPage();
+      await screen.findByText("Acme Corp");
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+
+      await waitFor(() => {
+        expect(toastMock).toHaveBeenCalledWith({
+          title: "Couldn't delete client",
+          description: "boom",
+          variant: "destructive",
+        });
+      });
     });
 
     it("hides the Delete action from a non-admin", async () => {
@@ -197,6 +231,26 @@ describe("ClientsPage", () => {
       await waitFor(() =>
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["clients"] })
       );
+      expect(toastMock).toHaveBeenCalledWith({ title: "Client restored" });
+    });
+
+    it("shows an error toast when restore fails", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      getMock.mockResolvedValue(okResult([DELETED_CLIENT]));
+      postMock.mockResolvedValue(apiError(500, "boom"));
+
+      renderPage();
+      await screen.findByText("Old Co");
+
+      fireEvent.click(screen.getByRole("button", { name: /restore/i }));
+
+      await waitFor(() => {
+        expect(toastMock).toHaveBeenCalledWith({
+          title: "Couldn't restore client",
+          description: "boom",
+          variant: "destructive",
+        });
+      });
     });
 
     it("hides the Restore action from a non-admin viewing a deleted client", async () => {

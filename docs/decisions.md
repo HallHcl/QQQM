@@ -304,11 +304,17 @@ for the distinction.
     is a pre-existing documentation error in the frozen backend surface — out of
     scope to fix (decision #1), noted here so a future reader isn't confused by
     the generated type technically allowing a value the controller doesn't honor.
-- **Activity's `sort` param is validated but never actually used** —
-  `activityLogs.validator.ts:21` accepts a `sort` param, but the service always
-  orders by `created_at` regardless of what's passed. Relevant for the Activity
-  module audit (Part 27a) — don't build sort-column UI for this endpoint expecting
-  it to have an effect.
+- **Activity's `sort` param is never validated at runtime at all — the entire list
+  validator is dead code.** `listActivityLogsQuerySchema`
+  (`activityLogs.validator.ts:18-29`, including its `sort` field at line 21) is
+  never imported anywhere else in the backend (confirmed by project-wide grep —
+  zero references outside its own declaration file), and `activityLogs.routes.ts`
+  attaches no validation middleware at all. The controller hand-parses the query
+  itself and never reads `req.query.sort`
+  (`activityLogs.controller.ts:4-27`), and the service always orders by
+  `al.created_at` regardless of what's passed (`activityLogs.service.ts:83`).
+  Relevant for the Activity module audit (Part 27a) — don't build sort-column UI
+  for this endpoint expecting it to have an effect.
 - **`usePagination.ts`'s own header comment is stale** — it still says "not wired
   into any page yet" (a leftover from Part 19), but it's actually consumed by 7 list
   pages as of Schedule's completion. Harmless (doesn't affect behavior), but worth a
@@ -375,7 +381,7 @@ missed.
 
 ## 13. Known gap: `usePagination` has no URL-state persistence (2026-08-13, found during Activity build, Part 27b)
 
-**Status:** Known gap, deferred — cross-cutting, affects all 8 modules identically.
+**Status:** ✅ CLOSED 2026-08-15 — see resolution at the end of this entry.
 
 `frontend/src/hooks/usePagination.ts` holds `page`/`per_page`/`sort`/`order`/`search`/`deleted` in
 plain React `useState`, with no read from or write to the URL. Confirmed by a project-wide grep for
@@ -394,6 +400,71 @@ and then re-verifying all 8 downstream consumers (`ClientsPage`, `ProjectsPage`,
 `EnvironmentsPage`, `ServersPage`, `ResourcesPage`, `PeoplePage`, `SchedulePage`, `ActivityPage`)
 plus their test suites together — patching module-by-module would both duplicate the work 8 times
 and risk inconsistent URL-param shapes between modules.
+
+**Update, 2026-08-14 — known gap carried forward, unchanged through Part 28:** this gap was
+explicitly out of scope for all six Part 28 sub-tickets (28a-28f) per each ticket's own stated
+constraints, and no Part 28 diff touches `usePagination.ts` (confirmed). Still remains a future,
+separate, dedicated ticket, not addressed incidentally by any Shared Foundations Polish work.
+
+**Resolution, 2026-08-15 — URL-State Persistence ticket:**
+
+`usePagination.ts` now calls `useSearchParams()` (react-router-dom) directly instead of
+`useState`, deriving page/per_page/sort/order/search/deleted from the URL query string on every
+render (falling back to the hook's `initial*` options for missing or malformed values) and
+writing every change back to the URL via a `{ replace: true }` navigation.
+
+**Mechanism decision — extend `usePagination` itself, not a parallel `useUrlFilters` hook.** The
+hook now also exposes two generic escape-hatch methods, `getParam(key)`/`setParams(patch, {
+resetPage })`, so pages with their own additional filters (Resources' type/project, People's
+role, Schedule's status/calendar-day, Activity's 6 filters) route those URL reads/writes through
+the *same* `useSearchParams()` instance instead of calling `useSearchParams()` a second time
+themselves. This matters because react-router's `setSearchParams` closes over the params
+snapshot from the render it was obtained in — two independent `useSearchParams()` instances (or
+even two separate calls to the same instance) issued within one event handler race, and the
+second call silently clobbers the first's write. Concretely, this is why Activity's filter
+handlers were rewritten from two calls (`setEntityType(value); pagination.setPage(1);`) into one
+combined `pagination.setParams({ entity_type: value }, { resetPage: true })` — every
+page-affecting write for a given interaction is now issued as a single call.
+
+**Scope decision — pagination fields AND per-module filters, confirmed correct in practice.**
+Clients/Projects/Environments/Servers needed **zero** page-level code changes: every filter they
+have (search/sort/order/deleted) is already one of `usePagination`'s own fields, so the hook
+rewrite alone covers all 4 — confirmed by running their 63 pre-existing tests unmodified, all
+still passing. The remaining 4 modules (Resources, People, Schedule, Activity) each had
+additional local `useState` filter fields migrated to be derived from the URL via
+`getParam`/`setParams` instead, removing the local `useState` entirely (URL is now the single
+source of truth — no separate local/URL sync to keep consistent).
+
+**Navigation decision — `replace: true` for every write, uniformly, including Prev/Next page
+clicks.** The alternative (push for page navigation, replace for filters) was considered and
+rejected: it requires a special case for every interaction type (is a per-page-reset triggered by
+a filter change a "push" or a "replace"? what about typing into a live search box, which fires on
+every keystroke?) with no clear line. A uniform `replace: true` rule means: typing in a search box
+doesn't spam 20 history entries per word typed, and the browser Back button from any list page
+returns to wherever the user was before they landed on that list — normal, unsurprising behavior
+that doesn't require the user to step back through pagination one page at a time. Documented here
+per the ticket's "use your judgment and document the choice" instruction.
+
+**Malformed/out-of-range URL handling:** `page`/`per_page` are parsed and clamped (non-integer,
+non-positive, or non-numeric falls back to the hook's default); `deleted`/`order` are validated
+against their known enum and fall back to the hook's `initial*` option if the URL value isn't one
+of them; each page's own enum-typed filters (Activity's `entity_type`/`action`, Schedule's `date`)
+apply the same validate-or-fall-back-to-unset pattern at the page level. An out-of-range page
+number (e.g. `page=9999`) is accepted as-is (not clamped against `total_pages`, which isn't known
+until the API responds) — the existing Prev/Next disabled-state and empty-list-state logic already
+handle this gracefully, so no additional special-casing was needed.
+
+**Known, pre-existing, intentionally-unchanged inconsistency:** Activity's own filter changes
+already reset the page to 1 (built that way in Part 27b); Resources' type/project filters and
+People's role filter never did, and Schedule's status filter never did either — this was true
+before this ticket and remains true after it, preserved exactly per the ticket's "preserve every
+existing behavior" instruction rather than retroactively "fixed" as a drive-by change. If this
+inconsistency is ever worth resolving, it should be its own scoped ticket, not bundled into a
+state/URL-mechanism change.
+
+Verified: full test suite run twice, 494/494 passed both times (up from 475 pre-ticket; the +19
+is entirely new URL-sync/malformed-value test coverage in existing suites, no new test files),
+`tsc --noEmit` clean, zero backend files touched.
 
 ## 14. Deferred: Activity diff viewer — `old_value`/`new_value` not rendered (2026-08-13, Part 27a/27b)
 
@@ -450,6 +521,83 @@ pattern). This remains open regardless of whether Users CRUD (decision #7, BLOCK
 built — the two are unrelated: `changed_by` filters by `people.id`, never `users.id` (verified,
 `001_init.sql:201`).
 
+## 17. Server table-vs-card dual pattern is intentional (2026-08-14, decided during Part 28 scoping)
+
+**Status:** Decided, not touched by any Part 28 sub-ticket — a scoping-time decision, recorded here
+so a future polish ticket doesn't "fix" it as an inconsistency.
+
+`ServersPage.tsx` (Servers module, the **manage** surface) renders Servers as a `<Table>`
+(`frontend/src/features/servers/ServersPage.tsx:203-214` — `TableHeader`/`TableRow`/`TableCell`),
+while `InfrastructurePage.tsx` (Infrastructure module, the **browse** surface) renders the same
+underlying `Server` entity as a card grid (`frontend/src/features/infrastructure/InfrastructurePage.tsx` —
+`grid gap-4 sm:grid-cols-2 lg:grid-cols-3` of `ServerCard`). These are two different pages showing the
+same entity in two different visual forms.
+
+**This is a deliberate dual-pattern, not an inconsistency to unify.** The two pages serve different
+tasks: `ServersPage` is where an admin/member manages Servers directly (edit, delete, restore,
+credential references) — a table suits dense, sortable, action-per-row management. `InfrastructurePage`
+is a client → project → environment drill-down browse view for orienting within a project's
+infrastructure — a card grid suits at-a-glance browsing more than a dense table would. Collapsing them
+into one shared pattern would optimize one task at the expense of the other.
+
+**Do not build a shared `ServerTable`/`ServerCard` unification component** expecting to remove this
+difference — it was evaluated during Part 28 scoping and kept intentionally.
+
+## 18. Post-mutation feedback contract: every mutation gets both onSuccess and onError toasts (2026-08-14, implemented in Part 28d)
+
+**Status:** Standing contract for all future mutation code in this app, starting Part 28d.
+
+Before Part 28d, several mutations had an `onSuccess` toast but no `onError` toast — a failed
+mutation silently produced no user-facing feedback beyond whatever fallback error state the
+surrounding component happened to have (e.g. `ProjectRoster.tsx`'s add/remove-person actions,
+`PersonDetailDialog.tsx`'s add/remove-client actions, `CredentialRefList.tsx`'s delete action — all
+verified pre-Part-28 `onSuccess`-only via the Part 28 diff). Part 28d added `apiErrorMessage()`
+(`frontend/src/api/errors.ts:57-60`) specifically to make adding the missing `onError` toast a
+one-line change at each site, then applied it everywhere a mutation lacked one.
+
+**The contract, going forward:** every `useMutation` call site that surfaces a result to the user
+must supply both an `onSuccess` toast (or equivalent success feedback) and an `onError` toast using
+`apiErrorMessage(err)` for the description, and no "the surrounding form's inline error state already
+covers it" carve-out, since inline state and a toast serve different purposes (inline state explains
+*what* to fix; a toast confirms *that* the action failed, which matters even when the inline state is
+easy to miss, e.g. a delete button in a list row far from any form). **The one deliberate exception:**
+stale-write `409` optimistic-lock conflicts are routed to the dedicated `ConflictState` UI instead of
+an error toast, since that UI already communicates the conflict more specifically than a generic toast
+would (`ClientFormDialog.tsx:142`, `ProjectFormDialog.tsx:148`, `PersonFormDialog.tsx:138`); the
+`onSuccess` toast side of the contract still applies as normal.
+
+**How to apply:** any new mutation added in a future ticket (module polish or otherwise) must include
+both handlers from the start — do not defer the `onError` toast as a "nice to have," per the gap this
+decision was written to close.
+
+## 19. Correction — Polish Discovery Audit contrast findings were a computation error (2026-08-14, found and re-verified during Part 28b)
+
+**Status:** Correction to a prior audit's findings, not a code change — **no design tokens were
+modified**.
+
+The original Polish Discovery & Shared Foundations Audit (pre-28a) reported four Tier 1 findings.
+During Part 28b, two of them were independently re-verified twice (by hand and by script) and **do
+not reproduce**:
+
+- Audit finding #3 (`muted-foreground` on `surface`, originally reported ≈3.77:1, failing WCAG AA)
+  — re-measured at **7.43:1**, comfortably passing WCAG AA (≥4.5:1 for normal text).
+- Audit finding #4 (`danger` on `surface`, originally reported ≈2.7:1, failing WCAG AA) —
+  re-measured at **5.30:1**, comfortably passing WCAG AA.
+
+Both original figures were a **computation error in the audit itself**, not a real contrast defect in
+the theme — no token in `tailwind.config`/the CSS variable set was ever out of compliance. Because no
+real defect existed, **no token changes were made** in Part 28 for these two findings.
+
+**The audit's Tier 1 finding #7 (Select label association) was the only real, verified defect from
+that group of four** — this is the one fixed in Part 28b (see `architecture.md` §3.4.2: `id`/
+`aria-label` passthrough added to `ProjectPicker`/`EnvironmentPicker`/`ServerPicker` and wired at
+every call site).
+
+**Practical takeaway, consistent with `decisions.md` #12's Verifier AI lesson:** audit findings, like
+every other claim in this project, get re-verified against source (or, here, against a script)
+before anyone acts on them — this is a case where that discipline caught a genuine error in the audit
+itself, saving a token change that would have "fixed" a contrast ratio that was never actually broken.
+
 ---
 
 ## Open / deferred items tracker (quick reference)
@@ -459,9 +607,10 @@ built — the two are unrelated: `changed_by` filters by `people.id`, never `use
 | Users CRUD (backend + frontend) | 🚫 BLOCKED / FUTURE | See decision #7 |
 | `PersonDetailDialog` account-visibility UI (Part 25c) | ⏭️ Skipped | Depends on Users decision being unblocked |
 | Third role tier ("viewer") | ⏭️ Not scheduled | See decision #8 |
-| UI/UX visual polish phase | ⏭️ Not started | Starts after Frontend Functional Complete (all 8 modules) |
+| UI/UX visual polish phase — Phase 1 (Shared Foundations) | ✅ Complete 2026-08-14 | Parts 28a-28f — see `progress.md` |
+| UI/UX visual polish phase — Phase 2 (module-by-module) | ⏭️ Not started, not yet scoped | Follows Phase 1 |
 | `architecture.md` / `api-spec.md` | ✅ Generated and verified by coding agent | Every `decisions.md`/`progress.md` claim checked against source — no errors found; see decision #11 for newly-discovered inconsistencies |
-| `usePagination` URL-state persistence | ⏭️ Not scheduled | Cross-cutting, all 8 modules — see decision #13 |
+| `usePagination` URL-state persistence | ✅ Complete 2026-08-15 | Cross-cutting, all 8 modules — see decision #13 |
 | Activity diff viewer (`old_value`/`new_value` rendering) | ⏭️ Deferred | See decision #14 |
 | Cross-module "view history" links into Activity | ⏭️ Deferred | See decision #15 |
 | `PersonPicker` / `EntityPicker` components | ⏭️ Deferred | See decision #16 |

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ActivityPage from "./ActivityPage";
 
@@ -53,11 +54,13 @@ function mockGetByPath(handlers: { activity?: unknown } = {}) {
   });
 }
 
-function renderPage() {
+function renderPage(initialEntries = ["/activity"]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <ActivityPage />
+      <MemoryRouter initialEntries={initialEntries}>
+        <ActivityPage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -143,6 +146,32 @@ describe("ActivityPage", () => {
       });
     });
 
+    it("changing sort order (now inside the filter bar) re-requests with the new order and does NOT reset the page", async () => {
+      mockGetByPath({ activity: ok(paginated([LOG_1], 2)) });
+      renderPage();
+
+      await screen.findByText("create");
+      getMock.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
+      await waitFor(() => {
+        const call = getMock.mock.calls.find(([path]) => path === "/api/activity-logs");
+        expect(call?.[1].params.query.page).toBe(2);
+      });
+      getMock.mockClear();
+
+      // Combobox DOM order: entity type, action, order, rows-per-page.
+      fireEvent.click(screen.getAllByRole("combobox")[2]);
+      fireEvent.click(await screen.findByRole("option", { name: "Oldest first" }));
+
+      await waitFor(() => {
+        const call = getMock.mock.calls.find(([path]) => path === "/api/activity-logs");
+        expect(call?.[1].params.query.order).toBe("asc");
+        // Order is not one of the filters that resets pagination — matches
+        // pre-migration behavior (usePagination's setOrder never touches page).
+        expect(call?.[1].params.query.page).toBe(2);
+      });
+    });
+
     it("typing an entity ID re-requests with entity_id set", async () => {
       mockGetByPath({ activity: ok(paginated([LOG_1])) });
       renderPage();
@@ -156,6 +185,36 @@ describe("ActivityPage", () => {
         const call = getMock.mock.calls.find(([path]) => path === "/api/activity-logs");
         expect(call?.[1].params.query.entity_id).toBe("c1");
       });
+    });
+
+    it("initializes every filter from the URL on load (bookmarked/shared URL support)", async () => {
+      mockGetByPath({ activity: ok(paginated([])) });
+      renderPage([
+        "/activity?entity_type=client&entity_id=c1&action=update&changed_by=person-1&from=2026-01-01&to=2026-02-01&page=2&order=asc",
+      ]);
+
+      await waitFor(() => expect(getMock).toHaveBeenCalled());
+      const call = getMock.mock.calls.find(([path]) => path === "/api/activity-logs");
+      expect(call?.[1].params.query).toMatchObject({
+        entity_type: "client",
+        entity_id: "c1",
+        action: "update",
+        changed_by: "person-1",
+        from: "2026-01-01",
+        to: "2026-02-01",
+        page: 2,
+        order: "asc",
+      });
+    });
+
+    it("falls back to unset for a malformed entity_type/action in the URL (no crash)", async () => {
+      mockGetByPath({ activity: ok(paginated([])) });
+      renderPage(["/activity?entity_type=not-a-real-type&action=not-a-real-action"]);
+
+      await waitFor(() => expect(getMock).toHaveBeenCalled());
+      const call = getMock.mock.calls.find(([path]) => path === "/api/activity-logs");
+      expect(call?.[1].params.query.entity_type).toBeUndefined();
+      expect(call?.[1].params.query.action).toBeUndefined();
     });
   });
 

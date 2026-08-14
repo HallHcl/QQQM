@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConflictState } from "@/components/state/ConflictState";
-import { ApiError } from "@/api/errors";
+import { ApiError, apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { useClients } from "@/hooks/useClients";
 import { useProject, useCreateProject, useUpdateProject } from "@/hooks/useProjects";
@@ -131,14 +131,18 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Props
    * branch leaves something visible to the user.
    */
   function applyServerError(err: unknown): void {
+    const title = isEdit ? "Couldn't update project" : "Couldn't create project";
+
     if (!(err instanceof ApiError)) {
       setFormError("Something went wrong. Please try again.");
+      toast({ title, description: apiErrorMessage(err), variant: "destructive" });
       return;
     }
 
     if (err.status === 409) {
       if (err.message === DUPLICATE_NAME_MESSAGE) {
         setFieldErrors({ name: err.message });
+        toast({ title, description: err.message, variant: "destructive" });
         return;
       }
       captureConflict(err);
@@ -155,11 +159,13 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Props
       }
       if (Object.keys(nextErrors).length > 0) {
         setFieldErrors(nextErrors);
+        toast({ title, description: "Check the highlighted fields below.", variant: "destructive" });
         return;
       }
     }
 
     setFormError(err.message);
+    toast({ title, description: err.message, variant: "destructive" });
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -258,16 +264,17 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Props
             </div>
 
             <div className="space-y-1">
-              <Label>Client</Label>
+              <Label htmlFor="client">Client</Label>
               {isEdit ? (
                 <Input
+                  id="client"
                   value={clients.find((c) => c.id === clientId)?.name ?? "—"}
                   disabled
                   readOnly
                 />
               ) : (
                 <Select value={clientId} onValueChange={setClientId}>
-                  <SelectTrigger>
+                  <SelectTrigger id="client">
                     <SelectValue placeholder="Select a client" />
                   </SelectTrigger>
                   <SelectContent>

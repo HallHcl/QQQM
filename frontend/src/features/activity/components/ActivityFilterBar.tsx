@@ -1,3 +1,4 @@
+import { FilterBar } from "@/components/FilterBar";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -6,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { SortOrder } from "@/hooks/usePagination";
 import type { ActivityAction, EntityType } from "@/types";
 
 const ENTITY_TYPES: EntityType[] = [
@@ -36,6 +38,8 @@ interface Props {
   onFromChange: (from: string) => void;
   to: string;
   onToChange: (to: string) => void;
+  order: SortOrder | undefined;
+  onOrderChange: (order: SortOrder) => void;
 }
 
 export default function ActivityFilterBar({
@@ -51,14 +55,16 @@ export default function ActivityFilterBar({
   onFromChange,
   to,
   onToChange,
+  order,
+  onOrderChange,
 }: Props) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <FilterBar>
       <Select
         value={entityType ?? "all"}
         onValueChange={(value) => onEntityTypeChange(value === "all" ? undefined : (value as EntityType))}
       >
-        <SelectTrigger className="w-48">
+        <SelectTrigger className="w-48" aria-label="Entity type">
           <SelectValue placeholder="Entity type" />
         </SelectTrigger>
         <SelectContent>
@@ -75,7 +81,7 @@ export default function ActivityFilterBar({
         value={action ?? "all"}
         onValueChange={(value) => onActionChange(value === "all" ? undefined : (value as ActivityAction))}
       >
-        <SelectTrigger className="w-36">
+        <SelectTrigger className="w-36" aria-label="Action">
           <SelectValue placeholder="Action" />
         </SelectTrigger>
         <SelectContent>
@@ -85,6 +91,16 @@ export default function ActivityFilterBar({
               {a}
             </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={order} onValueChange={(v) => onOrderChange(v as SortOrder)}>
+        <SelectTrigger className="w-32" aria-label="Sort order">
+          <SelectValue placeholder="Order" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="asc">Oldest first</SelectItem>
+          <SelectItem value="desc">Newest first</SelectItem>
         </SelectContent>
       </Select>
 
@@ -117,6 +133,6 @@ export default function ActivityFilterBar({
         onChange={(e) => onToChange(e.target.value)}
         className="w-40"
       />
-    </div>
+    </FilterBar>
   );
 }
