@@ -10,6 +10,7 @@ import { ProjectPicker } from "@/components/ProjectPicker";
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
 import { useEnvironments } from "@/hooks/useEnvironments";
@@ -78,31 +79,37 @@ export default function InfrastructurePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Infrastructure</h1>
-        <div className="flex gap-2">
-          <Select value={clientId} onValueChange={setClientId}>
-            <SelectTrigger className="w-48" aria-label="Client">
-              <SelectValue placeholder="Client" />
-            </SelectTrigger>
-            <SelectContent>
-              {clients.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <ProjectPicker
-            value={projectId}
-            onChange={setProjectId}
-            clientId={clientId}
-            placeholder="Project"
-            className="w-48"
-            aria-label="Project"
-          />
-        </div>
-      </div>
+      {/* flex-wrap + gap-3 overrides the default header wrapper via the
+          className prop — needed because two wide picker controls
+          (Client + Project) would overflow at narrow laptop widths. */}
+      <PageHeader
+        title="Infrastructure"
+        className="flex flex-wrap items-center justify-between gap-3"
+        actions={
+          <>
+            <Select value={clientId} onValueChange={setClientId}>
+              <SelectTrigger className="w-48" aria-label="Client">
+                <SelectValue placeholder="Client" />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <ProjectPicker
+              value={projectId}
+              onChange={setProjectId}
+              clientId={clientId}
+              placeholder="Project"
+              className="w-48"
+              aria-label="Project"
+            />
+          </>
+        }
+      />
 
       {isLoading ? (
         <LoadingState message="Loading infrastructure..." />

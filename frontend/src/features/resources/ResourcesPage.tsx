@@ -15,6 +15,7 @@ import {
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { usePagination, type DeletedFilter, type SortOrder } from "@/hooks/usePagination";
@@ -139,12 +140,14 @@ export default function ResourcesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Resources</h1>
-        <RequireRole roles={["admin", "member"]}>
-          <Button onClick={() => setCreateOpen(true)}>New resource</Button>
-        </RequireRole>
-      </div>
+      <PageHeader
+        title="Resources"
+        actions={
+          <RequireRole roles={["admin", "member"]}>
+            <Button onClick={() => setCreateOpen(true)}>New resource</Button>
+          </RequireRole>
+        }
+      />
 
       <ResourceFilterBar
         search={pagination.search}

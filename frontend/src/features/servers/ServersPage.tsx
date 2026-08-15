@@ -24,6 +24,7 @@ import {
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { apiErrorMessage } from "@/api/errors";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -131,23 +132,25 @@ export default function ServersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Servers</h1>
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Search servers..."
-            value={pagination.search}
-            onChange={(e) => pagination.setSearch(e.target.value)}
-            className="w-64"
-          />
-          {/* Server create/update is admin+member (requireAnyRole), NOT
-              admin-only like Environments — verified against
-              backend/src/routes/servers.routes.ts. */}
-          <RequireRole roles={["admin", "member"]}>
-            <Button onClick={openCreateForm}>New server</Button>
-          </RequireRole>
-        </div>
-      </div>
+      <PageHeader
+        title="Servers"
+        actions={
+          <>
+            <Input
+              placeholder="Search servers..."
+              value={pagination.search}
+              onChange={(e) => pagination.setSearch(e.target.value)}
+              className="w-64"
+            />
+            {/* Server create/update is admin+member (requireAnyRole), NOT
+                admin-only like Environments — verified against
+                backend/src/routes/servers.routes.ts. */}
+            <RequireRole roles={["admin", "member"]}>
+              <Button onClick={openCreateForm}>New server</Button>
+            </RequireRole>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <Select value={pagination.sort} onValueChange={pagination.setSort}>

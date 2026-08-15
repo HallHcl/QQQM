@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuth } from "@/features/auth/useAuth";
 
 export default function ManageUsersPage() {
@@ -7,7 +8,7 @@ export default function ManageUsersPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Manage users</h1>
+      <PageHeader title="Manage users" />
 
       <Card>
         <CardHeader>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { usePagination, type DeletedFilter, type SortOrder } from "@/hooks/usePagination";
@@ -113,12 +114,14 @@ export default function PeoplePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">People</h1>
-        <RequireRole roles={["admin", "member"]}>
-          <Button onClick={openCreateForm}>New person</Button>
-        </RequireRole>
-      </div>
+      <PageHeader
+        title="People"
+        actions={
+          <RequireRole roles={["admin", "member"]}>
+            <Button onClick={openCreateForm}>New person</Button>
+          </RequireRole>
+        }
+      />
 
       <PeopleFilterBar
         typeFilter={typeFilter}

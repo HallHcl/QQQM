@@ -24,6 +24,7 @@ import {
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { apiErrorMessage } from "@/api/errors";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -121,20 +122,22 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Projects</h1>
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Search projects..."
-            value={pagination.search}
-            onChange={(e) => pagination.setSearch(e.target.value)}
-            className="w-64"
-          />
-          <RequireRole roles={["admin"]}>
-            <Button onClick={openCreateForm}>New project</Button>
-          </RequireRole>
-        </div>
-      </div>
+      <PageHeader
+        title="Projects"
+        actions={
+          <>
+            <Input
+              placeholder="Search projects..."
+              value={pagination.search}
+              onChange={(e) => pagination.setSearch(e.target.value)}
+              className="w-64"
+            />
+            <RequireRole roles={["admin"]}>
+              <Button onClick={openCreateForm}>New project</Button>
+            </RequireRole>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <Select value={pagination.sort} onValueChange={pagination.setSort}>

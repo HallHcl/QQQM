@@ -2,6 +2,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { usePagination } from "@/hooks/usePagination";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import type { ActivityAction, EntityType } from "@/types";
@@ -98,9 +99,7 @@ export default function ActivityPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Activity</h1>
-      </div>
+      <PageHeader title="Activity" />
 
       <div className="space-y-4">
         <ActivityFilterBar
