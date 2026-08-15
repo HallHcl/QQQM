@@ -13,6 +13,26 @@ export default {
       },
     },
     extend: {
+      // ---------------------------------------------------------------------------
+      // Type scale — governed tokens for data-dense laptop-first admin UI.
+      // See docs/design-tokens.md for the full reference.
+      // DO NOT do a blanket replace of existing text-{size} usage outside of
+      // PageHeader; per-module migration happens in later tickets.
+      // ---------------------------------------------------------------------------
+      fontSize: {
+        // Page title (h1-equivalent): all module page headers
+        "heading-page":    ["1.5rem",   { lineHeight: "2rem",    fontWeight: "600" }],
+        // Section heading (h2-equivalent)
+        "heading-section": ["1.125rem", { lineHeight: "1.75rem", fontWeight: "600" }],
+        // Card / subsection heading (h3-equivalent)
+        "heading-card":    ["1rem",     { lineHeight: "1.5rem",  fontWeight: "600" }],
+        // Body copy — existing Tailwind text-sm default, kept as-is
+        "body":            ["0.875rem", { lineHeight: "1.25rem" }],
+        // Form labels
+        "label":           ["0.875rem", { lineHeight: "1.25rem", fontWeight: "500" }],
+        // Captions / meta / timestamps
+        "caption":         ["0.75rem",  { lineHeight: "1rem" }],
+      },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
