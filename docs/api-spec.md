@@ -6,7 +6,8 @@ call what" and "which cross-cutting rule applies to which entity" quickly, with 
 future ticket can trust it instead of re-reading the raw backend source every time.
 
 Every role gate below was re-derived directly from the current `backend/src/routes/*.routes.ts`
-file for that module (not copied from `decisions.md`/`progress.md`'s prose), verified 2026-08-12.
+file for that module (not copied from `decisions.md`/`progress.md`'s prose), verified 2026-08-15,
+including a Part 29 re-check.
 All routes are mounted under `/api/...` behind the `auth` middleware
 (`backend/src/app.ts:42-52`, `backend/src/middleware/auth.ts`) unless noted otherwise — "Role gate"
 below is the *additional* gate on top of that base authentication requirement.

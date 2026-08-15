@@ -600,6 +600,103 @@ itself, saving a token change that would have "fixed" a contrast ratio that was 
 
 ---
 
+## 20. Prefer in-place content swaps over nested dialogs (2026-08-15, Part 29b; fixed 29-CLOSEOUT)
+
+**Status:** Fixed and standing convention.
+
+`PersonDetailDialog.tsx` was the first place in the project to render a `ConfirmDialog` from inside an
+already-open `Dialog`. The nested overlay produced a real visual bleed-through at mobile width, not a
+screenshot artifact — found in Part 29b. **Fixed in 29-CLOSEOUT**: the remove-client confirmation is
+now an in-place content-swap within the same `DialogContent` (a single `Dialog`/`DialogContent`, with
+the confirm-step markup conditionally rendered in place of the normal detail content via the
+`removingClient` state, `frontend/src/features/people/components/PersonDetailDialog.tsx:69-183`) —
+matching the Resources precedent, rather than mounting a second nested `Dialog`/`ConfirmDialog`. The
+pattern was also watched across the remaining Part 29 modules (Resources, Schedule,
+Environments/Servers/Infrastructure, Projects, and Activity); no recurrence was found anywhere else.
+
+Confirmed via a `role="dialog"` count assertion of exactly 1 during the confirm step
+(`frontend/src/features/people/components/PersonDetailDialog.test.tsx:144-148`), which is permanent
+automated regression coverage; the fix was additionally verified manually at both 1280px and 375px
+viewport widths per the screenshot-verification convention (decision #22).
+
+**Standing convention:** prefer swapping content inside the existing dialog over opening a nested
+`Dialog`/`ConfirmDialog`. If nesting is genuinely unavoidable in future work, open a dedicated
+shared-component ticket first; do not add an inline one-off fix.
+
+## 21. `relationship_type` on Person-to-Client links is a future feature (2026-08-15, Part 29b)
+
+**Status:** BLOCKED / FUTURE; not a bug in the current in-scope UI.
+
+The generated API and `useAddPersonClient` support an optional `relationship_type` field
+(`frontend/src/hooks/usePeople.ts:171-187`), and the remove-association copy preserves and describes
+an existing relationship note (`PersonDetailDialog.tsx:171-175`). The current add-client UI does not
+collect a relationship type, so it sends `relationship_type: undefined` by design
+(`PersonDetailDialog.test.tsx:97-104`).
+
+Whether this field is needed is a product decision. Do not expand the current People polish or add an
+ad hoc input; treat it in the same category as Users CRUD and schedule it only as a future feature.
+
+## 22. Dialog screenshot verification uses the viewport as the authority (2026-08-15, Part 29)
+
+**Status:** Standing verification convention.
+
+Playwright `fullPage: true` screenshots can create false bleed-through impressions for `position: fixed`
+dialogs on pages taller than the viewport. This was discovered in the Resources verification and
+confirmed by re-capture during Schedule verification. For dialog and overlay checks, use a viewport-only
+screenshot or scroll the target element into view; do not treat a full-page capture as authoritative for
+overlay layering.
+
+## 23. Toast-error-display pattern in form dialogs: typed-vs-unknown split is intentional (2026-08-15, confirmed 29-CLOSEOUT)
+
+**Status:** Confirmed intentional design — not a bug, not a gap to standardize away.
+
+`ClientFormDialog.tsx`, `ProjectFormDialog.tsx`, `PersonFormDialog.tsx`, and `ResourceMetadataDialog.tsx`
+each call `applyServerError(err: unknown)` and branch on `err instanceof ApiError`:
+
+- **Unrecognized/non-`ApiError` case** — falls back to `apiErrorMessage(err)` for the toast description
+  (`ClientFormDialog.tsx:130-134`, `ProjectFormDialog.tsx:145-149`, `PersonFormDialog.tsx:132-136`,
+  `ResourceMetadataDialog.tsx:84-88`).
+- **Typed `ApiError` case** (after the dedicated 409/conflict branch has already been handled) —
+  displays the raw `err.message` directly, not `apiErrorMessage(err)`
+  (`ClientFormDialog.tsx:161-162`, `ProjectFormDialog.tsx:176-177`, `PersonFormDialog.tsx:158-159`,
+  `ResourceMetadataDialog.tsx:105-106`), so the user sees the real, specific API message — e.g. a 409
+  duplicate-name detail or another server-supplied validation string — rather than a generic one.
+
+`ScheduleFormDialog.tsx` does not import or use `apiErrorMessage` at all (confirmed: only `ApiError` is
+imported, `ScheduleFormDialog.tsx:26`); it uses a fully manual inline fallback at both of its call sites
+— `description: err instanceof ApiError ? err.message : "Something went wrong. Please try again."`
+(`ScheduleFormDialog.tsx:173`, `ScheduleFormDialog.tsx:217`) — which is functionally equivalent to what
+`apiErrorMessage` does, just written out inline instead of calling the shared helper.
+
+**This is confirmed intentional, not a bug.** The toast contract established in decision #18 is "every
+mutation gets paired success/error feedback with an appropriately normalized message" — it does not
+require every branch to literally call `apiErrorMessage`. Displaying a typed `ApiError`'s own
+`err.message` raw is the *more* correct behavior for a recognized API error (it's already a
+server-authored, user-appropriate string), not a shortcut that skipped normalization.
+
+**How to apply:** do not "fix" `ScheduleFormDialog.tsx` to call `apiErrorMessage` for consistency, and
+do not flag the typed-vs-unknown split as inconsistent in a future audit — both are deliberate. If a
+future ticket adds a new form dialog's error handling, either approach (call `apiErrorMessage()`
+directly, or an equivalent inline `instanceof ApiError` ternary) satisfies decision #18's contract.
+
+---
+
+### Open observation (not a numbered decision — deferred, no fix planned)
+
+**Long unbroken names can overflow `DialogTitle` at narrow viewports.** Discovered incidentally in
+`PersonDetailDialog.tsx` during 29-CLOSEOUT's nested-dialog-fix regression testing: a person/entity name
+of roughly 40+ characters with no spaces (nothing for the browser to wrap on) can overflow the dialog's
+width at 375px, because `DialogTitle` (`frontend/src/components/ui/dialog.tsx:82-94`) applies no
+`truncate`/`break-words` handling — it renders `{person.name}` as plain text
+(`PersonDetailDialog.tsx:73`) with only `text-lg font-semibold leading-none tracking-tight`, no
+wrap/truncate utility class. **Confirmed not to occur with normal-length names.** Not fixed — this is
+flagged for a possible future dedicated UI-polish ticket if a consistent `DialogTitle` wrap/truncate
+standard is ever wanted app-wide (every dialog using `DialogTitle` would need the same fix, not just
+People's). Deliberately not given a number in the decisions series above, since it is an observation to
+track, not a settled architectural decision.
+
+---
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -608,9 +705,13 @@ itself, saving a token change that would have "fixed" a contrast ratio that was 
 | `PersonDetailDialog` account-visibility UI (Part 25c) | ⏭️ Skipped | Depends on Users decision being unblocked |
 | Third role tier ("viewer") | ⏭️ Not scheduled | See decision #8 |
 | UI/UX visual polish phase — Phase 1 (Shared Foundations) | ✅ Complete 2026-08-14 | Parts 28a-28f — see `progress.md` |
-| UI/UX visual polish phase — Phase 2 (module-by-module) | ⏭️ Not started, not yet scoped | Follows Phase 1 |
+| UI/UX visual polish phase — Phase 2 (module-by-module) | ✅ Complete 2026-08-15 | Parts 29a-29g — see `progress.md` |
 | `architecture.md` / `api-spec.md` | ✅ Generated and verified by coding agent | Every `decisions.md`/`progress.md` claim checked against source — no errors found; see decision #11 for newly-discovered inconsistencies |
 | `usePagination` URL-state persistence | ✅ Complete 2026-08-15 | Cross-cutting, all 8 modules — see decision #13 |
 | Activity diff viewer (`old_value`/`new_value` rendering) | ⏭️ Deferred | See decision #14 |
 | Cross-module "view history" links into Activity | ⏭️ Deferred | See decision #15 |
 | `PersonPicker` / `EntityPicker` components | ⏭️ Deferred | See decision #16 |
+| Nested dialog composition (`PersonDetailDialog`) | ✅ Fixed 29-CLOSEOUT | See decision #20 |
+| Person-client `relationship_type` input | ⏭️ BLOCKED / FUTURE | See decision #21 |
+| Toast-error-display typed-vs-unknown split | ✅ Confirmed intentional | See decision #23 |
+| `DialogTitle` overflow on long unbroken names | ⏭️ Open observation, no fix planned | See open observation after decision #23 |

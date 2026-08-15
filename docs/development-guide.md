@@ -1,8 +1,8 @@
 # QQM — Development Guide (Rules for the Coding Agent)
 
 This document is a checklist of rules distilled from this project's actual
-practice, through Part 28f (Shared UX Foundations Polish complete) — Frontend
-Functional Complete (8/8 modules) plus UI/UX Polish Phase 1. It is written FOR the
+practice, through Part 29g (module-by-module polish complete) plus URL-State Persistence — Frontend
+Functional Complete (8/8 modules) plus UI/UX Polish Phases 1 and 2. It is written FOR the
 coding agent (VSCode Agent / whichever assistant implements tickets), not as
 project history — for the "why," see `decisions.md`. For system structure, see
 `architecture.md`. For the API contract, see `api-spec.md`. For what's done and
@@ -69,7 +69,7 @@ ground truth.
 Check for an existing component/hook before building a new one:
 `ConfirmDialog`, `ConflictState` + `useConflictResolution`, `LoadingState` /
 `EmptyState` / `ErrorState`, `RequireAuth`, `RequireRole` + `useHasRole`,
-`usePagination`, `ProjectPicker`, `EnvironmentPicker`, `ServerPicker`, the Detail
+`usePagination`, `parseScheduledDate`, `ProjectPicker`, `EnvironmentPicker`, `ServerPicker`, the Detail
 View pattern (established by Projects, Part 21d).
 
 If a ticket's own audit reveals the same small piece of logic duplicated across
@@ -86,13 +86,13 @@ already-completed module rather than inventing new UI structure.
 
 **Note on phase**: this rule was written during the Frontend Functional Complete
 phase (Parts 19-27), when polish was explicitly out of scope (see `decisions.md` #3
-and #9). UI/UX Polish Phase 1 (Shared Foundations, Parts 28a-28f) has since
-completed — see `progress.md` — and did make deliberate, scoped visual/UX changes
-(new shared components, label/aria fixes, a responsive mobile nav). If your ticket
-is a Phase 2 module-polish ticket, follow that ticket's own instructions on what
-"redesign" latitude you have rather than this rule's original functional-wiring-only
-framing; if your ticket is ordinary functional/bugfix work outside the polish track,
-this rule's original intent (don't redesign incidentally) still applies.
+and #9). UI/UX Polish Phases 1 and 2 (Parts 28a-28f and 29a-29g) have since
+completed — see `progress.md` — and made deliberate, scoped visual/UX changes. If a
+future ticket explicitly continues the polish track, follow that ticket's own
+instructions on what "redesign" latitude you have rather than this rule's original
+functional-wiring-only framing; if your ticket is ordinary functional/bugfix work
+outside the polish track, this rule's original intent (don't redesign incidentally)
+still applies.
 
 ## 6. Verify every downstream consumer before changing a hook's shape or signature.
 
@@ -169,7 +169,15 @@ version-history UX, People's account-visibility question, Schedule's status-tran
 interaction), do not design the interaction yourself inside the audit — surface the
 open questions and wait for an explicit decision.
 
-## 11. Tests are a safety net sized to the risk, not a coverage target.
+## 11. Dialog composition and screenshot verification have standing rules.
+
+Prefer in-place content swaps over nesting a `Dialog` or `ConfirmDialog` inside an already-open
+dialog. If nested dialogs are genuinely unavoidable, stop and scope a dedicated shared-component
+ticket before adding an inline workaround. For dialog and overlay verification, use viewport-only or
+scroll-to-element screenshots; `fullPage: true` is not authoritative for fixed-position overlays on
+pages taller than the viewport.
+
+## 12. Tests are a safety net sized to the risk, not a coverage target.
 
 Match the depth of testing already established for similar prior work (list states,
 RBAC gating per action, payload correctness, 409 handling where applicable, cascade/
@@ -177,7 +185,7 @@ confirmation-copy assertions where relevant). Don't chase a coverage percentage 
 this project has deliberately kept the test layer "targeted," not exhaustive
 snapshot/integration testing (established explicitly in Part 19.1).
 
-## 12. When in doubt about a judgment call, make the call, state your reasoning explicitly, and flag it for review — don't silently pick one or block on asking.
+## 13. When in doubt about a judgment call, make the call, state your reasoning explicitly, and flag it for review — don't silently pick one or block on asking.
 
 This project moves fastest when the agent makes a reasonable, well-reasoned decision
 and clearly flags it (in "Decisions made" and, if it's a genuine toss-up, "Needs

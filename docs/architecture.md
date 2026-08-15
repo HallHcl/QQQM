@@ -1,7 +1,7 @@
 # QQM — System Architecture
 
 Verified directly from source (directory listings, actual imports, actual route/service/migration
-files) on 2026-08-12. Every non-trivial claim below cites the file (and line, where practical) it
+files) on 2026-08-15. Every non-trivial claim below cites the file (and line, where practical) it
 was verified against. Where this document's findings differ from `decisions.md` / `progress.md`,
 see **Discrepancies found** at the end — nothing here has been silently corrected.
 
@@ -391,11 +391,11 @@ same patterns as every other module rather than being a documented exception:
   (`useActivityLogs.ts:13-24`, `ActivityLogFilters` interface). `sort` is deliberately never sent —
   the hook's own header comment (`useActivityLogs.ts:8-12`) documents that it's dead at the
   controller layer.
-- **`usePagination` wired, but only its `page`/`perPage`/`order` pieces**: `ActivityPage.tsx:26`
+- **`usePagination` wired, but only its `page`/`perPage`/`order` pieces**: `ActivityPage.tsx:31`
   calls `usePagination({ initialOrder: "desc" })` and ignores `deleted`/`search`/`sort` — Activity
   has no soft-delete concept (append-only table) and its list endpoint has no `search` param
   (matches `api-spec.md`'s cross-cutting pagination notes). Page-size and next/prev controls render
-  at `ActivityPage.tsx:120-161`.
+  at `ActivityPage.tsx:136-148`.
 - **`ActivityFilterBar.tsx`** (`frontend/src/features/activity/components/ActivityFilterBar.tsx`,
   new component) renders the entity-type/action selects and entity-ID/changed-by/from/to inputs,
   replacing the old page's single hardcoded entity-type-only `<Select>`.
@@ -408,6 +408,22 @@ same patterns as every other module rather than being a documented exception:
   `decisions.md` for the dated entry recording this and Activity's other explicitly deferred items.
 
 ---
+
+### 3.6 Schedule date-only parsing utility (Part 29d)
+
+Schedule dates are database `DATE` values, but the API returns them as UTC-midnight ISO timestamps.
+The shared `parseScheduledDate()` helper in `frontend/src/hooks/useSchedules.ts:7-28` strips the
+time portion and parses the `yyyy-MM-dd` value as a local calendar date. This prevents viewers west of
+UTC from seeing the previous day when the value is formatted or matched by the calendar.
+
+The helper is a module-level shared pattern, not a one-off component fix: it is consumed by
+`SchedulePage.tsx:277`, `ScheduleCalendar.tsx:2,19-20`, `ScheduleList.tsx:14,63`,
+`ScheduleFormDialog.tsx:30,285`, and, as of the 29-CLOSEOUT fix,
+`NotificationBell.tsx:15,36,67` (`frontend/src/components/layout/NotificationBell.tsx`) — the bell's
+due/overdue schedule computation was found to still be using the bare `new Date(scheduled_date)`
+constructor after 29d introduced the helper for the Schedule module itself, producing the same
+timezone-off-by-a-day bug for viewers west of UTC; switching it to `parseScheduledDate()` made it the
+helper's 5th consumer. The backend schema and API contract were not changed.
 
 ## 4. Module relationships
 

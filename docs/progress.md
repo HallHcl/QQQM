@@ -1,6 +1,6 @@
 # QQM — Progress Tracker
 
-Last updated: after URL-State Persistence ticket (closes `decisions.md` #13) — 2026-08-15.
+Last updated: after Part 29 documentation batch update, final (post-29-CLOSEOUT) — 2026-08-15.
 
 See `decisions.md` for the reasoning behind blocked/skipped items, and
 `development-guide.md` for the rules every ticket follows.
@@ -10,8 +10,8 @@ See `decisions.md` for the reasoning behind blocked/skipped items, and
 ## Current status
 
 ```
-Current:  UI/UX Polish — Phase 1 (Shared Foundations) COMPLETE (28a-28f)
-Next:     UI/UX Polish — Phase 2 (module-by-module) — not yet scoped
+Current:  UI/UX Polish — Phase 2 (module-by-module) COMPLETE (29a-29g)
+Next:     Release/readiness checkpoint and deferred-item review — not yet scoped
 ```
 
 ---
@@ -151,6 +151,45 @@ intentionally left as-is.
 
 ---
 
+## UI/UX Polish — Phase 2: Module-by-module — ✅ COMPLETE (7 parts, 29a-29g)
+
+Part 29 applied the module-specific polish pass after Shared Foundations and URL-State Persistence.
+The backend remained frozen throughout.
+
+| Part | Scope |
+|---|---|
+| 29a | Clients — added the missing destructive-delete confirmation and verified the existing non-cascade behavior for Projects. |
+| 29b | People — added client-association loading feedback, destructive unlink confirmation, and the corresponding cascade-accurate copy; nested-dialog bleed-through and the optional `relationship_type` field were recorded as decisions/deferred work. |
+| 29c | Resources — clean verification; no functional defects found. The existing in-place version-history/editor flow was retained, and the full-page screenshot artifact was recorded as a verification-methodology issue. |
+| 29d | Schedule — fixed the production-affecting timezone bug by centralizing DATE-only parsing in `parseScheduledDate`; corrected calendar tests to assert local calendar days and re-verified state-machine behavior. |
+| 29e | Environments/Servers/Infrastructure — fixed the `VpnResourcePicker` label association; no other defects found. The empty Project picker was confirmed to be a test-data artifact, not a product bug. |
+| 29f | Projects — fixed the production-affecting display gap for Projects whose parent Client is soft-deleted by merging active and deleted client lookups, while preserving the Clients boolean-only filter constraint. |
+| 29g | Activity — added accessible labels for the UUID filter inputs and preserved the documented append-only, dead-`sort`, and controller-vs-service logging quirks; no backend or functional contract changes. |
+| 29-CLOSEOUT | Closeout pass fixing three issues found after 29a-29g: (1) `NotificationBell.tsx` was still computing due/overdue schedules with the bare `new Date(schedule.scheduled_date)` constructor instead of the timezone-safe `parseScheduledDate()` helper 29d introduced for the Schedule module itself, so the bell's own due-count could be off by a day for viewers west of UTC — fixed by switching it to `parseScheduledDate()`, making it the helper's 5th consumer (see `architecture.md` §3.6). (2) `PersonDetailDialog.tsx`'s nested-`ConfirmDialog`-inside-`Dialog` bleed-through (found in 29b, left unfixed at the time) was fixed via an in-place content-swap within the same `DialogContent`, matching the Resources precedent — see decision #20. (3) `npm run build` was failing with `TS2591` (`process` not found) in the new `useSchedules.test.ts`, because `tsconfig.app.json`'s `types` array only listed `vite/client`; fixed by adding `"node"` to that array. |
+
+The three genuine production-affecting/build-affecting defects found across this phase were Schedule
+timezone parsing (29d), Projects' soft-deleted-client display (29f), and the NotificationBell timezone
+bug (29-CLOSEOUT); the nested-dialog bleed-through (29b, fixed 29-CLOSEOUT) and the TS2591 build failure
+(29-CLOSEOUT) were also real, fixed defects. The remaining Part 29 changes were polish, accessibility,
+verification, or documentation decisions rather than backend/API work.
+
+**Current verification note (post-29-CLOSEOUT):** the frontend test inventory is 507 tests across 57
+files, confirmed by running the full suite: 507/507 passed. `npm run build`'s `TS2591` failure described
+above has been fixed (root cause: `tsconfig.app.json`'s `types` array didn't include `"node"`, so
+`process`/other Node globals weren't available to any file under `src`, including tests) — there is no
+live build failure as of this update.
+
+A previously-documented flake (`ServerFormDialog.test.tsx`) was cited across several of Part 29's own
+tickets, but did not reproduce in 3 consecutive full-suite runs during 29-CLOSEOUT (507/507 every time).
+A separate report claimed `ResourceEditor.test.tsx` flakes; that also did not reproduce. **Current
+status: no flake has been reproduced in the most recent verification for either file.** Neither claim
+should be treated as "fixed" — no root cause was ever identified for either one — and whether either
+file is genuinely intermittent under different conditions (CI load, parallelism) remains unconfirmed.
+
+**UI/UX Polish — Phase 2 (Module-by-module) Complete, including the 29-CLOSEOUT fixes above.**
+
+---
+
 ## Blocked / Deferred (not part of the linear module sequence)
 
 | Item | Status | See |
@@ -173,7 +212,7 @@ intentionally left as-is.
 | `docs/` central documentation (`decisions.md`, `progress.md`, `development-guide.md`, `architecture.md`, `api-spec.md`) | ✅ complete — all 5 files exist; `architecture.md`/`api-spec.md` generated + verified from source by the coding agent, then independently spot-checked by a separate Verifier AI pass (see `decisions.md` #12) |
 | UI/UX Polish — Phase 1 (Shared Foundations) | ✅ 2026-08-14 (Parts 28a-28f) |
 | `usePagination` URL-state persistence (`decisions.md` #13) | ✅ 2026-08-15 |
-| UI/UX Polish — Phase 2 (module-by-module) | ⬜ Not started — not yet scoped |
+| UI/UX Polish — Phase 2 (module-by-module) | ✅ 2026-08-15 (Parts 29a-29g + 29-CLOSEOUT) |
 
 ---
 
@@ -193,3 +232,5 @@ intentionally left as-is.
 | After Activity complete (27b) | 424 (49 test files) |
 | After Shared Foundations Polish complete (28f) | 475 (55 test files) — **milestone: +51 tests / +6 test files across Part 28**, driven by 6 new test files (`FilterBar.test.tsx`, `PaginationControls.test.tsx`, `MobileNav.test.tsx`, `InfrastructurePage.test.tsx`, `PeopleFilterBar.test.tsx`, `PersonDetailDialog.test.tsx`) plus expanded coverage in existing suites for the new label-association and toast-contract behavior. Verified by running the full suite: 474 passed, 1 failed — the failure is a `ServerFormDialog.test.tsx` timeout that occurs intermittently under full-suite/parallel execution; running that file in isolation passes 9/9, confirming it's a known flake, not a regression. |
 | After URL-State Persistence complete | 494 (55 test files) — **+19 tests, 0 new test files**, all added to existing suites (`usePagination.test.ts` 9→19, `ActivityPage.test.tsx` 10→12, `ResourcesPage.test.tsx` 18→20, `PeoplePage.test.tsx` 15→17, `SchedulePage.test.tsx` 13→16). Verified by running the full suite twice: 494/494 passed both times, no flakes observed. |
+| After Part 29 complete (29g) | 504 (56 test files) — **+10 tests / +1 test file**, including the new `useSchedules.test.ts` coverage for timezone-safe date parsing and expanded module-polish regression tests. |
+| After 29-CLOSEOUT | 507 (57 test files) — **+3 tests / +1 test file**, the new file being `NotificationBell.test.tsx` (regression coverage for the timezone bug fix), plus the new `role="dialog"` count-of-1 regression assertion added to `PersonDetailDialog.test.tsx` for the nested-dialog fix. Verified by running the full suite: 507/507 passed. |
