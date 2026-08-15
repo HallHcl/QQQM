@@ -14,7 +14,7 @@ export function LoadingState({ message = "Loading...", className }: LoadingState
         className
       )}
     >
-      <Loader2 className="h-5 w-5 animate-spin text-brand" />
+      <Loader2 className="h-6 w-6 animate-spin text-brand" />
       <span>{message}</span>
     </div>
   );
