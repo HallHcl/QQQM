@@ -24,7 +24,12 @@ export function PageHeader({ title, actions, className }: PageHeaderProps) {
   return (
     <div className={cn("flex items-center justify-between", className)}>
       <h1 className="text-heading-page">{title}</h1>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        // min-w-0 lets this flex item actually shrink below its unwrapped
+        // content width so flex-wrap can engage at narrow viewports,
+        // instead of the row silently overflowing past the page edge.
+        <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>
+      ) : null}
     </div>
   );
 }
