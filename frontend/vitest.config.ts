@@ -13,5 +13,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
+    // tests/ holds Playwright specs (separate runner, separate config) —
+    // vitest's default include glob would otherwise pick them up and fail.
+    exclude: ["node_modules/**", "tests/**"],
   },
 })
