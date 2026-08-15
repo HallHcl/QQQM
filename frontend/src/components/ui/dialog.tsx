@@ -57,7 +57,9 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-1.5 text-center sm:text-left",
+      // pr-8 reserves room for DialogClose (absolute right-4, 32px wide) so
+      // a wrapped multi-line title's second line doesn't run under it.
+      "flex min-w-0 flex-col space-y-1.5 pr-8 text-center sm:text-left",
       className
     )}
     {...props}
@@ -86,7 +88,7 @@ const DialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      "break-words text-lg font-semibold leading-none tracking-tight",
+      "min-w-0 break-words text-lg font-semibold leading-none tracking-tight",
       className
     )}
     {...props}

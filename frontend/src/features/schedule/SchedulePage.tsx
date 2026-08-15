@@ -162,7 +162,7 @@ export default function SchedulePage() {
           onSelect={setSelectedDate}
         />
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="w-40" aria-label="Schedule status">
