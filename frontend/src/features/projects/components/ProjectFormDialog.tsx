@@ -77,7 +77,12 @@ export default function ProjectFormDialog({ open, onOpenChange, project }: Props
   const clients = isEdit ? [...activeClients, ...deletedClients] : activeClients;
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
-  const { refetch: refetchProject } = useProject(project?.id);
+  // Gated on `open` so this unsubscribes once the dialog closes — otherwise
+  // it stays subscribed on the last-edited project's id, and a subsequent
+  // delete of that same record trips the list's broad invalidateQueries
+  // into a pointless background refetch of a now-deleted row (404 in
+  // console, no user-facing effect, but noisy and wasteful).
+  const { refetch: refetchProject } = useProject(project?.id, { enabled: open });
   const { conflict: conflictInfo, isConflict, captureConflict, clearConflict } = useConflictResolution();
 
   const [name, setName] = useState("");

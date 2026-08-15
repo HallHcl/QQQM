@@ -41,7 +41,7 @@ export function useProjects(clientId?: string, params: Partial<PaginationParams>
   return { ...query, data: query.data?.data, pagination: query.data?.pagination };
 }
 
-export function useProject(id: string | undefined) {
+export function useProject(id: string | undefined, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: [KEY, id],
     queryFn: async () => {
@@ -50,7 +50,10 @@ export function useProject(id: string | undefined) {
       });
       return unwrapApiResult(result);
     },
-    enabled: Boolean(id),
+    // Callers that only need this while some other condition holds (e.g. a
+    // dialog is open) can pass `enabled: false` to also unsubscribe there —
+    // ANDed with the id check so it's never enabled without a real id.
+    enabled: Boolean(id) && (options.enabled ?? true),
   });
 }
 

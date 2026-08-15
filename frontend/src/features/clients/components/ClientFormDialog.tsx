@@ -68,7 +68,12 @@ export default function ClientFormDialog({ open, onOpenChange, client }: Props) 
   const isEdit = Boolean(client);
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
-  const { refetch: refetchClient } = useClient(client?.id);
+  // Gated on `open` so this unsubscribes once the dialog closes — otherwise
+  // it stays subscribed on the last-edited client's id, and a subsequent
+  // delete of that same record trips the list's broad invalidateQueries
+  // into a pointless background refetch of a now-deleted row (404 in
+  // console, no user-facing effect, but noisy and wasteful).
+  const { refetch: refetchClient } = useClient(client?.id, { enabled: open });
   const { conflict: conflictInfo, isConflict, captureConflict, clearConflict } = useConflictResolution();
 
   const [name, setName] = useState("");
