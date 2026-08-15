@@ -83,7 +83,7 @@ describe("ClientFormDialog — create", () => {
 
   it("associates the Status label with its select trigger for screen readers", () => {
     renderDialog();
-    expect(screen.getByLabelText("Status")).toHaveAttribute("role", "combobox");
+    expect(screen.getByLabelText(/Status/i)).toHaveAttribute("role", "combobox");
   });
 
   it("submits the mutation with the entered values and invalidates the clients query on success", async () => {

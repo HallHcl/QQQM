@@ -126,7 +126,7 @@ describe("ScheduleFormDialog", () => {
       const { onOpenChange, invalidateSpy } = renderDialog(SAMPLE_SCHEDULE);
 
       await screen.findByDisplayValue("Quarterly PM");
-      fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "checked filters" } });
+      fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: "checked filters" } });
       fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
       await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
@@ -152,7 +152,7 @@ describe("ScheduleFormDialog", () => {
       expect(await screen.findByDisplayValue("Alex Rivera")).toBeDisabled();
       expect(await screen.findByDisplayValue("Migration")).toBeDisabled();
 
-      expect(screen.getByLabelText("Notes")).not.toBeDisabled();
+      expect(screen.getByLabelText(/Notes/i)).not.toBeDisabled();
     });
 
     it("shows no server field when the schedule has no server_id", async () => {
@@ -234,7 +234,7 @@ describe("ScheduleFormDialog", () => {
       renderDialog(SAMPLE_SCHEDULE);
 
       await screen.findByDisplayValue("Quarterly PM");
-      fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "my in-progress note" } });
+      fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: "my in-progress note" } });
       fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
       expect(await screen.findByText("This record changed")).toBeInTheDocument();

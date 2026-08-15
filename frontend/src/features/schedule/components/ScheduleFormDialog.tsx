@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OptionalLabel } from "@/components/ui/optional-label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -247,7 +248,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
             onKeepEditing={handleKeepEditingAndRetry}
           />
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-1">
               <Label htmlFor="title">Title</Label>
               {isEdit ? (
@@ -264,7 +265,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
                   <Input id="type" value={schedule?.type ?? ""} disabled readOnly />
                 ) : (
                   <Select value={type} onValueChange={(v) => setType(v as ScheduleType)}>
-                    <SelectTrigger id="type">
+                    <SelectTrigger id="type" aria-required="true">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -305,7 +306,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
                   <Input id="assignedTo" value={assigneeName} disabled readOnly />
                 ) : (
                   <Select value={assignedTo} onValueChange={setAssignedTo}>
-                    <SelectTrigger id="assignedTo">
+                    <SelectTrigger id="assignedTo" aria-required="true">
                       <SelectValue placeholder="Select person" />
                     </SelectTrigger>
                     <SelectContent>
@@ -398,7 +399,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
             )}
 
             <div className="space-y-1">
-              <Label htmlFor="notes">Notes</Label>
+              <OptionalLabel htmlFor="notes">Notes</OptionalLabel>
               <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
 

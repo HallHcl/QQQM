@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OptionalLabel } from "@/components/ui/optional-label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -210,7 +211,7 @@ export default function CredentialReferenceFormDialog({
 
           <div className="space-y-1">
             <Label htmlFor="cr_label">Label</Label>
-            <Input id="cr_label" value={label} onChange={(e) => setLabel(e.target.value)} />
+            <Input id="cr_label" value={label} onChange={(e) => setLabel(e.target.value)} required />
             {fieldErrors.label && <p className="text-xs text-danger">{fieldErrors.label}</p>}
           </div>
 
@@ -221,6 +222,7 @@ export default function CredentialReferenceFormDialog({
               value={referenceLocation}
               onChange={(e) => setReferenceLocation(e.target.value)}
               placeholder="e.g. a vault path, not the secret itself"
+              required
             />
             {fieldErrors.reference_location && (
               <p className="text-xs text-danger">{fieldErrors.reference_location}</p>
@@ -228,7 +230,7 @@ export default function CredentialReferenceFormDialog({
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="applies_to_access_method">Applies to access method</Label>
+            <OptionalLabel htmlFor="applies_to_access_method">Applies to access method</OptionalLabel>
             <Select
               value={appliesToAccessMethod ?? UNSET}
               onValueChange={(v) =>
@@ -253,7 +255,7 @@ export default function CredentialReferenceFormDialog({
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="cr_notes">Notes</Label>
+            <OptionalLabel htmlFor="cr_notes">Notes</OptionalLabel>
             <Textarea id="cr_notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
             {fieldErrors.notes && <p className="text-xs text-danger">{fieldErrors.notes}</p>}
           </div>

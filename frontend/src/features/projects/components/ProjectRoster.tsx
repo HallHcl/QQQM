@@ -147,7 +147,7 @@ export default function ProjectRoster({ projectId, clientId }: Props) {
             Person
           </Label>
           <Select value={selectedPersonId} onValueChange={setSelectedPersonId}>
-            <SelectTrigger id="roster-person" className="w-56">
+            <SelectTrigger id="roster-person" className="w-56" aria-required="true">
               <SelectValue placeholder="Select a person" />
             </SelectTrigger>
             <SelectContent>
@@ -170,6 +170,7 @@ export default function ProjectRoster({ projectId, clientId }: Props) {
             onChange={(e) => setRoleInProject(e.target.value)}
             placeholder="e.g. Lead engineer"
             className="w-48"
+            required
           />
         </div>
 

@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OptionalLabel } from "@/components/ui/optional-label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -246,17 +247,17 @@ export default function ClientFormDialog({ open, onOpenChange, client }: Props) 
             onKeepEditing={handleRetryWithLatest}
           />
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {formError && <p className="text-sm text-danger">{formError}</p>}
 
             <div className="space-y-1">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
               {fieldErrors.name && <p className="text-xs text-danger">{fieldErrors.name}</p>}
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="status">Status</Label>
+              <OptionalLabel htmlFor="status">Status</OptionalLabel>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger id="status">
                   <SelectValue />
@@ -273,7 +274,7 @@ export default function ClientFormDialog({ open, onOpenChange, client }: Props) 
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="description">Description</Label>
+              <OptionalLabel htmlFor="description">Description</OptionalLabel>
               <Textarea
                 id="description"
                 rows={3}

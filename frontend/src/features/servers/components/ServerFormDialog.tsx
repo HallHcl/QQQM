@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OptionalLabel } from "@/components/ui/optional-label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -389,6 +390,7 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
                 id="display_name"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
+                required
               />
               {fieldErrors.display_name && (
                 <p className="text-xs text-danger">{fieldErrors.display_name}</p>
@@ -425,11 +427,11 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="hostname">Hostname</Label>
-                <Input id="hostname" value={hostname} onChange={(e) => setHostname(e.target.value)} />
+                <Input id="hostname" value={hostname} onChange={(e) => setHostname(e.target.value)} required />
                 {fieldErrors.hostname && <p className="text-xs text-danger">{fieldErrors.hostname}</p>}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="ip_address">IP address</Label>
+                <OptionalLabel htmlFor="ip_address">IP address</OptionalLabel>
                 <Input id="ip_address" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} />
                 {fieldErrors.ip_address && (
                   <p className="text-xs text-danger">{fieldErrors.ip_address}</p>
@@ -461,7 +463,7 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
                     value={serviceType}
                     onValueChange={(v) => setServiceType(v as (typeof SERVICE_TYPES)[number])}
                   >
-                    <SelectTrigger id="service_type">
+                    <SelectTrigger id="service_type" aria-required="true">
                       <SelectValue placeholder="Select..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -482,7 +484,7 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
                     value={accessMethod}
                     onValueChange={(v) => setAccessMethod(v as (typeof ACCESS_METHODS)[number])}
                   >
-                    <SelectTrigger id="access_method">
+                    <SelectTrigger id="access_method" aria-required="true">
                       <SelectValue placeholder="Select..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -507,13 +509,14 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
                     value={accessHost}
                     onChange={(e) => setAccessHost(e.target.value)}
                     placeholder="Hostname, IP, or anything network-resolvable"
+                    required
                   />
                   {fieldErrors.access_host && (
                     <p className="text-xs text-danger">{fieldErrors.access_host}</p>
                   )}
                 </div>
                 <div className="w-24 space-y-1">
-                  <Label htmlFor="access_port">Port</Label>
+                  <OptionalLabel htmlFor="access_port">Port</OptionalLabel>
                   <Input
                     id="access_port"
                     type="number"
@@ -529,7 +532,7 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="access_path">Access path</Label>
+                <OptionalLabel htmlFor="access_path">Access path</OptionalLabel>
                 <Input
                   id="access_path"
                   value={accessPath}
@@ -547,7 +550,7 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
             </fieldset>
 
             <div className="space-y-1">
-              <Label htmlFor="monitoring_url">Monitoring URL</Label>
+              <OptionalLabel htmlFor="monitoring_url">Monitoring URL</OptionalLabel>
               <Input
                 id="monitoring_url"
                 value={monitoringUrl}
@@ -564,7 +567,7 @@ export default function ServerFormDialog({ open, onOpenChange, server }: Props) 
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="notes">Notes</Label>
+              <OptionalLabel htmlFor="notes">Notes</OptionalLabel>
               <Textarea id="notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
               {fieldErrors.notes && <p className="text-xs text-danger">{fieldErrors.notes}</p>}
             </div>

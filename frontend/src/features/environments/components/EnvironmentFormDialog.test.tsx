@@ -252,7 +252,7 @@ describe("EnvironmentFormDialog — edit", () => {
     // getByLabelText only resolves for a real <label for>/id association, so
     // this fails if the id/htmlFor pairing is ever removed or the ids drift
     // apart, independent of what the trigger's own visible text says.
-    expect(await screen.findByLabelText("VPN resource")).toBeInTheDocument();
+    expect(await screen.findByLabelText(/VPN resource/i)).toBeInTheDocument();
   });
 
   it("shows an orphan warning instead of a normal reference when vpn_resource_id points at a deleted resource", async () => {

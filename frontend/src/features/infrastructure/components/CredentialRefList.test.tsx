@@ -156,7 +156,7 @@ describe("CredentialRefList — manageable mode (ServerDetailPage)", () => {
       fireEvent.change(screen.getByLabelText("Reference location"), {
         target: { value: "secret/servers/web-01" },
       });
-      fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "Rotate quarterly" } });
+      fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: "Rotate quarterly" } });
 
       fireEvent.click(screen.getByRole("combobox"));
       fireEvent.click(await screen.findByRole("option", { name: "SSH" }));
@@ -256,7 +256,7 @@ describe("CredentialRefList — manageable mode (ServerDetailPage)", () => {
 
       expect(await screen.findByLabelText("Label")).toHaveValue("Vault path");
       expect(screen.getByLabelText("Reference location")).toHaveValue("secret/servers/web-01");
-      expect(screen.getByLabelText("Notes")).toHaveValue("Rotate quarterly");
+      expect(screen.getByLabelText(/Notes/i)).toHaveValue("Rotate quarterly");
     });
 
     it("PATCHes the top-level (non-nested) endpoint with no updated_at field at all in the payload", async () => {

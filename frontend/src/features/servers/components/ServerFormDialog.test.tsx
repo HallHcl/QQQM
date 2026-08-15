@@ -129,8 +129,8 @@ describe("ServerFormDialog — create", () => {
     fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Web 01" } });
     fireEvent.change(screen.getByLabelText("Hostname"), { target: { value: "web-01" } });
     fireEvent.change(screen.getByLabelText("Access host"), { target: { value: "web-01.internal" } });
-    fireEvent.change(screen.getByLabelText("Port"), { target: { value: "99999" } });
-    fireEvent.change(screen.getByLabelText("Access path"), { target: { value: "no-leading-slash" } });
+    fireEvent.change(screen.getByLabelText(/Port/i), { target: { value: "99999" } });
+    fireEvent.change(screen.getByLabelText(/Access path/i), { target: { value: "no-leading-slash" } });
 
     const [environmentTrigger, serviceTypeTrigger, accessMethodTrigger] = screen.getAllByRole("combobox");
     fireEvent.click(environmentTrigger);
@@ -156,17 +156,17 @@ describe("ServerFormDialog — create", () => {
     await screen.findByLabelText("Display name");
     fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Web 01" } });
     fireEvent.change(screen.getByLabelText("Hostname"), { target: { value: "web-01" } });
-    fireEvent.change(screen.getByLabelText("IP address"), { target: { value: "10.0.0.1" } });
+    fireEvent.change(screen.getByLabelText(/IP address/i), { target: { value: "10.0.0.1" } });
     fireEvent.change(screen.getByLabelText("Tech stack"), { target: { value: "node, postgres" } });
     fireEvent.change(screen.getByLabelText("Access host"), { target: { value: "web-01.internal" } });
-    fireEvent.change(screen.getByLabelText("Port"), { target: { value: "22" } });
+    fireEvent.change(screen.getByLabelText(/Port/i), { target: { value: "22" } });
     // access_method will be "ssh" (not "web"), yet access_path is still sent —
     // the backend enforces no relationship between the two.
-    fireEvent.change(screen.getByLabelText("Access path"), { target: { value: "/some/path" } });
-    fireEvent.change(screen.getByLabelText("Monitoring URL"), {
+    fireEvent.change(screen.getByLabelText(/Access path/i), { target: { value: "/some/path" } });
+    fireEvent.change(screen.getByLabelText(/Monitoring URL/i), {
       target: { value: "https://grafana.example.com/d/web-01" },
     });
-    fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "Primary web node" } });
+    fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: "Primary web node" } });
 
     const [environmentTrigger, serviceTypeTrigger, accessMethodTrigger] = screen.getAllByRole("combobox");
     fireEvent.click(environmentTrigger);

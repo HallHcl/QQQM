@@ -93,9 +93,9 @@ describe("PersonFormDialog — create", () => {
     const { onOpenChange, invalidateSpy } = renderDialog();
 
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "New Person" } });
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "new@example.com" } });
-    fireEvent.change(screen.getByLabelText("Phone"), { target: { value: "555-0199" } });
-    fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "Some notes" } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: "new@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone/i), { target: { value: "555-0199" } });
+    fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: "Some notes" } });
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
@@ -160,9 +160,9 @@ describe("PersonFormDialog — edit", () => {
   it("pre-fills the form from the loaded record", () => {
     renderDialog(SAMPLE_PERSON);
     expect(screen.getByLabelText("Name")).toHaveValue("Alex Rivera");
-    expect(screen.getByLabelText("Email")).toHaveValue("alex@example.com");
-    expect(screen.getByLabelText("Phone")).toHaveValue("555-0100");
-    expect(screen.getByLabelText("Notes")).toHaveValue("Backend specialist");
+    expect(screen.getByLabelText(/Email/i)).toHaveValue("alex@example.com");
+    expect(screen.getByLabelText(/Phone/i)).toHaveValue("555-0100");
+    expect(screen.getByLabelText(/Notes/i)).toHaveValue("Backend specialist");
   });
 
   it("sends updated_at from the loaded record in the PATCH body on submit", async () => {
