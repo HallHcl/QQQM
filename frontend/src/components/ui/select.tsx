@@ -4,7 +4,25 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Select = SelectPrimitive.Root
+/**
+ * Thin wrapper around Radix's Select.Root that guards against the
+ * "uncontrolled to controlled" React warning. Radix decides controlled vs.
+ * uncontrolled purely from `value !== undefined` (see
+ * @radix-ui/react-use-controllable-state's `isControlled` check) — every
+ * caller in this codebase binds `value` to `string | undefined` state that
+ * starts as `undefined` (no selection yet / data not loaded) and later
+ * becomes a real id, which flips that flag mid-lifecycle and trips the
+ * warning. Radix already treats `value=""` as "no selection" for placeholder
+ * purposes (its internal `shouldShowPlaceholder` treats `""` and `undefined`
+ * identically), so coercing `undefined` to `""` here keeps the Select
+ * continuously controlled without changing displayed or submitted behavior.
+ */
+const Select = ({
+  value,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => (
+  <SelectPrimitive.Root value={value ?? ""} {...props} />
+)
 
 const SelectGroup = SelectPrimitive.Group
 
