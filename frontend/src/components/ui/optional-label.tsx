@@ -8,7 +8,7 @@ const OptionalLabel = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <Label ref={ref} className={cn("flex items-baseline gap-1.5", className)} {...props}>
     {children}
-    <span className="text-sm font-normal text-muted-foreground" aria-hidden="true">(optional)</span>
+    <span className="text-sm font-normal text-muted-foreground">(optional)</span>
   </Label>
 ))
 OptionalLabel.displayName = "OptionalLabel"

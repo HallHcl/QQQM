@@ -237,7 +237,7 @@ describe("EnvironmentFormDialog — edit", () => {
     // the same label-association fix 28b applied to ProjectPicker/
     // EnvironmentPicker/ServerPicker, extended to this fourth, module-local
     // picker.
-    fireEvent.click(await screen.findByRole("button", { name: /^vpn resource$/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /^vpn resource/i }));
     fireEvent.click(await screen.findByText("Corporate VPN"));
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
