@@ -63,7 +63,7 @@ export default function VersionHistoryPanel({ resourceId, onRevert }: Props) {
                   <span className="rounded-sm bg-surface-hover px-1.5 py-0.5 font-mono text-xs text-foreground">
                     v{version.version_number}
                   </span>
-                  <span className="font-mono text-xs text-subtle">
+                  <span className="font-mono text-xs text-muted-foreground">
                     {format(new Date(version.created_at), "PPp")}
                   </span>
                 </div>
@@ -99,7 +99,7 @@ export default function VersionHistoryPanel({ resourceId, onRevert }: Props) {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="font-medium">Version {selectedVersion.version_number}</h4>
-              <span className="font-mono text-xs text-subtle">
+              <span className="font-mono text-xs text-muted-foreground">
                 {format(new Date(selectedVersion.created_at), "PPp")}
               </span>
             </div>

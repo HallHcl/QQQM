@@ -42,11 +42,11 @@ export default function ActivityTimeline({ logs }: Props) {
               {log.entity_type.replace("_", " ")}
             </span>
             <span className="text-sm text-muted-foreground">by {log.changed_by_person.name}</span>
-            <span className="font-mono text-xs text-subtle">
+            <span className="font-mono text-xs text-muted-foreground">
               {format(new Date(log.created_at), "PPp")}
             </span>
           </div>
-          <p className="mt-1 font-mono text-xs text-subtle">Entity ID: {log.entity_id}</p>
+          <p className="mt-1 font-mono text-xs text-muted-foreground">Entity ID: {log.entity_id}</p>
         </li>
       ))}
     </ol>
