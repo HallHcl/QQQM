@@ -3,6 +3,18 @@ import { describe, expect, it, vi } from "vitest";
 import ScheduleCalendar from "./ScheduleCalendar";
 import type { ScheduleListItem } from "@/hooks/useSchedules";
 
+/**
+ * Asserts a Date's LOCAL calendar day (not `.toISOString()`, which reads
+ * UTC and would give a timezone-dependent — sometimes wrong — answer for a
+ * Date that's meant to represent a specific local calendar day; see
+ * parseScheduledDate's doc comment in useSchedules.ts for why that
+ * distinction matters here specifically).
+ */
+function expectLocalDate(date: Date, isoDate: string) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  expect([date.getFullYear(), date.getMonth() + 1, date.getDate()]).toEqual([year, month, day]);
+}
+
 const calendarPropsSpy = vi.fn();
 
 // The underlying Calendar/react-day-picker rendering (which cell gets which
@@ -49,7 +61,7 @@ describe("ScheduleCalendar", () => {
       modifiers: { scheduled: Date[]; overdue: Date[] };
     };
     expect(props.modifiers.overdue).toHaveLength(1);
-    expect(props.modifiers.overdue[0].toISOString().slice(0, 10)).toBe("2026-08-15");
+    expectLocalDate(props.modifiers.overdue[0], "2026-08-15");
     expect(props.modifiers.scheduled).toHaveLength(0);
   });
 
@@ -64,7 +76,7 @@ describe("ScheduleCalendar", () => {
     };
     expect(props.modifiers.overdue).toHaveLength(0);
     expect(props.modifiers.scheduled).toHaveLength(1);
-    expect(props.modifiers.scheduled[0].toISOString().slice(0, 10)).toBe("2020-01-01");
+    expectLocalDate(props.modifiers.scheduled[0], "2020-01-01");
   });
 
   it("buckets a pending schedule with is_overdue: true as overdue too (not exclusive to in_progress)", () => {

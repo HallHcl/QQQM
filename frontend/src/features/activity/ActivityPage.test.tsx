@@ -172,6 +172,15 @@ describe("ActivityPage", () => {
       });
     });
 
+    it("associates the Entity ID and Changed by inputs with an accessible name (aria-label), not just placeholder text", async () => {
+      mockGetByPath({ activity: ok(paginated([LOG_1])) });
+      renderPage();
+
+      await screen.findByText("create");
+      expect(screen.getByLabelText("Entity ID")).toBeInTheDocument();
+      expect(screen.getByLabelText("Changed by")).toBeInTheDocument();
+    });
+
     it("typing an entity ID re-requests with entity_id set", async () => {
       mockGetByPath({ activity: ok(paginated([LOG_1])) });
       renderPage();

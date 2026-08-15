@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { RequireRole } from "@/components/auth/RequireRole";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ export default function ClientsPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | undefined>(undefined);
+  const [deletingClient, setDeletingClient] = useState<Client | undefined>(undefined);
 
   const deleteClient = useDeleteClient();
   const restoreClient = useRestoreClient();
@@ -77,8 +79,9 @@ export default function ClientsPage() {
     setFormOpen(true);
   }
 
-  function handleDelete(client: Client) {
-    deleteClient.mutate(client.id, {
+  function confirmDelete() {
+    if (!deletingClient) return;
+    deleteClient.mutate(deletingClient.id, {
       onSuccess: () => toast({ title: "Client deleted" }),
       onError: (err) => {
         toast({
@@ -219,7 +222,11 @@ export default function ClientsPage() {
                             Edit
                           </Button>
                           <RequireRole roles={["admin"]}>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(client)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeletingClient(client)}
+                            >
                               Delete
                             </Button>
                           </RequireRole>
@@ -244,6 +251,22 @@ export default function ClientsPage() {
       )}
 
       <ClientFormDialog open={formOpen} onOpenChange={setFormOpen} client={editingClient} />
+
+      <ConfirmDialog
+        open={Boolean(deletingClient)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingClient(undefined);
+        }}
+        title="Delete this client?"
+        description={
+          deletingClient
+            ? `"${deletingClient.name}" will be hidden from the active client list. Its projects are not deleted or hidden — they stay fully visible and functional, unaffected by this. You can restore the client at any time.`
+            : ""
+        }
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

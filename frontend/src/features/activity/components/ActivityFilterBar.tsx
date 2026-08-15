@@ -106,6 +106,7 @@ export default function ActivityFilterBar({
 
       <Input
         placeholder="Entity ID"
+        aria-label="Entity ID"
         value={entityId}
         onChange={(e) => onEntityIdChange(e.target.value)}
         className="w-48 font-mono text-xs"
@@ -113,6 +114,7 @@ export default function ActivityFilterBar({
 
       <Input
         placeholder="Changed by (person ID)"
+        aria-label="Changed by"
         value={changedBy}
         onChange={(e) => onChangedByChange(e.target.value)}
         className="w-48 font-mono text-xs"

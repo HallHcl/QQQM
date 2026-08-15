@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -18,6 +18,7 @@ import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { usePagination, type DeletedFilter, type SortOrder } from "@/hooks/usePagination";
 import {
+  parseScheduledDate,
   useDeleteSchedule,
   useRestoreSchedule,
   useSchedules,
@@ -273,6 +274,6 @@ export default function SchedulePage() {
 
 function parseDateParam(raw: string | null): Date | undefined {
   if (!raw) return undefined;
-  const parsed = parse(raw, "yyyy-MM-dd", new Date());
+  const parsed = parseScheduledDate(raw);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }

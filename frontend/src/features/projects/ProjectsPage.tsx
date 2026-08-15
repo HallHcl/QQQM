@@ -59,8 +59,19 @@ export default function ProjectsPage() {
   // unlike the single-record ProjectDetail response) — cross-reference the
   // client picker's own list to resolve a display name, same as
   // InfrastructurePage/OverviewPage already do for their own client pickers.
-  const { data: clients = [] } = useClients();
-  const clientNameById = new Map(clients.map((c) => [c.id, c.name]));
+  // Projects deliberately do NOT cascade-hide when their parent Client is
+  // soft-deleted (decisions.md #6) — the project row stays fully visible and
+  // functional here, so its Client column must still resolve a real name,
+  // not silently fall back to "—" just because that client is no longer
+  // active. Clients' `deleted` filter is boolean-only server-side, with no
+  // "all" mode (decisions.md #11) — a single deleted:"all" call isn't an
+  // option here — so active and deleted clients are fetched separately and
+  // merged into one lookup, both already-supported query shapes.
+  const { data: activeClients = [] } = useClients();
+  const { data: deletedClients = [] } = useClients({ deleted: "true" });
+  const clientNameById = new Map(
+    [...activeClients, ...deletedClients].map((c) => [c.id, c.name])
+  );
 
   const totalPages = pageInfo?.total_pages ?? 1;
 

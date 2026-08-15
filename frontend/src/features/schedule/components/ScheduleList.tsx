@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { parseScheduledDate } from "@/hooks/useSchedules";
 import type { Schedule } from "@/types";
 import ScheduleStatusActions from "./ScheduleStatusActions";
 
@@ -59,7 +60,7 @@ export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }:
                 </div>
               </TableCell>
               <TableCell>{schedule.type}</TableCell>
-              <TableCell>{format(new Date(schedule.scheduled_date), "PP")}</TableCell>
+              <TableCell>{format(parseScheduledDate(schedule.scheduled_date), "PP")}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Badge variant={STATUS_VARIANT[schedule.status]}>

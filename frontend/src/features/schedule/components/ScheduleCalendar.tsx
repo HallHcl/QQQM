@@ -1,5 +1,5 @@
 import { Calendar } from "@/components/ui/calendar";
-import type { ScheduleListItem } from "@/hooks/useSchedules";
+import { parseScheduledDate, type ScheduleListItem } from "@/hooks/useSchedules";
 
 interface Props {
   schedules: ScheduleListItem[];
@@ -16,8 +16,8 @@ export default function ScheduleCalendar({ schedules, selected, onSelect }: Prop
   // returned on every list/detail response — read it directly rather than
   // reimplementing the same logic client-side (a prior version only checked
   // status === "pending", silently missing in_progress schedules).
-  const scheduledDates = schedules.filter((s) => !s.is_overdue).map((s) => new Date(s.scheduled_date));
-  const overdueDates = schedules.filter((s) => s.is_overdue).map((s) => new Date(s.scheduled_date));
+  const scheduledDates = schedules.filter((s) => !s.is_overdue).map((s) => parseScheduledDate(s.scheduled_date));
+  const overdueDates = schedules.filter((s) => s.is_overdue).map((s) => parseScheduledDate(s.scheduled_date));
 
   return (
     <Calendar

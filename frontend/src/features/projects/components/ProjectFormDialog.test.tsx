@@ -174,6 +174,24 @@ describe("ProjectFormDialog — edit", () => {
     expect(screen.getByText("A project's client can't be changed after creation.")).toBeInTheDocument();
   });
 
+  it("resolves the client's real name in the locked field even when that client has since been soft-deleted (projects don't cascade-hide — decisions.md #6)", async () => {
+    const DELETED_CLIENT: Client = { ...SAMPLE_CLIENT, id: "c-orphan", name: "Orphan Test Client", deleted_at: "2026-01-10T00:00:00.000Z" };
+    getMock.mockImplementation((path: string) => {
+      if (path === "/api/clients") {
+        return Promise.resolve(
+          ok({ data: [DELETED_CLIENT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
+        );
+      }
+      if (path === "/api/projects/{id}") {
+        return Promise.resolve(ok({ ...SAMPLE_PROJECT, client_id: "c-orphan" }));
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    renderDialog({ ...SAMPLE_PROJECT, client_id: "c-orphan" });
+    await waitFor(() => expect(screen.getByLabelText("Client")).toHaveValue("Orphan Test Client"));
+  });
+
   it("sends updated_at from the loaded record in the PATCH body, without client_id", async () => {
     patchMock.mockResolvedValue(ok({ ...SAMPLE_PROJECT, name: "Migration v2" }));
     const { onOpenChange } = renderDialog(SAMPLE_PROJECT);

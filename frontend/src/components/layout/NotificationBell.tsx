@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import api from "@/lib/api";
+import { parseScheduledDate } from "@/hooks/useSchedules";
 import type { Paginated, Schedule } from "@/types";
 
 const POLL_INTERVAL_MS = 60_000;
@@ -32,7 +33,7 @@ export default function NotificationBell() {
 
   const today = startOfDay(new Date());
   const dueSchedules = schedules.filter(
-    (schedule) => !isBefore(today, startOfDay(new Date(schedule.scheduled_date)))
+    (schedule) => !isBefore(today, startOfDay(parseScheduledDate(schedule.scheduled_date)))
   );
 
   return (
@@ -63,7 +64,7 @@ export default function NotificationBell() {
           >
             <span className="font-medium">{schedule.title}</span>
             <span className="text-xs text-muted-foreground">
-              {schedule.type} &middot; due {format(new Date(schedule.scheduled_date), "PP")}
+              {schedule.type} &middot; due {format(parseScheduledDate(schedule.scheduled_date), "PP")}
             </span>
           </DropdownMenuItem>
         ))}

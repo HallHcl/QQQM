@@ -153,7 +153,7 @@ describe("ClientsPage", () => {
   });
 
   describe("RBAC-gated delete/restore", () => {
-    it("shows the Delete action to an admin and lets them trigger it", async () => {
+    it("opens a confirmation naming the client before deleting, and only deletes on confirm", async () => {
       useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
       getMock.mockResolvedValue(okResult([ACTIVE_CLIENT]));
       deleteMock.mockResolvedValue({
@@ -165,8 +165,13 @@ describe("ClientsPage", () => {
       const { invalidateSpy } = renderPage();
       await screen.findByText("Acme Corp");
 
-      const deleteButton = screen.getByRole("button", { name: /delete/i });
-      fireEvent.click(deleteButton);
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+
+      expect(screen.getByText("Delete this client?")).toBeInTheDocument();
+      expect(screen.getByText(/"Acme Corp" will be hidden/i)).toBeInTheDocument();
+      expect(deleteMock).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
       await waitFor(() => expect(deleteMock).toHaveBeenCalledTimes(1));
       expect(deleteMock).toHaveBeenCalledWith("/api/clients/{id}", {
@@ -178,6 +183,20 @@ describe("ClientsPage", () => {
       expect(toastMock).toHaveBeenCalledWith({ title: "Client deleted" });
     });
 
+    it("does not call the delete mutation when the confirmation is cancelled", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      getMock.mockResolvedValue(okResult([ACTIVE_CLIENT]));
+
+      renderPage();
+      await screen.findByText("Acme Corp");
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(deleteMock).not.toHaveBeenCalled();
+      expect(screen.queryByText("Delete this client?")).not.toBeInTheDocument();
+    });
+
     it("shows an error toast when delete fails", async () => {
       useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
       getMock.mockResolvedValue(okResult([ACTIVE_CLIENT]));
@@ -187,6 +206,7 @@ describe("ClientsPage", () => {
       await screen.findByText("Acme Corp");
 
       fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
       await waitFor(() => {
         expect(toastMock).toHaveBeenCalledWith({

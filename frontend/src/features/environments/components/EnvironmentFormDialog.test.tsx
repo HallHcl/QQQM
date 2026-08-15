@@ -232,13 +232,27 @@ describe("EnvironmentFormDialog — edit", () => {
     patchMock.mockResolvedValue(ok({ ...SAMPLE_ENVIRONMENT, vpn_resource_id: "r1" }));
     const { onOpenChange } = renderDialog(SAMPLE_ENVIRONMENT);
 
-    fireEvent.click(await screen.findByRole("button", { name: /no vpn resource linked/i }));
+    // Accessible name comes from the now-associated <label for="vpn-resource">
+    // ("VPN resource"), not the trigger's own state-dependent text content —
+    // the same label-association fix 28b applied to ProjectPicker/
+    // EnvironmentPicker/ServerPicker, extended to this fourth, module-local
+    // picker.
+    fireEvent.click(await screen.findByRole("button", { name: /^vpn resource$/i }));
     fireEvent.click(await screen.findByText("Corporate VPN"));
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(patchMock.mock.calls[0][1].body).toMatchObject({ vpn_resource_id: "r1" });
+  });
+
+  it("associates the VPN resource Label with its picker via id/htmlFor (label-association fix, same class as 28b's ProjectPicker/EnvironmentPicker/ServerPicker fix)", async () => {
+    renderDialog(SAMPLE_ENVIRONMENT);
+
+    // getByLabelText only resolves for a real <label for>/id association, so
+    // this fails if the id/htmlFor pairing is ever removed or the ids drift
+    // apart, independent of what the trigger's own visible text says.
+    expect(await screen.findByLabelText("VPN resource")).toBeInTheDocument();
   });
 
   it("shows an orphan warning instead of a normal reference when vpn_resource_id points at a deleted resource", async () => {

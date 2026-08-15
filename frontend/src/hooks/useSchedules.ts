@@ -1,9 +1,31 @@
+import { parse } from "date-fns";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient, unwrapApiResult } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import type { DeletedFilter, SortOrder } from "./usePagination";
 
 const KEY = "schedules";
+
+/**
+ * `scheduled_date` is a DATE-only column server-side, but round-trips
+ * through the API as a UTC-midnight ISO timestamp (e.g.
+ * "2026-08-15T00:00:00.000Z" — confirmed live: POST /api/schedules echoes
+ * back exactly this shape for input "2026-08-15"). Parsing that with the
+ * bare `new Date(string)` constructor is correct in UTC terms but WRONG for
+ * display: any local getter (`getDate()`, date-fns `format`, react-day-
+ * picker's day matching) reads it in the browser's local timezone, which
+ * shows the PREVIOUS calendar day for anyone west of UTC (verified:
+ * `new Date("2026-08-15T00:00:00.000Z")` displays as Aug 14 in
+ * America/New_York). Parsing only the yyyy-MM-dd portion as a local date
+ * instead sidesteps this entirely — the calendar day displayed always
+ * matches the calendar day the date represents, regardless of viewer
+ * timezone. Use this instead of `new Date(schedule.scheduled_date)`
+ * anywhere scheduled_date needs to become a Date object for display or
+ * calendar-matching purposes.
+ */
+export function parseScheduledDate(scheduledDate: string): Date {
+  return parse(scheduledDate.slice(0, 10), "yyyy-MM-dd", new Date());
+}
 
 export type Schedule = components["schemas"]["Schedule"];
 export type ScheduleListItem = components["schemas"]["ScheduleListItem"];

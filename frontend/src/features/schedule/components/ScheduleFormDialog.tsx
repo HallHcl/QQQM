@@ -27,7 +27,7 @@ import { ApiError } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { usePeople } from "@/hooks/usePeople";
 import { useConflictResolution } from "@/hooks/useConflictResolution";
-import { useCreateSchedule, useSchedule, useUpdateSchedule } from "@/hooks/useSchedules";
+import { parseScheduledDate, useCreateSchedule, useSchedule, useUpdateSchedule } from "@/hooks/useSchedules";
 import type { Schedule, ScheduleStatus, ScheduleType } from "@/types";
 
 const SCHEDULE_TYPES: ScheduleType[] = ["PM", "MA", "other"];
@@ -135,8 +135,9 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
     try {
       if (schedule) {
         // notes is the only field this dialog can change; status transitions
-        // are dedicated action buttons (not built yet) and every other field
-        // is immutable after creation. updated_at is still required for the
+        // are handled by the dedicated action buttons in ScheduleStatusActions.tsx
+        // (rendered in ScheduleList.tsx, not here) and every other field is
+        // immutable after creation. updated_at is still required for the
         // optimistic lock even though status isn't part of this write.
         await updateSchedule.mutateAsync({
           id: schedule.id,
@@ -281,7 +282,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
                 {isEdit ? (
                   <Input
                     id="date"
-                    value={schedule ? format(new Date(schedule.scheduled_date), "PP") : ""}
+                    value={schedule ? format(parseScheduledDate(schedule.scheduled_date), "PP") : ""}
                     disabled
                     readOnly
                   />

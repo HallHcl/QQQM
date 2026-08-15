@@ -291,8 +291,8 @@ export default function EnvironmentFormDialog({ open, onOpenChange, environment 
 
             {isEdit && (
               <div className="space-y-1">
-                <Label>VPN resource</Label>
-                <VpnResourcePicker value={vpnResourceId} onChange={setVpnResourceId} />
+                <Label htmlFor="vpn-resource">VPN resource</Label>
+                <VpnResourcePicker id="vpn-resource" value={vpnResourceId} onChange={setVpnResourceId} />
                 <p className="text-xs text-muted-foreground">
                   Any non-deleted resource can be linked here — the backend doesn't restrict this to a
                   particular resource type.

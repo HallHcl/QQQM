@@ -127,7 +127,7 @@ describe("PersonDetailDialog", () => {
     });
   });
 
-  it("removes a client and shows a success toast", async () => {
+  it("opens a confirmation naming the client and the person before removing, and only removes on confirm", async () => {
     mockGetByPath({
       clients: ok({ data: [CLIENT_1], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } }),
       personClients: ok([LINKED_CLIENT_1]),
@@ -139,11 +139,37 @@ describe("PersonDetailDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /remove/i }));
 
+    expect(screen.getByText("Remove this client association?")).toBeInTheDocument();
+    expect(screen.getByText(/"Acme Corp" will be unlinked from Ada Lovelace/i)).toBeInTheDocument();
+    expect(deleteMock).not.toHaveBeenCalled();
+
+    // The confirm step swaps content inside the single open Dialog rather
+    // than mounting a second nested Dialog/ConfirmDialog primitive.
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
     await waitFor(() => expect(deleteMock).toHaveBeenCalledTimes(1));
     expect(deleteMock).toHaveBeenCalledWith("/api/people/{id}/clients/{clientId}", {
       params: { path: { id: "person1", clientId: "c1" } },
     });
     expect(toastMock).toHaveBeenCalledWith({ title: "Client removed" });
+  });
+
+  it("does not call the remove mutation when the confirmation is cancelled", async () => {
+    mockGetByPath({
+      clients: ok({ data: [CLIENT_1], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } }),
+      personClients: ok([LINKED_CLIENT_1]),
+    });
+
+    renderDialog();
+    await screen.findByText("Acme Corp");
+
+    fireEvent.click(screen.getByRole("button", { name: /remove/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(deleteMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("Remove this client association?")).not.toBeInTheDocument();
   });
 
   it("shows an error toast when removing a client fails", async () => {
@@ -157,6 +183,7 @@ describe("PersonDetailDialog", () => {
     await screen.findByText("Acme Corp");
 
     fireEvent.click(screen.getByRole("button", { name: /remove/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
 
     await waitFor(() => {
       expect(toastMock).toHaveBeenCalledWith({
@@ -164,6 +191,20 @@ describe("PersonDetailDialog", () => {
         description: "boom",
         variant: "destructive",
       });
+    });
+  });
+
+  describe("loading state", () => {
+    it("shows a loading message instead of the empty state while client associations are still loading", async () => {
+      mockGetByPath({
+        clients: ok({ data: [CLIENT_1], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } }),
+        personClients: new Promise(() => {}),
+      });
+
+      renderDialog();
+
+      expect(await screen.findByText("Loading client associations...")).toBeInTheDocument();
+      expect(screen.queryByText("No client associations.")).not.toBeInTheDocument();
     });
   });
 });

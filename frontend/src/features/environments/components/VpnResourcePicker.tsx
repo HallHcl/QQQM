@@ -11,6 +11,8 @@ interface Props {
   value: string | null | undefined;
   onChange: (resourceId: string | null) => void;
   disabled?: boolean;
+  id?: string;
+  "aria-label"?: string;
 }
 
 /**
@@ -22,7 +24,13 @@ interface Props {
  * server-side instead, which scales regardless of total resource count
  * without needing to touch useResources.ts.
  */
-export function VpnResourcePicker({ value, onChange, disabled }: Props) {
+export function VpnResourcePicker({
+  value,
+  onChange,
+  disabled,
+  id,
+  "aria-label": ariaLabel,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { data: resources = [], isLoading } = useResources({ search: search || undefined });
@@ -40,6 +48,8 @@ export function VpnResourcePicker({ value, onChange, disabled }: Props) {
           type="button"
           variant="outline"
           disabled={disabled}
+          id={id}
+          aria-label={ariaLabel}
           className="flex h-10 w-full items-center justify-between px-3 py-2 font-normal"
         >
           <VpnResourceStatus resourceId={value} />

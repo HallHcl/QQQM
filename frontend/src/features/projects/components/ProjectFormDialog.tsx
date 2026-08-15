@@ -65,7 +65,16 @@ interface Props {
 
 export default function ProjectFormDialog({ open, onOpenChange, project }: Props) {
   const isEdit = Boolean(project);
-  const { data: clients = [] } = useClients();
+  // Create mode's picker only ever offers active clients (the backend
+  // requires an active client_id on create — projects.service.ts's
+  // createProject rejects a deleted one with a 400), but edit mode's
+  // read-only display must still resolve a name for a project whose client
+  // has since been soft-deleted (projects don't cascade-hide when their
+  // client does — decisions.md #6) — a separate deleted:"true" fetch covers
+  // that, since Clients' `deleted` filter has no "all" mode (decisions.md #11).
+  const { data: activeClients = [] } = useClients();
+  const { data: deletedClients = [] } = useClients({ deleted: "true" });
+  const clients = isEdit ? [...activeClients, ...deletedClients] : activeClients;
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const { refetch: refetchProject } = useProject(project?.id);

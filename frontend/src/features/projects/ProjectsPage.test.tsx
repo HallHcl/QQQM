@@ -359,4 +359,29 @@ describe("ProjectsPage", () => {
       expect(projectsCall?.[1].params.query.deleted).toBe("false");
     });
   });
+
+  describe("client column when the parent client is soft-deleted (no cascade — decisions.md #6)", () => {
+    it("still resolves the real client name instead of falling back to '—', since the project stays fully visible and functional", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      const DELETED_CLIENT = {
+        ...SAMPLE_CLIENT,
+        id: "c-orphan",
+        name: "Orphan Test Client",
+        deleted_at: "2026-01-10T00:00:00.000Z",
+      };
+      mockGetByPath({
+        projects: okResult([{ ...SAMPLE_PROJECT, client_id: "c-orphan" }]),
+        // Both the active-clients call and the deleted-clients call hit this
+        // same handler in the test double — asserting on the merged result,
+        // not on which of the two calls actually carried the deleted client.
+        clients: okResult([DELETED_CLIENT]),
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("Migration")).toBeInTheDocument();
+      expect(screen.getByText("Orphan Test Client")).toBeInTheDocument();
+      expect(screen.queryByText("—")).not.toBeInTheDocument();
+    });
+  });
 });
