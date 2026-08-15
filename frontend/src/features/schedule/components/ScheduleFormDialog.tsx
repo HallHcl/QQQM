@@ -23,7 +23,7 @@ import {
 import { ProjectPicker } from "@/components/ProjectPicker";
 import { ServerPicker } from "@/components/ServerPicker";
 import { ConflictState } from "@/components/state/ConflictState";
-import { ApiError } from "@/api/errors";
+import { ApiError, apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { usePeople } from "@/hooks/usePeople";
 import { useConflictResolution } from "@/hooks/useConflictResolution";
@@ -170,7 +170,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
       if (err instanceof ApiError && captureConflict(err)) return;
       toast({
         title: schedule ? "Couldn't update schedule" : "Couldn't create schedule",
-        description: err instanceof ApiError ? err.message : "Something went wrong. Please try again.",
+        description: apiErrorMessage(err),
         variant: "destructive",
       });
     }
@@ -214,7 +214,7 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
       if (err instanceof ApiError && captureConflict(err)) return;
       toast({
         title: "Couldn't update schedule",
-        description: err instanceof ApiError ? err.message : "Something went wrong. Please try again.",
+        description: apiErrorMessage(err),
         variant: "destructive",
       });
     }
