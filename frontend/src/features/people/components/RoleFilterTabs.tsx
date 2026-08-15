@@ -26,7 +26,10 @@ interface Props {
 export default function RoleFilterTabs({ value, onValueChange }: Props) {
   return (
     <Tabs value={value} onValueChange={onValueChange}>
-      <TabsList className="flex-wrap">
+      {/* h-auto min-h-10 overrides TabsList's fixed h-10 — this instance
+          wraps to a second row at narrow widths, and a fixed height would
+          let that row overflow the box and overlap whatever follows it. */}
+      <TabsList className="h-auto min-h-10 flex-wrap">
         {TYPES.map((type) => (
           <TabsTrigger key={type.value} value={type.value}>
             {type.label}
