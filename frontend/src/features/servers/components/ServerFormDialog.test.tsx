@@ -3,6 +3,19 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ServerFormDialog from "./ServerFormDialog";
 
+// This file's tests each drive several sequential Radix `Select` interactions
+// (open -> portal render/position -> option find -> click, repeated for the
+// Environment/Service type/Access method pickers) on top of react-hook-form
+// validation and React Query. That's the most cumulative async UI work of
+// any file in the suite, and it reliably fits within Vitest's 5s default
+// `testTimeout` in isolation and under normal single-suite-run load, but
+// under heavy CI CPU contention (reproduced locally by running two full
+// suites concurrently) the extra wall-clock time pushed exactly these tests
+// over the 5s line while lighter tests elsewhere had more margin. This is a
+// scoped, file-local increase (not a global timeout bump) to give this
+// specific file the extra headroom the awaited work legitimately needs.
+vi.setConfig({ testTimeout: 15000 });
+
 const getMock = vi.fn();
 const postMock = vi.fn();
 const patchMock = vi.fn();
