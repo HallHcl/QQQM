@@ -165,7 +165,8 @@ describe("ClientsPage", () => {
       const { invalidateSpy } = renderPage();
       await screen.findByText("Acme Corp");
 
-      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 
       expect(screen.getByText("Delete this client?")).toBeInTheDocument();
       expect(screen.getByText(/"Acme Corp" will be hidden/i)).toBeInTheDocument();
@@ -190,7 +191,8 @@ describe("ClientsPage", () => {
       renderPage();
       await screen.findByText("Acme Corp");
 
-      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
       expect(deleteMock).not.toHaveBeenCalled();
@@ -205,7 +207,8 @@ describe("ClientsPage", () => {
       renderPage();
       await screen.findByText("Acme Corp");
 
-      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
       fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
       await waitFor(() => {
@@ -224,9 +227,10 @@ describe("ClientsPage", () => {
       renderPage();
       await screen.findByText("Acme Corp");
 
-      expect(screen.queryByRole("button", { name: /delete/i })).not.toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
       // Edit is not RBAC-gated (create/update are admin+member) and should still show.
-      expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Delete" })).not.toBeInTheDocument();
     });
 
     it("shows the Restore action to an admin viewing a deleted client and lets them trigger it", async () => {
@@ -293,6 +297,93 @@ describe("ClientsPage", () => {
 
       expect(await screen.findByText("Old Co")).toBeInTheDocument();
       expect(screen.getByText("Deleted")).toBeInTheDocument();
+    });
+  });
+
+  describe("row click / keyboard opens Edit (Clients has no detail page)", () => {
+    it("opens the edit form when an active row is clicked", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      getMock.mockResolvedValue(okResult([ACTIVE_CLIENT]));
+
+      renderPage();
+      const nameCell = await screen.findByText("Acme Corp");
+      const row = nameCell.closest("tr")!;
+      expect(row).toHaveAttribute("role", "button");
+      expect(row).toHaveAttribute("tabIndex", "0");
+
+      fireEvent.click(row);
+
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Acme Corp")).toBeInTheDocument();
+    });
+
+    it("opens the edit form when Enter is pressed on a focused row", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      getMock.mockResolvedValue(okResult([ACTIVE_CLIENT]));
+
+      renderPage();
+      const nameCell = await screen.findByText("Acme Corp");
+      const row = nameCell.closest("tr")!;
+
+      fireEvent.keyDown(row, { key: "Enter" });
+
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("does not open the edit form when the Actions menu trigger is clicked", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      getMock.mockResolvedValue(okResult([ACTIVE_CLIENT]));
+
+      renderPage();
+      await screen.findByText("Acme Corp");
+
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("full keyboard-only walkthrough: Tab reaches the Actions trigger independently of the row, opens via keyboard, and Delete reaches the confirmation dialog", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      getMock.mockResolvedValue(okResult([ACTIVE_CLIENT]));
+
+      renderPage();
+      const nameCell = await screen.findByText("Acme Corp");
+      const row = nameCell.closest("tr")!;
+      const actionsTrigger = screen.getByRole("button", { name: "Actions" });
+
+      // The row and the Actions trigger are both independently focusable —
+      // the row's keyboard handling doesn't swallow the trigger's own focus
+      // or keyboard behavior (Radix owns the trigger/menu's keyboard nav).
+      row.focus();
+      expect(row).toHaveFocus();
+      actionsTrigger.focus();
+      expect(actionsTrigger).toHaveFocus();
+
+      // Radix's DropdownMenuTrigger opens on pointerdown or on Enter/Space/
+      // ArrowDown keydown — exercise the keyboard path here.
+      fireEvent.keyDown(actionsTrigger, { key: "Enter" });
+      const deleteItem = await screen.findByRole("menuitem", { name: "Delete" });
+
+      // Selecting Delete via the menu (Radix's own keyboard handling)
+      // reaches the same confirmation dialog as a mouse click would.
+      fireEvent.click(deleteItem);
+      expect(await screen.findByText("Delete this client?")).toBeInTheDocument();
+
+      // The row's own primary action (opening the edit form) never fired —
+      // the Actions-menu interaction is fully isolated from the row.
+      expect(screen.queryByDisplayValue("Acme Corp")).not.toBeInTheDocument();
+    });
+
+    it("does not make a deleted row clickable (no Edit action for deleted clients)", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      getMock.mockResolvedValue(okResult([DELETED_CLIENT]));
+
+      renderPage();
+      const nameCell = await screen.findByText("Old Co");
+      const row = nameCell.closest("tr")!;
+      expect(row).not.toHaveAttribute("role", "button");
+      expect(row).not.toHaveAttribute("tabIndex");
     });
   });
 

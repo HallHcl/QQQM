@@ -24,6 +24,8 @@ import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { RowActions } from "@/components/RowActions";
+import { useHasRole } from "@/hooks/useHasRole";
 import { apiErrorMessage } from "@/api/errors";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -69,6 +71,7 @@ export default function ClientsPage() {
 
   const deleteClient = useDeleteClient();
   const restoreClient = useRestoreClient();
+  const canDelete = useHasRole(["admin"]);
 
   function openCreateForm() {
     setEditingClient(undefined);
@@ -194,7 +197,28 @@ export default function ClientsPage() {
               {clients.map((client) => {
                 const isDeleted = Boolean(client.deleted_at);
                 return (
-                  <TableRow key={client.id} className={cn(isDeleted && "opacity-50")}>
+                  <TableRow
+                    key={client.id}
+                    className={cn(!isDeleted && "cursor-pointer", isDeleted && "opacity-50")}
+                    role={isDeleted ? undefined : "button"}
+                    tabIndex={isDeleted ? undefined : 0}
+                    // Explicit aria-label so the row's accessible name doesn't
+                    // flatten in the nested Edit/Delete menu's own labels
+                    // (which would otherwise make e.g. a role="button" query
+                    // for "Delete" ambiguously match this row too).
+                    aria-label={isDeleted ? undefined : `Edit ${client.name}`}
+                    onClick={isDeleted ? undefined : () => openEditForm(client)}
+                    onKeyDown={
+                      isDeleted
+                        ? undefined
+                        : (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              openEditForm(client);
+                            }
+                          }
+                    }
+                  >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {client.name}
@@ -212,7 +236,11 @@ export default function ClientsPage() {
                     <TableCell className="text-muted-foreground">
                       {new Date(client.updated_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
                       {isDeleted ? (
                         <RequireRole roles={["admin"]}>
                           <Button variant="ghost" size="sm" onClick={() => handleRestore(client)}>
@@ -220,20 +248,10 @@ export default function ClientsPage() {
                           </Button>
                         </RequireRole>
                       ) : (
-                        <>
-                          <Button variant="ghost" size="sm" onClick={() => openEditForm(client)}>
-                            Edit
-                          </Button>
-                          <RequireRole roles={["admin"]}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeletingClient(client)}
-                            >
-                              Delete
-                            </Button>
-                          </RequireRole>
-                        </>
+                        <RowActions
+                          onEdit={() => openEditForm(client)}
+                          onDelete={canDelete ? () => setDeletingClient(client) : undefined}
+                        />
                       )}
                     </TableCell>
                   </TableRow>
