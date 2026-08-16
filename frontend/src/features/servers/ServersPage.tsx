@@ -241,7 +241,7 @@ export default function ServersPage() {
                         {environment?.vpn_resource_id && (
                           <span title="Requires VPN connection">
                             <ShieldCheck
-                              className="h-3.5 w-3.5 text-warning"
+                              className="h-3.5 w-3.5 text-muted-foreground"
                               aria-label="Requires VPN connection"
                             />
                           </span>
