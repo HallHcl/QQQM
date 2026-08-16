@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -78,9 +79,11 @@ export default function ServersPage() {
   // The list endpoint returns bare environment_id per row (no nested
   // environment name) — cross-reference the environment picker's own list to
   // resolve a display name, same as EnvironmentsPage does for project_id ->
-  // project name.
+  // project name. Keyed on the full environment object (not just name) so
+  // the table can also read vpn_resource_id for the VPN badge below, with no
+  // extra fetch beyond this already-existing useEnvironments() call.
   const { data: environments = [] } = useEnvironments();
-  const environmentNameById = new Map(environments.map((e) => [e.id, e.name]));
+  const environmentById = new Map(environments.map((e) => [e.id, e]));
 
   const totalPages = pageInfo?.total_pages ?? 1;
 
@@ -208,8 +211,7 @@ export default function ServersPage() {
               <TableRow>
                 <TableHead>Display name</TableHead>
                 <TableHead>Environment</TableHead>
-                <TableHead>Service type</TableHead>
-                <TableHead>Access method</TableHead>
+                <TableHead>Connection</TableHead>
                 <TableHead>Updated</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -217,6 +219,11 @@ export default function ServersPage() {
             <TableBody>
               {servers.map((server) => {
                 const isDeleted = Boolean(server.deleted_at);
+                const environment = environmentById.get(server.environment_id);
+                // Only surface ip_address separately when it adds information —
+                // access_host is already the "how to reach it" value shown in
+                // the Connection column, and the two are frequently identical.
+                const showIp = server.ip_address && server.ip_address !== server.access_host;
                 return (
                   <TableRow key={server.id} className={cn(isDeleted && "opacity-50")}>
                     <TableCell className="font-medium">
@@ -229,13 +236,42 @@ export default function ServersPage() {
                       <p className="text-xs text-muted-foreground">{server.hostname}</p>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {environmentNameById.get(server.environment_id) ?? "—"}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-foreground">{environment?.name ?? "—"}</span>
+                        {environment?.vpn_resource_id && (
+                          <span title="Requires VPN connection">
+                            <ShieldCheck
+                              className="h-3.5 w-3.5 text-warning"
+                              aria-label="Requires VPN connection"
+                            />
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {server.service_type ? SERVICE_TYPE_LABELS[server.service_type] : "—"}
+                      </p>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {server.service_type ? SERVICE_TYPE_LABELS[server.service_type] : "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {server.access_method ? ACCESS_METHOD_LABELS[server.access_method] : "—"}
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="shrink-0">
+                          {server.access_method ? ACCESS_METHOD_LABELS[server.access_method] : "—"}
+                        </Badge>
+                        <span className="font-mono text-xs text-foreground">
+                          {server.access_host}
+                          {server.access_port ? `:${server.access_port}` : ""}
+                        </span>
+                      </div>
+                      {server.access_path && (
+                        <p
+                          className="max-w-[220px] truncate text-xs text-muted-foreground"
+                          title={server.access_path}
+                        >
+                          {server.access_path}
+                        </p>
+                      )}
+                      {showIp && (
+                        <p className="text-xs text-muted-foreground">IP: {server.ip_address}</p>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(server.updated_at).toLocaleDateString()}

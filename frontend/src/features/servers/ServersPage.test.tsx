@@ -135,6 +135,34 @@ describe("ServersPage", () => {
     expect(screen.getByText("Production")).toBeInTheDocument();
     expect(screen.getByText("Application")).toBeInTheDocument();
     expect(screen.getByText("SSH")).toBeInTheDocument();
+    expect(screen.getByText("web-01.internal:22")).toBeInTheDocument();
+    // ip_address (10.0.0.1) matches nothing shown elsewhere but differs from
+    // access_host, so it should appear as a secondary "IP:" line.
+    expect(screen.getByText("IP: 10.0.0.1")).toBeInTheDocument();
+  });
+
+  it("shows a VPN badge next to the environment when vpn_resource_id is set, and omits it otherwise", async () => {
+    mockGetByPath({
+      servers: okResult([SAMPLE_SERVER]),
+      environments: okResult([{ ...SAMPLE_ENVIRONMENT, vpn_resource_id: "r1" }]),
+    });
+
+    renderPage();
+
+    await screen.findByText("Web 01");
+    expect(screen.getByLabelText("Requires VPN connection")).toBeInTheDocument();
+  });
+
+  it("does not show a VPN badge when the environment has no vpn_resource_id", async () => {
+    mockGetByPath({
+      servers: okResult([SAMPLE_SERVER]),
+      environments: okResult([SAMPLE_ENVIRONMENT]),
+    });
+
+    renderPage();
+
+    await screen.findByText("Web 01");
+    expect(screen.queryByLabelText("Requires VPN connection")).not.toBeInTheDocument();
   });
 
   it("renders an empty state when the list is empty", async () => {
