@@ -9,6 +9,12 @@ const postMock = vi.fn();
 const deleteMock = vi.fn();
 const useAuthMock = vi.fn();
 const toastMock = vi.fn();
+const navigateMock = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return { ...actual, useNavigate: () => navigateMock };
+});
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -104,7 +110,31 @@ describe("ProjectsPage", () => {
     deleteMock.mockReset();
     useAuthMock.mockReset();
     toastMock.mockClear();
+    navigateMock.mockClear();
     useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
+  });
+
+  it("navigates to the project's detail page when the row is clicked", async () => {
+    mockGetByPath({ projects: okResult([SAMPLE_PROJECT]), clients: okResult([SAMPLE_CLIENT]) });
+    renderPage();
+
+    const nameCell = await screen.findByText("Migration");
+    const row = nameCell.closest("tr")!;
+    expect(row).toHaveAttribute("role", "button");
+    fireEvent.click(row);
+
+    expect(navigateMock).toHaveBeenCalledWith("/projects/p1");
+  });
+
+  it("navigates to the project's detail page when Enter is pressed on a focused row", async () => {
+    mockGetByPath({ projects: okResult([SAMPLE_PROJECT]), clients: okResult([SAMPLE_CLIENT]) });
+    renderPage();
+
+    const nameCell = await screen.findByText("Migration");
+    const row = nameCell.closest("tr")!;
+    fireEvent.keyDown(row, { key: "Enter" });
+
+    expect(navigateMock).toHaveBeenCalledWith("/projects/p1");
   });
 
   it("shows a loading state while the fetch is in flight", () => {
@@ -167,7 +197,8 @@ describe("ProjectsPage", () => {
       const { invalidateSpy } = renderPage();
       await screen.findByText("Migration");
 
-      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 
       // Confirmation dialog is shown; the mutation has not fired yet.
       expect(screen.getByText("Delete this project?")).toBeInTheDocument();
@@ -199,7 +230,8 @@ describe("ProjectsPage", () => {
       renderPage();
       await screen.findByText("Migration");
 
-      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
       fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
       await waitFor(() => {
@@ -221,7 +253,8 @@ describe("ProjectsPage", () => {
       renderPage();
       await screen.findByText("Migration");
 
-      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
       expect(screen.getByText("Delete this project?")).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -230,7 +263,7 @@ describe("ProjectsPage", () => {
       expect(screen.queryByText("Delete this project?")).not.toBeInTheDocument();
     });
 
-    it("hides Delete and Edit from a non-admin (create/update are admin-only on Projects, verified against backend/src/routes/projects.routes.ts)", async () => {
+    it("hides Delete and Edit from a non-admin (create/update are admin-only on Projects, verified against backend/src/routes/projects.routes.ts) — Actions menu doesn't render at all", async () => {
       useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
       mockGetByPath({
         projects: okResult([SAMPLE_PROJECT]),
@@ -240,8 +273,7 @@ describe("ProjectsPage", () => {
       renderPage();
       await screen.findByText("Migration");
 
-      expect(screen.queryByRole("button", { name: /delete/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Actions" })).not.toBeInTheDocument();
     });
 
     it("shows Edit to an admin", async () => {
@@ -254,7 +286,8 @@ describe("ProjectsPage", () => {
       renderPage();
       await screen.findByText("Migration");
 
-      expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
     });
 
     it("shows New project to an admin but not to a non-admin", async () => {

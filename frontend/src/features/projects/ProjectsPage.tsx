@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { RequireRole } from "@/components/auth/RequireRole";
+import { RowActions } from "@/components/RowActions";
+import { useHasRole } from "@/hooks/useHasRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +48,8 @@ const SORT_OPTIONS: { value: ProjectSort; label: string }[] = [
 ];
 
 export default function ProjectsPage() {
+  const navigate = useNavigate();
+  const canManage = useHasRole(["admin"]);
   const pagination = usePagination({ initialSort: "name", initialOrder: "asc" });
   const {
     data: projects = [],
@@ -206,13 +210,27 @@ export default function ProjectsPage() {
             <TableBody>
               {projects.map((project) => {
                 const isDeleted = Boolean(project.deleted_at);
+                const goToDetail = () => navigate(`/projects/${project.id}`);
                 return (
-                  <TableRow key={project.id} className={cn(isDeleted && "opacity-50")}>
+                  <TableRow
+                    key={project.id}
+                    className={cn("cursor-pointer", isDeleted && "opacity-50")}
+                    role="button"
+                    tabIndex={0}
+                    // Explicit aria-label so the row's accessible name doesn't
+                    // flatten in the nested Edit/Delete menu's own labels.
+                    aria-label={`View ${project.name}`}
+                    onClick={goToDetail}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        goToDetail();
+                      }
+                    }}
+                  >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <Link to={`/projects/${project.id}`} className="hover:underline">
-                          {project.name}
-                        </Link>
+                        {project.name}
                         {isDeleted && <Badge variant="secondary">Deleted</Badge>}
                       </div>
                     </TableCell>
@@ -228,7 +246,11 @@ export default function ProjectsPage() {
                     <TableCell className="text-muted-foreground">
                       {new Date(project.updated_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
                       {isDeleted ? (
                         <RequireRole roles={["admin"]}>
                           <Button variant="ghost" size="sm" onClick={() => handleRestore(project)}>
@@ -236,18 +258,10 @@ export default function ProjectsPage() {
                           </Button>
                         </RequireRole>
                       ) : (
-                        <RequireRole roles={["admin"]}>
-                          <Button variant="ghost" size="sm" onClick={() => openEditForm(project)}>
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeletingProject(project)}
-                          >
-                            Delete
-                          </Button>
-                        </RequireRole>
+                        <RowActions
+                          onEdit={canManage ? () => openEditForm(project) : undefined}
+                          onDelete={canManage ? () => setDeletingProject(project) : undefined}
+                        />
                       )}
                     </TableCell>
                   </TableRow>

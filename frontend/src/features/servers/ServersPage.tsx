@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { RequireRole } from "@/components/auth/RequireRole";
+import { RowActions } from "@/components/RowActions";
+import { useHasRole } from "@/hooks/useHasRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +68,9 @@ const ACCESS_METHOD_LABELS: Record<string, string> = {
 };
 
 export default function ServersPage() {
+  const navigate = useNavigate();
+  const canEdit = useHasRole(["admin", "member"]);
+  const canDelete = useHasRole(["admin"]);
   const pagination = usePagination({ initialSort: "display_name", initialOrder: "asc" });
   const {
     data: servers = [],
@@ -224,13 +229,27 @@ export default function ServersPage() {
                 // access_host is already the "how to reach it" value shown in
                 // the Connection column, and the two are frequently identical.
                 const showIp = server.ip_address && server.ip_address !== server.access_host;
+                const goToDetail = () => navigate(`/servers/${server.id}`);
                 return (
-                  <TableRow key={server.id} className={cn(isDeleted && "opacity-50")}>
+                  <TableRow
+                    key={server.id}
+                    className={cn("cursor-pointer", isDeleted && "opacity-50")}
+                    role="button"
+                    tabIndex={0}
+                    // Explicit aria-label so the row's accessible name doesn't
+                    // flatten in the nested Edit/Delete menu's own labels.
+                    aria-label={`View ${server.display_name}`}
+                    onClick={goToDetail}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        goToDetail();
+                      }
+                    }}
+                  >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <Link to={`/servers/${server.id}`} className="hover:underline">
-                          {server.display_name}
-                        </Link>
+                        {server.display_name}
                         {isDeleted && <Badge variant="secondary">Deleted</Badge>}
                       </div>
                       <p className="text-xs text-muted-foreground">{server.hostname}</p>
@@ -276,7 +295,11 @@ export default function ServersPage() {
                     <TableCell className="text-muted-foreground">
                       {new Date(server.updated_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
                       {isDeleted ? (
                         <RequireRole roles={["admin"]}>
                           <Button
@@ -288,22 +311,10 @@ export default function ServersPage() {
                           </Button>
                         </RequireRole>
                       ) : (
-                        <>
-                          <RequireRole roles={["admin", "member"]}>
-                            <Button variant="ghost" size="sm" onClick={() => openEditForm(server)}>
-                              Edit
-                            </Button>
-                          </RequireRole>
-                          <RequireRole roles={["admin"]}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeletingServer(server)}
-                            >
-                              Delete
-                            </Button>
-                          </RequireRole>
-                        </>
+                        <RowActions
+                          onEdit={canEdit ? () => openEditForm(server) : undefined}
+                          onDelete={canDelete ? () => setDeletingServer(server) : undefined}
+                        />
                       )}
                     </TableCell>
                   </TableRow>

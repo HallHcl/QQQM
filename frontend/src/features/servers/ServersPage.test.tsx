@@ -9,6 +9,12 @@ const postMock = vi.fn();
 const deleteMock = vi.fn();
 const useAuthMock = vi.fn();
 const toastMock = vi.fn();
+const navigateMock = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return { ...actual, useNavigate: () => navigateMock };
+});
 
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
@@ -113,7 +119,31 @@ describe("ServersPage", () => {
     deleteMock.mockReset();
     useAuthMock.mockReset();
     toastMock.mockClear();
+    navigateMock.mockClear();
     useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
+  });
+
+  it("navigates to the server's detail page when the row is clicked", async () => {
+    mockGetByPath({ servers: okResult([SAMPLE_SERVER]), environments: okResult([SAMPLE_ENVIRONMENT]) });
+    renderPage();
+
+    const nameEl = await screen.findByText("Web 01");
+    const row = nameEl.closest("tr")!;
+    expect(row).toHaveAttribute("role", "button");
+    fireEvent.click(row);
+
+    expect(navigateMock).toHaveBeenCalledWith("/servers/s1");
+  });
+
+  it("navigates to the server's detail page when Enter is pressed on a focused row", async () => {
+    mockGetByPath({ servers: okResult([SAMPLE_SERVER]), environments: okResult([SAMPLE_ENVIRONMENT]) });
+    renderPage();
+
+    const nameEl = await screen.findByText("Web 01");
+    const row = nameEl.closest("tr")!;
+    fireEvent.keyDown(row, { key: "Enter" });
+
+    expect(navigateMock).toHaveBeenCalledWith("/servers/s1");
   });
 
   it("shows a loading state while the fetch is in flight", () => {
@@ -212,8 +242,9 @@ describe("ServersPage", () => {
       renderPage();
       await screen.findByText("Web 01");
 
-      expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /delete/i })).not.toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Delete" })).not.toBeInTheDocument();
     });
 
     it("shows both Edit and Delete to an admin", async () => {
@@ -223,8 +254,9 @@ describe("ServersPage", () => {
       renderPage();
       await screen.findByText("Web 01");
 
-      expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /delete/i })).toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
     });
 
     it("hides Restore from a member viewing a deleted server", async () => {
@@ -271,7 +303,8 @@ describe("ServersPage", () => {
       const { invalidateSpy } = renderPage();
       await screen.findByText("Web 01");
 
-      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 
       expect(screen.getByText("Delete this server?")).toBeInTheDocument();
       expect(screen.getByText(/permanently removes \(hard-deletes\) its stored credential references/i)).toBeInTheDocument();
@@ -295,7 +328,8 @@ describe("ServersPage", () => {
       renderPage();
       await screen.findByText("Web 01");
 
-      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
       fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
       await waitFor(() => {
@@ -314,7 +348,8 @@ describe("ServersPage", () => {
       renderPage();
       await screen.findByText("Web 01");
 
-      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
       expect(deleteMock).not.toHaveBeenCalled();

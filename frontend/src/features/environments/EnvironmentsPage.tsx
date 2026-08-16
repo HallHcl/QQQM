@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { RequireRole } from "@/components/auth/RequireRole";
+import { RowActions } from "@/components/RowActions";
+import { useHasRole } from "@/hooks/useHasRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +48,8 @@ const SORT_OPTIONS: { value: EnvironmentSort; label: string }[] = [
 ];
 
 export default function EnvironmentsPage() {
+  const navigate = useNavigate();
+  const canManage = useHasRole(["admin"]);
   const pagination = usePagination({ initialSort: "name", initialOrder: "asc" });
   const {
     data: environments = [],
@@ -197,13 +201,27 @@ export default function EnvironmentsPage() {
             <TableBody>
               {environments.map((environment) => {
                 const isDeleted = Boolean(environment.deleted_at);
+                const goToDetail = () => navigate(`/environments/${environment.id}`);
                 return (
-                  <TableRow key={environment.id} className={cn(isDeleted && "opacity-50")}>
+                  <TableRow
+                    key={environment.id}
+                    className={cn("cursor-pointer", isDeleted && "opacity-50")}
+                    role="button"
+                    tabIndex={0}
+                    // Explicit aria-label so the row's accessible name doesn't
+                    // flatten in the nested Edit/Delete menu's own labels.
+                    aria-label={`View ${environment.name}`}
+                    onClick={goToDetail}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        goToDetail();
+                      }
+                    }}
+                  >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <Link to={`/environments/${environment.id}`} className="hover:underline">
-                          {environment.name}
-                        </Link>
+                        {environment.name}
                         {isDeleted && <Badge variant="secondary">Deleted</Badge>}
                       </div>
                     </TableCell>
@@ -216,7 +234,11 @@ export default function EnvironmentsPage() {
                     <TableCell className="text-muted-foreground">
                       {new Date(environment.updated_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
                       {isDeleted ? (
                         <RequireRole roles={["admin"]}>
                           <Button
@@ -228,18 +250,10 @@ export default function EnvironmentsPage() {
                           </Button>
                         </RequireRole>
                       ) : (
-                        <RequireRole roles={["admin"]}>
-                          <Button variant="ghost" size="sm" onClick={() => openEditForm(environment)}>
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeletingEnvironment(environment)}
-                          >
-                            Delete
-                          </Button>
-                        </RequireRole>
+                        <RowActions
+                          onEdit={canManage ? () => openEditForm(environment) : undefined}
+                          onDelete={canManage ? () => setDeletingEnvironment(environment) : undefined}
+                        />
                       )}
                     </TableCell>
                   </TableRow>
