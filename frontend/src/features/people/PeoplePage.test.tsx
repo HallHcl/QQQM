@@ -131,6 +131,31 @@ describe("PeoplePage", () => {
     expect(screen.getByText("Deleted")).toBeInTheDocument();
   });
 
+  describe("row keyboard activation (opens PersonDetailDialog, same as a click)", () => {
+    it("opens the detail dialog when Enter is pressed on a focused row", async () => {
+      mockGetByPath({ people: ok(paginated([ACTIVE_PERSON])) });
+      renderPage();
+
+      const nameCell = await screen.findByText("Alex Rivera");
+      const row = nameCell.closest("tr")!;
+      expect(row).toHaveAttribute("role", "button");
+      fireEvent.keyDown(row, { key: "Enter" });
+
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("does not open the detail dialog from a keydown on the Actions menu trigger", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      mockGetByPath({ people: ok(paginated([ACTIVE_PERSON])) });
+      renderPage();
+
+      await screen.findByText("Alex Rivera");
+      fireEvent.keyDown(screen.getByRole("button", { name: "Actions" }), { key: "Enter" });
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
   describe("pagination", () => {
     it("sends page/per_page/sort/order/search/deleted through to the request, with no client_id param", async () => {
       mockGetByPath({ people: ok(paginated([])) });
@@ -210,23 +235,25 @@ describe("PeoplePage", () => {
       const { unmount } = renderPage();
       await screen.findByText("Alex Rivera");
       expect(screen.getByRole("button", { name: /new person/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
       unmount();
 
       useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
       renderPage();
       await screen.findByText("Alex Rivera");
       expect(screen.getByRole("button", { name: /new person/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
     });
 
-    it("hides New person and Edit from a role with neither admin nor member", async () => {
+    it("hides New person and the Actions menu from a role with neither admin nor member", async () => {
       useAuthMock.mockReturnValue({ roles: [], isLoading: false });
       mockGetByPath({ people: ok(paginated([ACTIVE_PERSON])) });
       renderPage();
       await screen.findByText("Alex Rivera");
       expect(screen.queryByRole("button", { name: /new person/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Actions" })).not.toBeInTheDocument();
     });
   });
 
@@ -236,15 +263,17 @@ describe("PeoplePage", () => {
       mockGetByPath({ people: ok(paginated([ACTIVE_PERSON])) });
       const { unmount } = renderPage();
       await screen.findByText("Alex Rivera");
-      expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
       unmount();
 
       useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
       renderPage();
       await screen.findByText("Alex Rivera");
-      expect(screen.queryByRole("button", { name: /^delete$/i })).not.toBeInTheDocument();
-      // Edit still shows for member (admin+member gate).
-      expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      // Edit still shows for member (admin+member gate); Delete does not (admin only).
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Delete" })).not.toBeInTheDocument();
     });
 
     it("shows Restore to an admin viewing a deleted person, but not to a member", async () => {
@@ -270,7 +299,8 @@ describe("PeoplePage", () => {
 
       const { invalidateSpy } = renderPage();
       await screen.findByText("Alex Rivera");
-      fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 
       expect(await screen.findByText("Delete this person?")).toBeInTheDocument();
       expect(
@@ -293,7 +323,8 @@ describe("PeoplePage", () => {
 
       renderPage();
       await screen.findByText("Alex Rivera");
-      fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 
       expect(await screen.findByText("Delete this person?")).toBeInTheDocument();
       const dialog = screen.getByRole("dialog");
