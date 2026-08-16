@@ -168,8 +168,8 @@ export default function ProjectsPage() {
           value={pagination.deleted}
           onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
         >
-          <SelectTrigger className="w-32" aria-label="Status filter">
-            <SelectValue placeholder="Status" />
+          <SelectTrigger className="w-40" aria-label="Record status filter">
+            <SelectValue placeholder="Record status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="false">Active</SelectItem>
