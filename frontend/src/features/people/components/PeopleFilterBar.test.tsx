@@ -29,7 +29,7 @@ describe("PeopleFilterBar", () => {
     expect(screen.getByPlaceholderText("Search people...")).toBeInTheDocument();
     expect(screen.getByLabelText("Sort by")).toBeInTheDocument();
     expect(screen.getByLabelText("Sort order")).toBeInTheDocument();
-    expect(screen.getByLabelText("Status filter")).toBeInTheDocument();
+    expect(screen.getByLabelText("Record status filter")).toBeInTheDocument();
   });
 
   it("calls onTypeFilterChange when a role tab is clicked", () => {
@@ -59,7 +59,7 @@ describe("PeopleFilterBar", () => {
     fireEvent.click(await screen.findByRole("option", { name: "Descending" }));
     expect(props.onOrderChange).toHaveBeenCalledWith("desc");
 
-    fireEvent.click(screen.getByLabelText("Status filter"));
+    fireEvent.click(screen.getByLabelText("Record status filter"));
     fireEvent.click(await screen.findByRole("option", { name: "Deleted" }));
     expect(props.onDeletedChange).toHaveBeenCalledWith("true");
   });

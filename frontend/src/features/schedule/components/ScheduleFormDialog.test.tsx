@@ -4,6 +4,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import ScheduleFormDialog from "./ScheduleFormDialog";
 import type { Schedule } from "@/types";
 
+// This file's tests drive multiple sequential Radix Select interactions,
+// react-query fetches (people, projects, environments, servers, schedule
+// detail), and waitFor chains across 20 tests. The import phase alone takes
+// ~4.4s due to the hook dependency chain, leaving very little margin per
+// test against Vitest's 5s default under full-suite CPU contention — the
+// same pattern that caused ServerFormDialog.test.tsx to timeout and was
+// fixed there with this identical scoped override. File-local, does NOT
+// change the global default.
+vi.setConfig({ testTimeout: 15000 });
+
+
 const getMock = vi.fn();
 const postMock = vi.fn();
 const patchMock = vi.fn();
