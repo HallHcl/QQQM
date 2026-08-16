@@ -37,53 +37,60 @@ export default {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
+      // Every entry below wraps its CSS variable as
+      // `rgb(var(--x) / <alpha-value>)` rather than a bare `var(--x)` —
+      // Tailwind substitutes `<alpha-value>` with the opacity-modifier
+      // value (e.g. the `10` in `bg-danger/10`), which only works when the
+      // variable itself holds space-separated RGB channels (see
+      // globals.css). A bare `var(--x)` reference silently no-ops every
+      // opacity-modified class using that color instead of erroring.
       colors: {
-        border: "var(--border)",
-        input: "var(--input)",
-        ring: "var(--ring)",
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        border: "rgb(var(--border) / <alpha-value>)",
+        input: "rgb(var(--input) / <alpha-value>)",
+        ring: "rgb(var(--ring) / <alpha-value>)",
+        background: "rgb(var(--background) / <alpha-value>)",
+        foreground: "rgb(var(--foreground) / <alpha-value>)",
         primary: {
-          DEFAULT: "var(--primary)",
-          foreground: "var(--primary-foreground)",
+          DEFAULT: "rgb(var(--primary) / <alpha-value>)",
+          foreground: "rgb(var(--primary-foreground) / <alpha-value>)",
         },
         secondary: {
-          DEFAULT: "var(--secondary)",
-          foreground: "var(--secondary-foreground)",
+          DEFAULT: "rgb(var(--secondary) / <alpha-value>)",
+          foreground: "rgb(var(--secondary-foreground) / <alpha-value>)",
         },
         destructive: {
-          DEFAULT: "var(--destructive)",
-          foreground: "var(--destructive-foreground)",
+          DEFAULT: "rgb(var(--destructive) / <alpha-value>)",
+          foreground: "rgb(var(--destructive-foreground) / <alpha-value>)",
         },
         muted: {
-          DEFAULT: "var(--muted)",
-          foreground: "var(--muted-foreground)",
+          DEFAULT: "rgb(var(--muted) / <alpha-value>)",
+          foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "var(--shadcn-accent)",
-          foreground: "var(--shadcn-accent-foreground)",
+          DEFAULT: "rgb(var(--shadcn-accent) / <alpha-value>)",
+          foreground: "rgb(var(--shadcn-accent-foreground) / <alpha-value>)",
         },
         popover: {
-          DEFAULT: "var(--popover)",
-          foreground: "var(--popover-foreground)",
+          DEFAULT: "rgb(var(--popover) / <alpha-value>)",
+          foreground: "rgb(var(--popover-foreground) / <alpha-value>)",
         },
         card: {
-          DEFAULT: "var(--card)",
-          foreground: "var(--card-foreground)",
+          DEFAULT: "rgb(var(--card) / <alpha-value>)",
+          foreground: "rgb(var(--card-foreground) / <alpha-value>)",
         },
         // Brand palette (Razer-inspired)
         brand: {
-          DEFAULT: "var(--accent)",
-          hover: "var(--accent-hover)",
-          dim: "var(--accent-dim)",
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          hover: "rgb(var(--accent-hover) / <alpha-value>)",
+          dim: "rgb(var(--accent-dim) / <alpha-value>)",
         },
         surface: {
-          DEFAULT: "var(--surface)",
-          hover: "var(--surface-hover)",
+          DEFAULT: "rgb(var(--surface) / <alpha-value>)",
+          hover: "rgb(var(--surface-hover) / <alpha-value>)",
         },
-        subtle: "var(--text-muted)",
-        danger: "var(--danger)",
-        warning: "var(--warning)",
+        subtle: "rgb(var(--text-muted) / <alpha-value>)",
+        danger: "rgb(var(--danger) / <alpha-value>)",
+        warning: "rgb(var(--warning) / <alpha-value>)",
       },
       keyframes: {
         "accordion-down": {

@@ -4,22 +4,35 @@
 
 @layer base {
   :root {
-    /* Brand palette — Razer-inspired dark theme (single, non-togglable) */
-    --background: #0a0a0a;
-    --surface: #121212;
-    --surface-hover: #1a1a1a;
-    --border: #262626;
+    /* Brand palette — Razer-inspired dark theme (single, non-togglable).
+       Values are space-separated RGB channels (not hex/rgb()) so Tailwind's
+       opacity-modifier syntax (bg-danger/10, hover:bg-warning/40, etc.) can
+       wrap them as rgb(var(--x) / <alpha-value>) per Tailwind's documented
+       CSS-variable color convention — see tailwind.config.js's `colors`
+       block, which does the wrapping. A plain hex/rgb() value here makes
+       every opacity-modified class using it silently render fully
+       transparent instead of the intended tint (confirmed via the
+       RowActions visual sweep: hover:bg-danger/10 rendered as
+       rgba(0,0,0,0)). Same visual colors as before — only reformatted.
+       #0a0a0a=10 10 10, #121212=18 18 18, #1a1a1a=26 26 26,
+       #262626=38 38 38, #44d62c=68 214 44, #58e840=88 232 64,
+       #1f5c15=31 92 21, #f5f5f5=245 245 245, #a3a3a3=163 163 163,
+       #6b6b6b=107 107 107, #ff3b3b=255 59 59, #ffb800=255 184 0. */
+    --background: 10 10 10;
+    --surface: 18 18 18;
+    --surface-hover: 26 26 26;
+    --border: 38 38 38;
 
-    --accent: #44d62c;
-    --accent-hover: #58e840;
-    --accent-dim: #1f5c15;
+    --accent: 68 214 44;
+    --accent-hover: 88 232 64;
+    --accent-dim: 31 92 21;
 
-    --text-primary: #f5f5f5;
-    --text-secondary: #a3a3a3;
-    --text-muted: #6b6b6b;
+    --text-primary: 245 245 245;
+    --text-secondary: 163 163 163;
+    --text-muted: 107 107 107;
 
-    --danger: #ff3b3b;
-    --warning: #ffb800;
+    --danger: 255 59 59;
+    --warning: 255 184 0;
 
     /* shadcn/ui semantic tokens mapped onto the palette above.
        Note: shadcn's own "accent" slot is used internally for generic
