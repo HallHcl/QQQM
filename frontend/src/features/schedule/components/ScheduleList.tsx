@@ -10,10 +10,18 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RowActions } from "@/components/RowActions";
+import { useHasRole } from "@/hooks/useHasRole";
 import { cn } from "@/lib/utils";
 import { parseScheduledDate } from "@/hooks/useSchedules";
 import type { Schedule } from "@/types";
 import ScheduleStatusActions from "./ScheduleStatusActions";
+
+// Edit/Delete are hidden once a schedule reaches a terminal status — mirrors
+// scheduleStateMachine.ts's terminal states (done/cancelled have no further
+// transitions). This is independent of isDeleted: a non-deleted schedule
+// that's simply done or cancelled shouldn't still offer Edit/Delete.
+const TERMINAL_STATUSES: Schedule["status"][] = ["done", "cancelled"];
 
 const STATUS_VARIANT: Record<
   Schedule["status"],
@@ -33,6 +41,9 @@ interface Props {
 }
 
 export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }: Props) {
+  const canEdit = useHasRole(["admin", "member"]);
+  const canDelete = useHasRole(["admin"]);
+
   if (schedules.length === 0) {
     return <p className="text-sm text-muted-foreground">No schedules found.</p>;
   }
@@ -51,6 +62,7 @@ export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }:
       <TableBody>
         {schedules.map((schedule) => {
           const isDeleted = Boolean(schedule.deleted_at);
+          const isTerminal = TERMINAL_STATUSES.includes(schedule.status);
           return (
             <TableRow key={schedule.id} className={cn(isDeleted && "opacity-50")}>
               <TableCell className="font-medium">
@@ -84,18 +96,10 @@ export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }:
                     </Button>
                   </RequireRole>
                 ) : (
-                  <>
-                    <RequireRole roles={["admin", "member"]}>
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(schedule)}>
-                        Edit
-                      </Button>
-                    </RequireRole>
-                    <RequireRole roles={["admin"]}>
-                      <Button variant="ghost" size="sm" onClick={() => onDelete(schedule)}>
-                        Delete
-                      </Button>
-                    </RequireRole>
-                  </>
+                  <RowActions
+                    onEdit={canEdit && !isTerminal ? () => onEdit(schedule) : undefined}
+                    onDelete={canDelete && !isTerminal ? () => onDelete(schedule) : undefined}
+                  />
                 )}
               </TableCell>
             </TableRow>

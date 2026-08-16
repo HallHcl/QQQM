@@ -231,23 +231,25 @@ describe("SchedulePage", () => {
       const { unmount } = renderPage();
       await screen.findByText("Quarterly PM");
       expect(screen.getByRole("button", { name: /new schedule/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
       unmount();
 
       useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
       renderPage();
       await screen.findByText("Quarterly PM");
       expect(screen.getByRole("button", { name: /new schedule/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
     });
 
-    it("hides New schedule and Edit from a role with neither admin nor member", async () => {
+    it("hides New schedule and the Actions menu from a role with neither admin nor member", async () => {
       useAuthMock.mockReturnValue({ roles: [], isLoading: false });
       mockGetByPath({ schedules: ok(paginated([ACTIVE_SCHEDULE])) });
       renderPage();
       await screen.findByText("Quarterly PM");
       expect(screen.queryByRole("button", { name: /new schedule/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Actions" })).not.toBeInTheDocument();
     });
   });
 
@@ -257,15 +259,17 @@ describe("SchedulePage", () => {
       mockGetByPath({ schedules: ok(paginated([ACTIVE_SCHEDULE])) });
       const { unmount } = renderPage();
       await screen.findByText("Quarterly PM");
-      expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
       unmount();
 
       useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
       renderPage();
       await screen.findByText("Quarterly PM");
-      expect(screen.queryByRole("button", { name: /^delete$/i })).not.toBeInTheDocument();
-      // Edit still shows for member (admin+member gate).
-      expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      // Edit still shows for member (admin+member gate); Delete does not (admin only).
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Delete" })).not.toBeInTheDocument();
     });
 
     it("shows Restore to an admin viewing a deleted schedule, but not to a member", async () => {
@@ -283,6 +287,48 @@ describe("SchedulePage", () => {
     });
   });
 
+  describe("Edit/Delete are hidden for terminal statuses (done/cancelled), independent of isDeleted", () => {
+    it("shows the Actions menu with Edit and Delete for a pending schedule", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      mockGetByPath({ schedules: ok(paginated([{ ...ACTIVE_SCHEDULE, status: "pending" }])) });
+      renderPage();
+      await screen.findByText("Quarterly PM");
+
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
+    });
+
+    it("shows the Actions menu with Edit and Delete for an in_progress schedule", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      mockGetByPath({ schedules: ok(paginated([{ ...ACTIVE_SCHEDULE, status: "in_progress" }])) });
+      renderPage();
+      await screen.findByText("Quarterly PM");
+
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      expect(await screen.findByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
+    });
+
+    it("hides the Actions menu entirely for a done schedule (not soft-deleted, but terminal)", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      mockGetByPath({ schedules: ok(paginated([{ ...ACTIVE_SCHEDULE, status: "done" }])) });
+      renderPage();
+      await screen.findByText("Quarterly PM");
+
+      expect(screen.queryByRole("button", { name: "Actions" })).not.toBeInTheDocument();
+    });
+
+    it("hides the Actions menu entirely for a cancelled schedule (not soft-deleted, but terminal)", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      mockGetByPath({ schedules: ok(paginated([{ ...ACTIVE_SCHEDULE, status: "cancelled" }])) });
+      renderPage();
+      await screen.findByText("Quarterly PM");
+
+      expect(screen.queryByRole("button", { name: "Actions" })).not.toBeInTheDocument();
+    });
+  });
+
   describe("delete", () => {
     it("opens a confirmation whose copy reflects Schedule being a leaf entity (no cascade), and deletes on confirm", async () => {
       useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
@@ -291,7 +337,8 @@ describe("SchedulePage", () => {
 
       const { invalidateSpy } = renderPage();
       await screen.findByText("Quarterly PM");
-      fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 
       expect(await screen.findByText("Delete this schedule?")).toBeInTheDocument();
       expect(screen.getByText(/leaf record.*nothing else.*affected/i)).toBeInTheDocument();
@@ -312,7 +359,8 @@ describe("SchedulePage", () => {
 
       renderPage();
       await screen.findByText("Quarterly PM");
-      fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: "Actions" }), { button: 0 });
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 
       expect(await screen.findByText("Delete this schedule?")).toBeInTheDocument();
       const dialog = screen.getByRole("dialog");
