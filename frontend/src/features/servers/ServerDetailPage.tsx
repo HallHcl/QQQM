@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { RequireRole } from "@/components/auth/RequireRole";
@@ -8,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
 import CredentialRefList from "@/features/infrastructure/components/CredentialRefList";
-import ServerFormDialog from "./components/ServerFormDialog";
+import ServerEditCard from "./components/ServerEditCard";
 import { useServer } from "@/hooks/useServers";
+import { useHasRole } from "@/hooks/useHasRole";
+import { usePagination } from "@/hooks/usePagination";
 
 const SERVICE_TYPE_LABELS: Record<string, string> = {
   application: "Application",
@@ -33,7 +34,25 @@ const ACCESS_METHOD_LABELS: Record<string, string> = {
 export default function ServerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: server, isLoading, isError, error, refetch } = useServer(id);
-  const [formOpen, setFormOpen] = useState(false);
+  // Server create/update is admin+member (requireAnyRole), NOT admin-only
+  // like Environments — verified against backend/src/routes/servers.routes.ts.
+  const canEdit = useHasRole(["admin", "member"]);
+
+  // Only the ?edit escape hatch of usePagination is used here — this page
+  // has nothing to paginate. Reflecting edit mode in the URL (rather than
+  // local state) is what makes the list page's row-action "Edit" and this
+  // page's own Edit button converge on the same state, and keeps edit mode
+  // shareable/deep-linkable/bookmarkable.
+  const { getParam, setParams } = usePagination();
+  const isEditing = canEdit && getParam("edit") === "true";
+
+  function enterEdit() {
+    setParams({ edit: "true" });
+  }
+
+  function exitEdit() {
+    setParams({ edit: undefined });
+  }
 
   return (
     <div className="space-y-6">
@@ -54,110 +73,115 @@ export default function ServerDetailPage() {
       ) : (
         <>
           <Card>
-            <CardHeader className="flex flex-row items-start justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CardTitle>{server.display_name}</CardTitle>
-                  {server.deleted_at && <Badge variant="secondary">Deleted</Badge>}
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{server.hostname}</p>
-                <div className="mt-1">
-                  <Link
-                    to={`/environments/${server.environment.id}`}
-                    className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-                  >
-                    {server.environment.name}
-                  </Link>
-                  <span className="text-sm text-muted-foreground"> · {server.environment.project.name}</span>
-                </div>
-              </div>
-              {/* Server create/update is admin+member (requireAnyRole), NOT
-                  admin-only like Environments — verified against
-                  backend/src/routes/servers.routes.ts. */}
-              <RequireRole roles={["admin", "member"]}>
-                <Button variant="secondary" size="sm" onClick={() => setFormOpen(true)}>
-                  Edit
-                </Button>
-              </RequireRole>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {server.ip_address && (
+            {!isEditing && (
+              <CardHeader className="flex flex-row items-start justify-between gap-2">
                 <div>
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    IP address
-                  </span>
-                  <p className="text-sm">{server.ip_address}</p>
-                </div>
-              )}
-
-              {server.tech_stack.length > 0 && (
-                <div>
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Tech stack
-                  </span>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {server.tech_stack.map((tech, index) => (
-                      <Badge key={index} variant="secondary">
-                        {String(tech)}
-                      </Badge>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <CardTitle>{server.display_name}</CardTitle>
+                    {server.deleted_at && <Badge variant="secondary">Deleted</Badge>}
                   </div>
-                </div>
-              )}
-
-              <div className="rounded-md border border-border p-3">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Access documentation
-                </p>
-                <dl className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Service type</dt>
-                    <dd>{server.service_type ? SERVICE_TYPE_LABELS[server.service_type] : "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Access method</dt>
-                    <dd>{server.access_method ? ACCESS_METHOD_LABELS[server.access_method] : "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Access host</dt>
-                    <dd>{server.access_host || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Port</dt>
-                    <dd>{server.access_port ?? "—"}</dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-xs text-muted-foreground">Access path</dt>
-                    <dd>{server.access_path ?? "—"}</dd>
-                  </div>
-                </dl>
-              </div>
-
-              {server.monitoring_url && (
-                <div>
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Monitoring
-                  </span>
-                  <p>
-                    <a
-                      href={server.monitoring_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm text-brand underline underline-offset-2"
+                  <p className="mt-1 text-sm text-muted-foreground">{server.hostname}</p>
+                  <div className="mt-1">
+                    <Link
+                      to={`/environments/${server.environment.id}`}
+                      className="text-sm text-muted-foreground hover:text-foreground hover:underline"
                     >
-                      Monitoring dashboard
-                    </a>
-                  </p>
+                      {server.environment.name}
+                    </Link>
+                    <span className="text-sm text-muted-foreground"> · {server.environment.project.name}</span>
+                  </div>
                 </div>
-              )}
+                <RequireRole roles={["admin", "member"]}>
+                  <Button variant="secondary" size="sm" onClick={enterEdit}>
+                    Edit
+                  </Button>
+                </RequireRole>
+              </CardHeader>
+            )}
+            <CardContent className="space-y-4">
+              {isEditing ? (
+                <ServerEditCard server={server} onSaved={exitEdit} onCancel={exitEdit} />
+              ) : (
+                <>
+                  {server.ip_address && (
+                    <div>
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        IP address
+                      </span>
+                      <p className="text-sm">{server.ip_address}</p>
+                    </div>
+                  )}
 
-              {server.notes && (
-                <div>
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Notes
-                  </span>
-                  <p className="text-sm text-muted-foreground">{server.notes}</p>
-                </div>
+                  {server.tech_stack.length > 0 && (
+                    <div>
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Tech stack
+                      </span>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {server.tech_stack.map((tech, index) => (
+                          <Badge key={index} variant="secondary">
+                            {String(tech)}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-md border border-border p-3">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Access documentation
+                    </p>
+                    <dl className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Service type</dt>
+                        <dd>{server.service_type ? SERVICE_TYPE_LABELS[server.service_type] : "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Access method</dt>
+                        <dd>{server.access_method ? ACCESS_METHOD_LABELS[server.access_method] : "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Access host</dt>
+                        <dd>{server.access_host || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Port</dt>
+                        <dd>{server.access_port ?? "—"}</dd>
+                      </div>
+                      <div className="col-span-2">
+                        <dt className="text-xs text-muted-foreground">Access path</dt>
+                        <dd>{server.access_path ?? "—"}</dd>
+                      </div>
+                    </dl>
+                  </div>
+
+                  {server.monitoring_url && (
+                    <div>
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Monitoring
+                      </span>
+                      <p>
+                        <a
+                          href={server.monitoring_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-brand underline underline-offset-2"
+                        >
+                          Monitoring dashboard
+                        </a>
+                      </p>
+                    </div>
+                  )}
+
+                  {server.notes && (
+                    <div>
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Notes
+                      </span>
+                      <p className="text-sm text-muted-foreground">{server.notes}</p>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -175,8 +199,6 @@ export default function ServerDetailPage() {
               <CredentialRefList serverId={server.id} manageable />
             </CardContent>
           </Card>
-
-          <ServerFormDialog open={formOpen} onOpenChange={setFormOpen} server={server} />
         </>
       )}
     </div>

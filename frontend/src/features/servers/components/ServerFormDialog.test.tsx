@@ -83,13 +83,13 @@ function apiError(status: number, code: string, message: string, details?: unkno
   };
 }
 
-function renderDialog(server?: typeof SAMPLE_SERVER) {
+function renderDialog() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   const onOpenChange = vi.fn();
   render(
     <QueryClientProvider client={queryClient}>
-      <ServerFormDialog open onOpenChange={onOpenChange} server={server} />
+      <ServerFormDialog open onOpenChange={onOpenChange} />
     </QueryClientProvider>
   );
   return { onOpenChange, invalidateSpy };
@@ -236,117 +236,7 @@ describe("ServerFormDialog — create", () => {
   });
 });
 
-describe("ServerFormDialog — edit", () => {
-  beforeEach(() => {
-    getMock.mockReset();
-    postMock.mockReset();
-    patchMock.mockReset();
-    toastMock.mockClear();
-    getMock.mockImplementation((path: string) => {
-      if (path === "/api/environments") {
-        return Promise.resolve(
-          ok({ data: [SAMPLE_ENVIRONMENT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
-        );
-      }
-      if (path === "/api/servers/{id}") {
-        return Promise.resolve(ok(SAMPLE_SERVER));
-      }
-      throw new Error(`Unexpected path: ${path}`);
-    });
-  });
-
-  it("pre-fills the form from the loaded record, with the environment locked (no EnvironmentPicker rendered)", async () => {
-    renderDialog(SAMPLE_SERVER);
-    expect(screen.getByLabelText("Display name")).toHaveValue("Web 01");
-    expect(screen.getByLabelText("Hostname")).toHaveValue("web-01");
-    expect(
-      await screen.findByText("A server's environment can't be changed after creation.")
-    ).toBeInTheDocument();
-    // Only service_type + access_method comboboxes remain — the create-only
-    // EnvironmentPicker combobox must not be rendered on edit.
-    expect(screen.getAllByRole("combobox")).toHaveLength(2);
-    expect(await screen.findByDisplayValue("Production")).toBeDisabled();
-  });
-
-  it("sends updated_at and never sends environment_id in the PATCH body", async () => {
-    patchMock.mockResolvedValue(ok({ ...SAMPLE_SERVER, hostname: "web-01-renamed" }));
-    const { onOpenChange } = renderDialog(SAMPLE_SERVER);
-
-    await screen.findByDisplayValue("web-01");
-    fireEvent.change(screen.getByLabelText("Hostname"), { target: { value: "web-01-renamed" } });
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-
-    expect(patchMock).toHaveBeenCalledTimes(1);
-    const [path, options] = patchMock.mock.calls[0];
-    expect(path).toBe("/api/servers/{id}");
-    expect(options.params).toEqual({ path: { id: "s1" } });
-    expect(options.body).toMatchObject({
-      hostname: "web-01-renamed",
-      updated_at: SAMPLE_SERVER.updated_at,
-    });
-    expect(options.body.environment_id).toBeUndefined();
-  });
-
-  it("shows the conflict UI (not a generic error) on a stale-write 409, and does not lose the user's edit", async () => {
-    patchMock.mockResolvedValueOnce(
-      apiError(409, "CONFLICT", "Server was modified by someone else; refresh and try again")
-    );
-    renderDialog(SAMPLE_SERVER);
-
-    await screen.findByDisplayValue("web-01");
-    fireEvent.change(screen.getByLabelText("Hostname"), { target: { value: "My In-Progress Edit" } });
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    expect(await screen.findByText("This record changed")).toBeInTheDocument();
-    expect(
-      screen.getByText("Server was modified by someone else; refresh and try again")
-    ).toBeInTheDocument();
-    expect(toastMock).not.toHaveBeenCalled();
-
-    const freshRecord = { ...SAMPLE_SERVER, updated_at: "2026-01-03T00:00:00.000Z" };
-    getMock.mockImplementation((path: string) => {
-      if (path === "/api/servers/{id}") return Promise.resolve(ok(freshRecord));
-      return Promise.resolve(
-        ok({ data: [SAMPLE_ENVIRONMENT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
-      );
-    });
-    patchMock.mockResolvedValueOnce(ok({ ...freshRecord, hostname: "My In-Progress Edit" }));
-
-    fireEvent.click(screen.getByRole("button", { name: /keep my changes/i }));
-
-    await waitFor(() => expect(patchMock).toHaveBeenCalledTimes(2));
-    const [, retryOptions] = patchMock.mock.calls[1];
-    expect(retryOptions.body).toMatchObject({
-      hostname: "My In-Progress Edit",
-      updated_at: freshRecord.updated_at,
-    });
-  });
-
-  it("does NOT route a generic 409 to a duplicate-name field (no unique index exists on servers; every 409 here is a stale-write conflict)", async () => {
-    patchMock.mockResolvedValueOnce(apiError(409, "CONFLICT", "A conflicting server already exists"));
-    renderDialog(SAMPLE_SERVER);
-
-    await screen.findByDisplayValue("web-01");
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    expect(await screen.findByText("This record changed")).toBeInTheDocument();
-  });
-
-  it("shows an error toast for an unexpected (non-conflict) failure", async () => {
-    patchMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
-    renderDialog(SAMPLE_SERVER);
-
-    await screen.findByDisplayValue("web-01");
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    await waitFor(() => {
-      expect(toastMock).toHaveBeenCalledWith({
-        title: "Couldn't update server",
-        description: "boom",
-        variant: "destructive",
-      });
-    });
-  });
-});
+// Edit-mode behavior (pre-fill, locked environment field, PATCH payload
+// shape, conflict/error handling) moved to ServerEditCard, now covered by
+// ServerDetailPage.test.tsx's "edit mode" describe block instead of here —
+// this dialog no longer has an edit mode.

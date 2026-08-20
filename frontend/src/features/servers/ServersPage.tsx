@@ -94,7 +94,6 @@ export default function ServersPage() {
   const totalPages = pageInfo?.total_pages ?? 1;
 
   const [formOpen, setFormOpen] = useState(false);
-  const [editingServer, setEditingServer] = useState<Server | undefined>(undefined);
   const [deletingServer, setDeletingServer] = useState<Server | undefined>(undefined);
   const [restoringServer, setRestoringServer] = useState<Server | undefined>(undefined);
 
@@ -102,13 +101,13 @@ export default function ServersPage() {
   const restoreServer = useRestoreServer();
 
   function openCreateForm() {
-    setEditingServer(undefined);
     setFormOpen(true);
   }
 
+  // Editing now lives on ServerDetailPage's inline edit mode, not this
+  // dialog — see ServerFormDialog's create-only migration.
   function openEditForm(server: Server) {
-    setEditingServer(server);
-    setFormOpen(true);
+    navigate(`/servers/${server.id}?edit=true`);
   }
 
   function confirmDelete() {
@@ -333,7 +332,7 @@ export default function ServersPage() {
         </>
       )}
 
-      <ServerFormDialog open={formOpen} onOpenChange={setFormOpen} server={editingServer} />
+      <ServerFormDialog open={formOpen} onOpenChange={setFormOpen} />
 
       <ConfirmDialog
         open={Boolean(deletingServer)}
