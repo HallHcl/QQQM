@@ -24,23 +24,6 @@ vi.mock("@/hooks/use-toast", () => ({
   toast: (...args: unknown[]) => toastMock(...args),
 }));
 
-// The VPN resource picker (edit-only) reads Resources through apiClient
-// (useResources/useResource, migrated in Part 24a) alongside /api/projects
-// and /api/environments/{id} — all routed through the same getMock.
-// Default: empty resource list, 404 on single-resource lookup (nothing
-// linked).
-function defaultResourcePaths(path: string): Promise<unknown> | undefined {
-  if (path === "/api/resources") {
-    return Promise.resolve(
-      ok({ data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 1 } })
-    );
-  }
-  if (path === "/api/resources/{id}") {
-    return Promise.resolve(apiError(404, "NOT_FOUND", "Resource not found"));
-  }
-  return undefined;
-}
-
 const SAMPLE_PROJECT = {
   id: "p1",
   client_id: "c1",
@@ -79,13 +62,13 @@ function apiError(status: number, code: string, message: string, details?: unkno
   };
 }
 
-function renderDialog(environment?: typeof SAMPLE_ENVIRONMENT) {
+function renderDialog() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   const onOpenChange = vi.fn();
   render(
     <QueryClientProvider client={queryClient}>
-      <EnvironmentFormDialog open onOpenChange={onOpenChange} environment={environment} />
+      <EnvironmentFormDialog open onOpenChange={onOpenChange} />
     </QueryClientProvider>
   );
   return { onOpenChange, invalidateSpy };
@@ -164,194 +147,8 @@ describe("EnvironmentFormDialog — create", () => {
   });
 });
 
-describe("EnvironmentFormDialog — edit", () => {
-  beforeEach(() => {
-    getMock.mockReset();
-    postMock.mockReset();
-    patchMock.mockReset();
-    toastMock.mockClear();
-    getMock.mockImplementation((path: string) => {
-      if (path === "/api/projects") {
-        return Promise.resolve(
-          ok({ data: [SAMPLE_PROJECT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
-        );
-      }
-      if (path === "/api/environments/{id}") {
-        return Promise.resolve(ok(SAMPLE_ENVIRONMENT));
-      }
-      const resourceResponse = defaultResourcePaths(path);
-      if (resourceResponse) return resourceResponse;
-      throw new Error(`Unexpected path: ${path}`);
-    });
-  });
-
-  it("pre-fills the form from the loaded record, with the project locked (no ProjectPicker rendered) and the VPN resource picker present", async () => {
-    renderDialog(SAMPLE_ENVIRONMENT);
-    expect(screen.getByLabelText("Name")).toHaveValue("Production");
-    expect(
-      await screen.findByText("An environment's project can't be changed after creation.")
-    ).toBeInTheDocument();
-    // The create-only ProjectPicker combobox must not be rendered on edit.
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-    expect(await screen.findByDisplayValue("Migration")).toBeDisabled();
-    // The VPN resource picker IS shown on edit, pre-filled from vpn_resource_id (null here).
-    expect(await screen.findByText("No VPN resource linked")).toBeInTheDocument();
-  });
-
-  it("does not render the VPN resource picker in create mode", async () => {
-    getMock.mockResolvedValue(
-      ok({ data: [SAMPLE_PROJECT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
-    );
-    renderDialog(undefined);
-    await screen.findByLabelText("Name");
-    expect(screen.queryByText(/vpn resource/i)).not.toBeInTheDocument();
-  });
-
-  it("selecting a VPN resource sends its id in the PATCH body", async () => {
-    getMock.mockImplementation((path: string) => {
-      if (path === "/api/projects") {
-        return Promise.resolve(
-          ok({ data: [SAMPLE_PROJECT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
-        );
-      }
-      if (path === "/api/environments/{id}") {
-        return Promise.resolve(ok(SAMPLE_ENVIRONMENT));
-      }
-      if (path === "/api/resources") {
-        return Promise.resolve(
-          ok({
-            data: [{ id: "r1", type: "link", title: "Corporate VPN" }],
-            pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 },
-          })
-        );
-      }
-      const resourceResponse = defaultResourcePaths(path);
-      if (resourceResponse) return resourceResponse;
-      throw new Error(`Unexpected path: ${path}`);
-    });
-    patchMock.mockResolvedValue(ok({ ...SAMPLE_ENVIRONMENT, vpn_resource_id: "r1" }));
-    const { onOpenChange } = renderDialog(SAMPLE_ENVIRONMENT);
-
-    // Accessible name comes from the now-associated <label for="vpn-resource">
-    // ("VPN resource"), not the trigger's own state-dependent text content —
-    // the same label-association fix 28b applied to ProjectPicker/
-    // EnvironmentPicker/ServerPicker, extended to this fourth, module-local
-    // picker.
-    fireEvent.click(await screen.findByRole("button", { name: /^vpn resource/i }));
-    fireEvent.click(await screen.findByText("Corporate VPN"));
-
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-    expect(patchMock.mock.calls[0][1].body).toMatchObject({ vpn_resource_id: "r1" });
-  });
-
-  it("associates the VPN resource Label with its picker via id/htmlFor (label-association fix, same class as 28b's ProjectPicker/EnvironmentPicker/ServerPicker fix)", async () => {
-    renderDialog(SAMPLE_ENVIRONMENT);
-
-    // getByLabelText only resolves for a real <label for>/id association, so
-    // this fails if the id/htmlFor pairing is ever removed or the ids drift
-    // apart, independent of what the trigger's own visible text says.
-    expect(await screen.findByLabelText(/VPN resource/i)).toBeInTheDocument();
-  });
-
-  it("shows an orphan warning instead of a normal reference when vpn_resource_id points at a deleted resource", async () => {
-    // beforeEach's getMock implementation already 404s /api/resources/{id}
-    // by default (nothing linked) — that's exactly the soft-deleted case.
-    renderDialog({ ...SAMPLE_ENVIRONMENT, vpn_resource_id: "r-deleted" });
-
-    expect(await screen.findByText("Linked VPN resource has been deleted")).toBeInTheDocument();
-  });
-
-  it("sends updated_at and the unchanged vpn_resource_id from the loaded record in the PATCH body, without project_id", async () => {
-    patchMock.mockResolvedValue(ok({ ...SAMPLE_ENVIRONMENT, name: "Production v2" }));
-    const { onOpenChange } = renderDialog(SAMPLE_ENVIRONMENT);
-
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Production v2" } });
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-
-    expect(patchMock).toHaveBeenCalledTimes(1);
-    const [path, options] = patchMock.mock.calls[0];
-    expect(path).toBe("/api/environments/{id}");
-    expect(options.params).toEqual({ path: { id: "e1" } });
-    expect(options.body).toMatchObject({
-      name: "Production v2",
-      updated_at: SAMPLE_ENVIRONMENT.updated_at,
-      // SAMPLE_ENVIRONMENT.vpn_resource_id is null and untouched by this test.
-      vpn_resource_id: null,
-    });
-    expect(options.body.project_id).toBeUndefined();
-  });
-
-  it("shows the conflict UI (not a generic error) on a stale-write 409, and does not lose the user's edit", async () => {
-    patchMock.mockResolvedValueOnce(
-      apiError(409, "CONFLICT", "Environment was modified by someone else; refresh and try again")
-    );
-    renderDialog(SAMPLE_ENVIRONMENT);
-
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "My In-Progress Edit" } });
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    expect(await screen.findByText("This record changed")).toBeInTheDocument();
-    expect(
-      screen.getByText("Environment was modified by someone else; refresh and try again")
-    ).toBeInTheDocument();
-    expect(toastMock).not.toHaveBeenCalled();
-
-    const freshRecord = { ...SAMPLE_ENVIRONMENT, updated_at: "2026-01-03T00:00:00.000Z" };
-    getMock.mockImplementation((path: string) => {
-      if (path === "/api/environments/{id}") return Promise.resolve(ok(freshRecord));
-      return Promise.resolve(
-        ok({ data: [SAMPLE_PROJECT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
-      );
-    });
-    patchMock.mockResolvedValueOnce(ok({ ...freshRecord, name: "My In-Progress Edit" }));
-
-    fireEvent.click(screen.getByRole("button", { name: /keep my changes/i }));
-
-    await waitFor(() => expect(patchMock).toHaveBeenCalledTimes(2));
-    const [, retryOptions] = patchMock.mock.calls[1];
-    expect(retryOptions.body).toMatchObject({
-      name: "My In-Progress Edit",
-      updated_at: freshRecord.updated_at,
-    });
-  });
-
-  it("routes a duplicate-name 409 to the Name field instead of the conflict UI", async () => {
-    patchMock.mockResolvedValueOnce(
-      apiError(409, "CONFLICT", "An environment with this name already exists for this project")
-    );
-    renderDialog(SAMPLE_ENVIRONMENT);
-
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Duplicate Name" } });
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    expect(
-      await screen.findByText("An environment with this name already exists for this project")
-    ).toBeInTheDocument();
-    expect(screen.queryByText("This record changed")).not.toBeInTheDocument();
-    expect(toastMock).toHaveBeenCalledWith({
-      title: "Couldn't update environment",
-      description: "An environment with this name already exists for this project",
-      variant: "destructive",
-    });
-  });
-
-  it("shows an error toast for an unexpected (non-field, non-conflict) failure", async () => {
-    patchMock.mockResolvedValue(apiError(500, "INTERNAL", "boom"));
-    renderDialog(SAMPLE_ENVIRONMENT);
-
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Production v2" } });
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    await waitFor(() => {
-      expect(toastMock).toHaveBeenCalledWith({
-        title: "Couldn't update environment",
-        description: "boom",
-        variant: "destructive",
-      });
-    });
-  });
-});
+// Edit-mode behavior (pre-fill, locked project field, VPN resource picker,
+// PATCH payload shape, conflict/duplicate-name/error handling) moved to
+// EnvironmentEditCard, now covered by EnvironmentDetailPage.test.tsx's
+// "edit mode" describe block instead of here — this dialog no longer has
+// an edit mode.

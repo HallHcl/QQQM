@@ -70,7 +70,6 @@ export default function EnvironmentsPage() {
   const totalPages = pageInfo?.total_pages ?? 1;
 
   const [formOpen, setFormOpen] = useState(false);
-  const [editingEnvironment, setEditingEnvironment] = useState<Environment | undefined>(undefined);
   const [deletingEnvironment, setDeletingEnvironment] = useState<Environment | undefined>(undefined);
   const [restoringEnvironment, setRestoringEnvironment] = useState<Environment | undefined>(undefined);
 
@@ -78,13 +77,13 @@ export default function EnvironmentsPage() {
   const restoreEnvironment = useRestoreEnvironment();
 
   function openCreateForm() {
-    setEditingEnvironment(undefined);
     setFormOpen(true);
   }
 
+  // Editing now lives on EnvironmentDetailPage's inline edit mode, not this
+  // dialog — see EnvironmentFormDialog's create-only migration.
   function openEditForm(environment: Environment) {
-    setEditingEnvironment(environment);
-    setFormOpen(true);
+    navigate(`/environments/${environment.id}?edit=true`);
   }
 
   function confirmDelete() {
@@ -272,7 +271,7 @@ export default function EnvironmentsPage() {
         </>
       )}
 
-      <EnvironmentFormDialog open={formOpen} onOpenChange={setFormOpen} environment={editingEnvironment} />
+      <EnvironmentFormDialog open={formOpen} onOpenChange={setFormOpen} />
 
       <ConfirmDialog
         open={Boolean(deletingEnvironment)}
