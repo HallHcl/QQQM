@@ -5,6 +5,7 @@ import { RequireRole } from "@/components/auth/RequireRole";
 import { RowActions } from "@/components/RowActions";
 import { useHasRole } from "@/hooks/useHasRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { FilterBar } from "@/components/FilterBar";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -143,24 +144,22 @@ export default function ServersPage() {
       <PageHeader
         title="Servers"
         actions={
-          <>
-            <Input
-              placeholder="Search servers..."
-              value={pagination.search}
-              onChange={(e) => pagination.setSearch(e.target.value)}
-              className="w-64"
-            />
-            {/* Server create/update is admin+member (requireAnyRole), NOT
-                admin-only like Environments — verified against
-                backend/src/routes/servers.routes.ts. */}
-            <RequireRole roles={["admin", "member"]}>
-              <Button onClick={openCreateForm}>New server</Button>
-            </RequireRole>
-          </>
+          // Server create/update is admin+member (requireAnyRole), NOT
+          // admin-only like Environments — verified against
+          // backend/src/routes/servers.routes.ts.
+          <RequireRole roles={["admin", "member"]}>
+            <Button onClick={openCreateForm}>New server</Button>
+          </RequireRole>
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <FilterBar>
+        <Input
+          placeholder="Search servers..."
+          value={pagination.search}
+          onChange={(e) => pagination.setSearch(e.target.value)}
+          className="w-64"
+        />
         <Select value={pagination.sort} onValueChange={pagination.setSort}>
           <SelectTrigger className="w-40" aria-label="Sort by">
             <SelectValue placeholder="Sort by" />
@@ -198,7 +197,7 @@ export default function ServersPage() {
             <SelectItem value="all">All</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState message="Loading servers..." />

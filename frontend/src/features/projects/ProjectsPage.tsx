@@ -4,6 +4,7 @@ import { RequireRole } from "@/components/auth/RequireRole";
 import { RowActions } from "@/components/RowActions";
 import { useHasRole } from "@/hooks/useHasRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { FilterBar } from "@/components/FilterBar";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -129,21 +130,19 @@ export default function ProjectsPage() {
       <PageHeader
         title="Projects"
         actions={
-          <>
-            <Input
-              placeholder="Search projects..."
-              value={pagination.search}
-              onChange={(e) => pagination.setSearch(e.target.value)}
-              className="w-64"
-            />
-            <RequireRole roles={["admin"]}>
-              <Button onClick={openCreateForm}>New project</Button>
-            </RequireRole>
-          </>
+          <RequireRole roles={["admin"]}>
+            <Button onClick={openCreateForm}>New project</Button>
+          </RequireRole>
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <FilterBar>
+        <Input
+          placeholder="Search projects..."
+          value={pagination.search}
+          onChange={(e) => pagination.setSearch(e.target.value)}
+          className="w-64"
+        />
         <Select value={pagination.sort} onValueChange={pagination.setSort}>
           <SelectTrigger className="w-40" aria-label="Sort by">
             <SelectValue placeholder="Sort by" />
@@ -181,7 +180,7 @@ export default function ProjectsPage() {
             <SelectItem value="all">All</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState message="Loading projects..." />
