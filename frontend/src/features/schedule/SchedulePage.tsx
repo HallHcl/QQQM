@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { FilterBar } from "@/components/FilterBar";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Button } from "@/components/ui/button";
 import {
@@ -163,7 +164,7 @@ export default function SchedulePage() {
         />
 
         <div className="min-w-0 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <FilterBar>
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="w-40" aria-label="Schedule status">
                 <SelectValue />
@@ -219,7 +220,7 @@ export default function SchedulePage() {
                 Clear date filter
               </Button>
             )}
-          </div>
+          </FilterBar>
 
           {isLoading ? (
             <LoadingState message="Loading schedules..." />
