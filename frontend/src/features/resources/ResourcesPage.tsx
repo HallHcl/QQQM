@@ -5,20 +5,13 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
-import { usePagination, type DeletedFilter, type SortOrder } from "@/hooks/usePagination";
+import { usePagination } from "@/hooks/usePagination";
 import {
   useDeleteResource,
   useResources,
@@ -156,44 +149,14 @@ export default function ResourcesPage() {
         onTypeChange={setType}
         projectId={projectId}
         onProjectIdChange={setProjectId}
+        sort={pagination.sort}
+        onSortChange={pagination.setSort}
+        sortOptions={SORT_OPTIONS}
+        order={pagination.order}
+        onOrderChange={pagination.setOrder}
+        deleted={pagination.deleted}
+        onDeletedChange={pagination.setDeleted}
       />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Select value={pagination.sort} onValueChange={pagination.setSort}>
-          <SelectTrigger className="w-40" aria-label="Sort by">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={pagination.order} onValueChange={(v) => pagination.setOrder(v as SortOrder)}>
-          <SelectTrigger className="w-32" aria-label="Sort order">
-            <SelectValue placeholder="Order" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="asc">Ascending</SelectItem>
-            <SelectItem value="desc">Descending</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={pagination.deleted}
-          onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
-        >
-          <SelectTrigger className="w-40" aria-label="Record status filter">
-            <SelectValue placeholder="Record status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="false">Active</SelectItem>
-            <SelectItem value="true">Deleted</SelectItem>
-            <SelectItem value="all">All</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <div className="space-y-3">
