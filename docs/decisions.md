@@ -681,19 +681,125 @@ directly, or an equivalent inline `instanceof ApiError` ternary) satisfies decis
 
 ---
 
-### Open observation (not a numbered decision — deferred, no fix planned)
+## 24. `DialogTitle` overflow: `break-words`, not `truncate` (2026-08-15, fixed in the Design System & Interaction Refresh phase)
 
-**Long unbroken names can overflow `DialogTitle` at narrow viewports.** Discovered incidentally in
-`PersonDetailDialog.tsx` during 29-CLOSEOUT's nested-dialog-fix regression testing: a person/entity name
-of roughly 40+ characters with no spaces (nothing for the browser to wrap on) can overflow the dialog's
-width at 375px, because `DialogTitle` (`frontend/src/components/ui/dialog.tsx:82-94`) applies no
-`truncate`/`break-words` handling — it renders `{person.name}` as plain text
-(`PersonDetailDialog.tsx:73`) with only `text-lg font-semibold leading-none tracking-tight`, no
-wrap/truncate utility class. **Confirmed not to occur with normal-length names.** Not fixed — this is
-flagged for a possible future dedicated UI-polish ticket if a consistent `DialogTitle` wrap/truncate
-standard is ever wanted app-wide (every dialog using `DialogTitle` would need the same fix, not just
-People's). Deliberately not given a number in the decisions series above, since it is an observation to
-track, not a settled architectural decision.
+**Status:** Fixed and standing convention.
+
+Long unbroken names could overflow `DialogTitle` at narrow viewports — first observed in
+`PersonDetailDialog.tsx` during 29-CLOSEOUT's nested-dialog-fix regression testing: a
+person/entity name of roughly 40+ characters with no spaces (nothing for the browser to
+wrap on) could overflow the dialog's width at 375px, because `DialogTitle`
+(`frontend/src/components/ui/dialog.tsx`) applied no wrap/truncate handling at all.
+
+**Fixed** (`fix: wrap long dialog titles instead of overflowing past close button`): the
+title now wraps via `break-words`, **not** `truncate`. This was a deliberate choice, not
+the more obvious option — `truncate` would hide part of the real value (a name, an
+identifier) from an admin who needs to see the whole thing to do their job. Per the
+project's "admin tool, don't hide data" principle, wrapping the title onto a second line
+is preferred over silently clipping it with an ellipsis, even though wrapping is visually
+messier.
+
+**Standing convention:** any new or modified `DialogTitle` (or similarly unbounded-length
+title/label text) should wrap with `break-words`, not truncate, unless a specific ticket
+decides otherwise for a specific, justified reason.
+
+## 25. Optional-field indicator convention: `(optional)` suffix, not asterisks on required fields (2026-08-15/16, Design System & Interaction Refresh phase)
+
+**Status:** Decided and implemented; standing convention.
+
+Required fields carry **no visual marker** (the majority case, kept clean). Optional
+fields get a `<OptionalLabel>` component (`frontend/src/components/ui/optional-label.tsx`)
+appending `(optional)` in muted text after the label — the inverse of the more common
+asterisk-on-required convention. Required controls also carry `aria-required="true"` on
+the control itself (not the label). Full technical detail lives in `design-tokens.md`'s
+"Optional-Field Indicator Pattern" section — this entry exists so the *why* isn't lost:
+asterisks on every required field (the majority case) added visual noise across nearly
+every form in the app; marking the minority (optional fields) instead reads cleaner
+without losing the information.
+
+**How to apply:** new form fields follow this convention — no asterisk, `<OptionalLabel>`
+only when the field is genuinely optional. Conditionally-required fields (e.g. Resources'
+Content/ExternalURL, Schedule's Project/Server) are the documented exception — their
+requiredness is dynamic/composite and is communicated via existing error/hint text
+instead.
+
+## 26. Row-action pattern: overflow kebab menu, row click reserved for navigation (2026-08-16, Design System & Interaction Refresh phase)
+
+**Status:** Decided and implemented; standing convention.
+
+A new shared `RowActions` component (`frontend/src/components/ui/row-actions.tsx`, built
+in `feat(ui): add shared RowActions overflow menu component`) consolidates each list
+row's actions (edit, delete, restore, etc.) into a single overflow kebab menu, replacing
+ad hoc inline action buttons per row. Adopted across
+Clients/Projects/Environments/Servers/People/Schedule, with Playwright coverage in
+`frontend/tests/visual-sweep/` (`test(visual-sweep): add RowActions coverage for
+Clients/Projects/Environments/Servers/People/Schedule`).
+
+**Row-click behavior is decided per module, based on whether a natural navigation target
+exists:**
+- **Row click = primary action**, where a detail page or edit surface exists to navigate
+  to: Clients (opens Edit), Projects/Environments/Servers (navigates to the detail page).
+- **No row click**, where none exists: Schedule — a bare list entity with no detail page,
+  so its row click is intentionally left inert; all actions live in the `RowActions` menu
+  only.
+- People keeps its existing row-click behavior unchanged (opens `PersonDetailDialog`),
+  with actions additionally consolidated into the same `RowActions` menu.
+
+Schedule's `RowActions` menu was also fixed in this same window to correctly gate actions
+by terminal status (`feat(schedule): consolidate row actions into a menu; fix
+terminal-status gating`) — a schedule item in a terminal state (e.g. completed/cancelled)
+must not offer actions that assume it's still active.
+
+**How to apply:** any new list page follows this pattern — build/reuse `RowActions` for
+per-row actions, and decide row-click behavior by the same rule (navigate if a detail
+surface exists, otherwise leave the row inert and rely on the menu).
+
+## 27. Known flaky-test list and open test-coverage gaps (2026-08-16/20, Design System & Interaction Refresh phase)
+
+**Status:** Tracked, standing reference — not all items require action.
+
+**Known flaky tests, mitigated via a scoped `vi.setConfig({ testTimeout: 15000 })`** (CPU
+contention under full-suite/parallel runs, not a real defect in the test or the code
+under test):
+- `frontend/src/features/servers/components/ServerFormDialog.test.tsx`
+- `frontend/src/features/resources/components/ResourceEditor.test.tsx`
+- `frontend/src/features/schedule/components/ScheduleFormDialog.test.tsx`
+- `frontend/src/features/people/components/PersonDetailDialog.test.tsx`
+
+If a future full-suite run times out on one of these again despite the scoped timeout,
+treat it as the same known CPU-contention pattern first, not a new regression — but see
+decision #12's lesson: re-verify, don't just assume, if it recurs under different
+conditions (e.g. CI, not local).
+
+**Two known backlog items in the Playwright visual-sweep suite (test-isolation/coverage
+gaps, not product bugs):**
+- `frontend/tests/visual-sweep/375px-sweep.spec.ts`'s long-name `PersonDetailDialog`
+  fixture creates a Person via the API using a fixed constant name (`LONG_NAME`) on every
+  run, with no uniqueness suffix — repeated runs accumulate duplicate rows in the target
+  database rather than each run cleaning up after itself. This is a test-isolation defect
+  in the fixture, not a bug in the code the test exercises. Needs a uniqueness
+  suffix/cleanup step next time this spec is touched.
+- `frontend/tests/visual-sweep/create-flow-smoke.spec.ts` only covers the Server create
+  flow (confirming it's unaffected by the modal-to-inline-edit migration). It does **not**
+  cover Environment's equivalent create flow, even though Environment received the same
+  modal-to-inline-edit migration in this phase. Should be extended to cover Environment
+  create in a future ticket.
+
+## 28. Docker images do not auto-rebuild on `git push` (2026-08-20, workflow reminder from the Design System & Interaction Refresh phase)
+
+**Status:** Standing reminder — caused real confusion this session.
+
+Pulling new commits into a checkout that's served via `docker-compose` does **not** cause
+the running containers to pick up the change. The frontend/backend Docker images are
+built once from a snapshot of the source (`frontend/Dockerfile`, `backend/Dockerfile` —
+see `architecture.md` §6) — pulling new commits updates the files on disk, not the
+already-built image layers.
+
+**How to apply:** after pulling new commits, run `docker compose build --no-cache`
+(followed by `docker compose up`) before expecting the Docker-served app to reflect
+those changes. Skipping the rebuild is a common source of "I pulled the fix but it's
+still broken" confusion — check this first before re-debugging a change that already
+landed in source.
 
 ---
 
@@ -714,4 +820,10 @@ track, not a settled architectural decision.
 | Nested dialog composition (`PersonDetailDialog`) | ✅ Fixed 29-CLOSEOUT | See decision #20 |
 | Person-client `relationship_type` input | ⏭️ BLOCKED / FUTURE | See decision #21 |
 | Toast-error-display typed-vs-unknown split | ✅ Confirmed intentional | See decision #23 |
-| `DialogTitle` overflow on long unbroken names | ⏭️ Open observation, no fix planned | See open observation after decision #23 |
+| `DialogTitle` overflow on long unbroken names | ✅ Fixed 2026-08-15 (`break-words`) | See decision #24 |
+| Optional-field indicator convention | ✅ Decided and implemented | See decision #25; `design-tokens.md` |
+| Row-action pattern (`RowActions` + row-click rules) | ✅ Decided and implemented | See decision #26 |
+| Known flaky tests / test-coverage backlog | 🟡 Tracked, not all actioned | See decision #27 |
+| Docker no-auto-rebuild-on-pull reminder | ℹ️ Standing workflow reminder | See decision #28 |
+| Resources detail-page modal-to-inline-edit migration | ⏭️ Deferred | No detail page exists yet for Resources — see `progress.md` |
+| Light Theme Migration | 🟡 STARTING | Full light-mode background, dual-accent (blue/teal), no other token changes — see `progress.md` |

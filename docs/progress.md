@@ -1,6 +1,6 @@
 # QQM — Progress Tracker
 
-Last updated: after Part 29 documentation batch update, final (post-29-CLOSEOUT) — 2026-08-15.
+Last updated: after UI/UX Polish (Design System & Interaction Refresh) phase closeout — 2026-08-20.
 
 See `decisions.md` for the reasoning behind blocked/skipped items, and
 `development-guide.md` for the rules every ticket follows.
@@ -10,8 +10,8 @@ See `decisions.md` for the reasoning behind blocked/skipped items, and
 ## Current status
 
 ```
-Current:  UI/UX Polish — Phase 2 (module-by-module) COMPLETE (29a-29g)
-Next:     Release/readiness checkpoint and deferred-item review — not yet scoped
+Current:  UI/UX Polish — Design System & Interaction Refresh COMPLETE
+Next:     Light Theme Migration — STARTING (not yet built)
 ```
 
 ---
@@ -190,6 +190,78 @@ file is genuinely intermittent under different conditions (CI load, parallelism)
 
 ---
 
+## UI/UX Polish — Design System & Interaction Refresh — ✅ COMPLETE (2026-08-15 → 2026-08-20)
+
+A further round of UI/UX polish, built on top of Phase 1/Phase 2 above. Originally scoped
+as a full module-by-module pass; independently verified complete. Backend untouched
+throughout. Summary of what was done:
+
+- **Shared design-token foundation** — a governed typography scale (`tailwind.config.js`
+  `theme.extend.fontSize`, documented in `design-tokens.md`); a shared `<PageHeader>`
+  component migrated across all 11 pages; a `max-w-7xl` content constraint added to
+  `AppLayout`; an optional-field indicator convention (`<OptionalLabel>` — `(optional)`
+  suffix on optional fields, no marker on required fields) with correct ARIA semantics.
+- **6 accessibility/defect fixes** — dialog close-button hit target expanded to meet WCAG
+  2.2 AA; `text-xs` timestamp contrast raised to WCAG AA in activity/version panels;
+  brand focus-visible outline added to sidebar nav links; long dialog titles now wrap
+  instead of overflowing past the close button; flex/grid items now shrink so wrap/break
+  actually engages at 375px; `RoleFilterTabs`' wrapped row no longer overlaps the People
+  filter bar.
+- **Playwright tooling + 375px sweep** — new visual-regression tooling under
+  `frontend/tests/visual-sweep/`, plus a dedicated 375px-viewport sweep spec
+  (`375px-sweep.spec.ts`) covering narrow-viewport rendering across modules.
+- **Status label semantic fix** — renamed the "Status" filter label to "Record status"
+  sitewide to clarify it's the soft-delete filter, not an entity-state field.
+- **Server list column redesign** — `ServersPage` columns redesigned around access
+  documentation fields; VPN badge recolored to neutral (was incorrectly using the warning
+  amber token).
+- **Row/action pattern** — new shared `RowActions` overflow (kebab) menu component,
+  adopted across Clients/Projects/Environments/Servers/People/Schedule; Schedule's action
+  menu additionally fixed to gate actions correctly by terminal status. See `decisions.md`
+  for the standing convention.
+- **Sitewide color-token opacity fix** — color tokens reformatted as RGB channel triples
+  in `tailwind.config.js`/`globals.css` so Tailwind opacity modifiers (e.g. `bg-primary/10`)
+  work correctly; previously silently broken.
+- **Table density reduction** — cell padding tightened and the brand-accent header
+  underline dropped for a denser, more admin-tool-appropriate table look.
+- **Search/filter/sort toolbar consolidation** — Search moved into the shared `FilterBar`
+  for Clients/Projects/Environments/Servers; Resources' sort/order/status and Schedule's
+  filter row both merged into the same shared `FilterBar` pattern.
+- **Server + Environment modal-to-inline-edit migration** — `ServerDetailPage` and
+  `EnvironmentDetailPage` edit flows moved from modal dialogs to inline on-page editing;
+  Playwright smoke coverage added for both the inline-edit and create flows.
+
+**Explicitly deferred:** Resources detail-page migration to the modal-to-inline-edit
+pattern was **not** done — no detail page exists yet for Resources (Resources currently
+uses in-place list/version-editor UI, not a dedicated detail page), so this migration is
+a larger effort than Server/Environment's and is left for a separate future ticket.
+
+Additional smaller fixes landed in this same window, not itemized above: `Select`
+controlled-state warning suppressed, stale single-record queries no longer cause
+spurious 404s, `ScheduleFormDialog`'s toast errors standardized on `apiErrorMessage()`,
+and `LoadingState` spinner size standardized to match sibling states.
+
+---
+
+## Light Theme Migration — 🟡 STARTING (not yet built)
+
+Agreed with the project owner following UI/UX Polish closeout above; no implementation
+has started. Finalized decisions going in:
+
+- **Full light-mode background, not a dark/light toggle.** This is a single switch of
+  the app's background/surface tokens to a light palette — not a runtime-togglable
+  theme system with both modes maintained side by side.
+- **Dual-accent system** — blue for actions/links, teal for status/success — replacing
+  the current single Razer-inspired green accent.
+- **No other tokens change.** Spacing, radius, and the typography scale established in
+  this phase are untouched — this is a color-token swap, not a structural redesign.
+
+See `decisions.md` for the standing conventions this migration must respect, and the
+flagged stale dark-theme references in `architecture.md` that will need updating once
+this phase actually begins building.
+
+---
+
 ## Blocked / Deferred (not part of the linear module sequence)
 
 | Item | Status | See |
@@ -213,6 +285,8 @@ file is genuinely intermittent under different conditions (CI load, parallelism)
 | UI/UX Polish — Phase 1 (Shared Foundations) | ✅ 2026-08-14 (Parts 28a-28f) |
 | `usePagination` URL-state persistence (`decisions.md` #13) | ✅ 2026-08-15 |
 | UI/UX Polish — Phase 2 (module-by-module) | ✅ 2026-08-15 (Parts 29a-29g + 29-CLOSEOUT) |
+| UI/UX Polish — Design System & Interaction Refresh | ✅ 2026-08-20 |
+| Light Theme Migration | 🟡 STARTING — not yet built |
 
 ---
 

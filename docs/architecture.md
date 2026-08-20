@@ -599,6 +599,11 @@ under the repo root; if a production deployment exists, it is not represented in
   imprecise for nearly every module previously audited. See `decisions.md` #2 and `api-spec.md`.
 - **UI/theme is frozen during this phase** — functional wiring only, no visual redesign. See
   `decisions.md` #3.
+  <!-- TODO: stale once Light Theme Migration begins (progress.md) — decision #3 describes
+  the pre-polish, dark-theme-frozen phase; two rounds of UI/UX polish have since landed
+  (decisions.md #9, #24-28), and a Light Theme Migration is now starting. Update this
+  section, and re-check the rest of this file for other dark-theme-only assumptions,
+  once that migration actually starts building — not before. -->
 
 ---
 
