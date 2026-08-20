@@ -82,13 +82,11 @@ export default {
         brand: {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
           hover: "rgb(var(--accent-hover) / <alpha-value>)",
-          dim: "rgb(var(--accent-dim) / <alpha-value>)",
         },
         surface: {
           DEFAULT: "rgb(var(--surface) / <alpha-value>)",
           hover: "rgb(var(--surface-hover) / <alpha-value>)",
         },
-        subtle: "rgb(var(--text-muted) / <alpha-value>)",
         danger: "rgb(var(--danger) / <alpha-value>)",
         warning: "rgb(var(--warning) / <alpha-value>)",
       },

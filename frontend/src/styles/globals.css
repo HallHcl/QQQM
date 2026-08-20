@@ -16,8 +16,8 @@
        rgba(0,0,0,0)). Same visual colors as before — only reformatted.
        #0a0a0a=10 10 10, #121212=18 18 18, #1a1a1a=26 26 26,
        #262626=38 38 38, #44d62c=68 214 44, #58e840=88 232 64,
-       #1f5c15=31 92 21, #f5f5f5=245 245 245, #a3a3a3=163 163 163,
-       #6b6b6b=107 107 107, #ff3b3b=255 59 59, #ffb800=255 184 0. */
+       #f5f5f5=245 245 245, #a3a3a3=163 163 163,
+       #ff3b3b=255 59 59, #ffb800=255 184 0. */
     --background: 10 10 10;
     --surface: 18 18 18;
     --surface-hover: 26 26 26;
@@ -25,11 +25,9 @@
 
     --accent: 68 214 44;
     --accent-hover: 88 232 64;
-    --accent-dim: 31 92 21;
 
     --text-primary: 245 245 245;
     --text-secondary: 163 163 163;
-    --text-muted: 107 107 107;
 
     --danger: 255 59 59;
     --warning: 255 184 0;

@@ -801,6 +801,45 @@ those changes. Skipping the rebuild is a common source of "I pulled the fix but 
 still broken" confusion — check this first before re-debugging a change that already
 landed in source.
 
+## 29. Light Theme Migration, Phase 1 close-out — dead-token disposition and overlay-color exception (2026-08-20)
+
+**Status:** Decided and implemented.
+
+Phase 1 (design token audit, `docs/audit-light-theme-tokens.md`) was independently
+re-verified by two separate tools with converging results — GPT-Work via a direct
+GitHub connector, and a fresh VSCode Agent session reading local source directly (no
+shared context with the coding agent that ran the original audit). Both confirmed the
+same 9 dead CSS tokens and the same `bg-black/80` finding. Three decisions follow from
+that converged result:
+
+1. **7 of the 9 dead tokens are KEPT, unchanged, as shadcn/ui compatibility tokens:**
+   `primary`, `primary-foreground`, `secondary`, `destructive`,
+   `destructive-foreground`, `input`, `ring`. **Why:** these map onto shadcn's standard
+   semantic surface API. They have zero consumers today, but keeping them costs
+   nothing and avoids rework if a shadcn component that expects them is dropped in
+   later. Their current values (including any that would be wrong for a light theme)
+   are intentionally left as-is — they'll be addressed in a future ticket only if/when
+   a real consumer appears.
+2. **2 of the 9 dead tokens are REMOVED:** `subtle` (`--text-muted`) and `brand-dim`
+   (`--accent-dim`). **Why:** unlike the 7 above, these are proprietary to this
+   project (not part of shadcn's API surface), have zero consumers, and carry no
+   compatibility benefit — there's nothing to gain by keeping them dormant. Removed
+   from `frontend/src/styles/globals.css` (the `--text-muted`/`--accent-dim` variable
+   definitions and their two stale hex-mapping comment entries) and
+   `frontend/tailwind.config.js` (the `subtle` color and `brand.dim` sub-key). A live
+   grep across `frontend/src` for both `subtle` and `brand-dim` as Tailwind utility
+   classes confirmed zero usages immediately before deletion.
+3. **`bg-black/80` on the modal (`dialog.tsx:22`) and sheet (`sheet.tsx:23`) overlays
+   is an ACCEPTED, INTENTIONAL exception** to the "all colors go through tokens"
+   policy — no `--overlay` token will be created. **Why:** a modal/sheet scrim is a
+   functional dimming layer, not a palette color, and should stay `black/80`
+   regardless of light or dark theme.
+
+**How to apply:** do not flag `subtle`/`brand-dim` as missing if referenced by an old
+doc — they no longer exist. Do not "fix" the 7 kept dead tokens' values as part of
+unrelated work; they're deliberately dormant. Do not propose a `--overlay` token for
+`dialog.tsx`/`sheet.tsx` in a future polish pass — this was already decided against.
+
 ---
 
 ## Open / deferred items tracker (quick reference)
