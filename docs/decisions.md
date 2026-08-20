@@ -840,6 +840,83 @@ doc — they no longer exist. Do not "fix" the 7 kept dead tokens' values as par
 unrelated work; they're deliberately dormant. Do not propose a `--overlay` token for
 `dialog.tsx`/`sheet.tsx` in a future polish pass — this was already decided against.
 
+## 30. Light Theme Migration, Phase 2b — Direction B token values applied; Servers pilot; naming/mapping judgment calls (2026-08-20)
+
+**Status:** Implemented; two items below need human confirmation before Phase 2's
+sitewide rollout.
+
+Applied the Phase 2a-selected Direction B palette to `frontend/src/styles/globals.css`
+and `frontend/tailwind.config.js`, preserving every existing CSS-variable and
+Tailwind-class name (no renames) per the ticket's explicit instruction — only values
+changed, plus four new `-tint` tokens and `status`/`-active` roles that didn't exist
+before. `danger` and `warning` were converted from flat `DEFAULT`-only Tailwind color
+strings to `{DEFAULT, hover, active, tint}` objects (mirroring `brand`'s existing
+`DEFAULT`/`hover` shape) purely to hold the new hover/active/tint values the ticket
+supplied for them — additive, not a rename; `bg-danger`/`text-warning`/etc. still
+resolve identically via `DEFAULT`. The new teal role (no existing token in this
+project) was named `status` (CSS var `--status`, Tailwind class `status`), matching
+the ticket's own label for it.
+
+**Judgment call — `--text-secondary`'s value, and one ticket-supplied hex left
+unused.** The ticket listed three text values: `text-primary: #12181F`,
+`text-secondary: #46505A`, `text-muted: #667085` (the last flagged as "highest
+usage-count token, 139-140 sites app-wide"). But only two base text CSS vars exist in
+this codebase (`--text-primary`, `--text-secondary` — `--text-muted` was deleted in
+Phase 1 for having zero consumers, see decision #29), and the 139-140-site usage-count
+fact unambiguously identifies `--text-secondary`'s *current* real consumer
+(`--muted-foreground` → the `text-muted-foreground` Tailwind class, confirmed 139-140
+sites in the Phase 1 audit and `design-tokens.md:48`'s own description of
+`muted-foreground` as "Secondary / de-emphasised text"). So `--text-secondary` was set
+to `#667085` (the value the ticket *labeled* "text-muted"), not `#46505A` (the value
+the ticket labeled "text-secondary"). **The `#46505A` value was not applied anywhere**
+— there is no live third text-tier consumer to give it to, and inventing one (a new
+CSS var, or repointing `secondary-foreground` away from `--text-primary`) would be
+both a structural change out of this ticket's color-value-only scope and a fresh dead
+token, the opposite of decision #29's cleanup. **Needs a human decision**: is `#46505A`
+meant for a genuine third text tier (which would need its own follow-up ticket to wire
+a real consumer), or was it a labeling mismatch against this project's actual variable
+names that can simply be dropped?
+
+**Gap — `--surface-hover` had no ticket-supplied value.** The Direction B list covers
+`surface` but not `surface-hover`, which currently backs `hover:bg-surface-hover` (8
+sites) and shadcn's own generic hover-fill alias (`--shadcn-accent` →
+`--shadcn-accent-foreground`, used by dropdown/select/menu hover states). Leaving it at
+its old dark-theme value (`26 26 26`, near-black) would have put a near-black hover
+box into an otherwise white UI — exactly the "broken contrast-dependent UI" the ticket
+said to watch for. **Placeholder applied**: reused the ticket's own `--border` value
+(`#D8DEE4` / `216 222 228`) rather than inventing an unvetted new hex — visually
+verified via Playwright screenshot (no obvious defect), but this value has **not** been
+through the Phase 2a WCAG-contrast process the other 20 values have. Needs a real,
+contrast-checked value before Phase 2's sitewide rollout, not just before this pilot.
+
+**Correction — the ticket's assumed Servers status-badge mapping does not exist in
+source.** The ticket asked me to verify "connection status badges (`status`/`danger`/
+`warning` for online/offline/pending)" and a "VPN badge (`accent`/`accent-tint`)"
+against live source before assuming the mapping was right. It wasn't: the `Server`
+type (`frontend/src/types/index.ts:118-135`) has no status/connection field at all, and
+neither `ServersPage.tsx`, `ServerDetailPage.tsx`, nor `ServerCard.tsx` render any
+online/offline/pending badge — there is no such concept anywhere in the Servers module
+today. The "VPN badge" is actually a plain `muted-foreground`-colored `ShieldCheck`
+icon (`ServersPage.tsx:258-264`), not a colored `Badge`, and it indicates
+`environment.vpn_resource_id` (a property of the *Environment*, not the Server). The
+real `Badge` variants Servers uses are `secondary` (Deleted, tech-stack tags) and
+`outline` (access-method tag) — both grayscale/neutral, not accent/status/danger. The
+one already-correct piece: `RowActions`' Delete menu item already uses
+`text-danger`/`focus:bg-danger/10` (`components/RowActions.tsx:49`), confirmed
+rendering correctly in the new red (`#B91C1C`) via screenshot — no code change was
+needed there, it was already right. No colored status-badge component exists to build
+or wire in the Servers module; nothing was added, consistent with this ticket's
+color-value-only scope (no component/structure changes). A colored connection-status
+badge appears to be a `warning`-variant `Badge` used by **Schedule** (`PENDING`), not
+Servers — worth noting for whoever scopes a future ticket that actually wants
+online/offline-style status badges, since that's a new feature, not something this
+pilot could "reveal" by a token-only change.
+
+**How to apply:** the two "Needs human confirmation" items above (`#46505A`'s
+disposition, `--surface-hover`'s real value) should be resolved before Phase 2 rolls
+the token change out sitewide — a pilot-only scope tolerates a placeholder; a full
+rollout shouldn't ship one un-contrast-checked token alongside 20 verified ones.
+
 ---
 
 ## Open / deferred items tracker (quick reference)
@@ -865,4 +942,4 @@ unrelated work; they're deliberately dormant. Do not propose a `--overlay` token
 | Known flaky tests / test-coverage backlog | 🟡 Tracked, not all actioned | See decision #27 |
 | Docker no-auto-rebuild-on-pull reminder | ℹ️ Standing workflow reminder | See decision #28 |
 | Resources detail-page modal-to-inline-edit migration | ⏭️ Deferred | No detail page exists yet for Resources — see `progress.md` |
-| Light Theme Migration | 🟡 STARTING | Full light-mode background, dual-accent (blue/teal), no other token changes — see `progress.md` |
+| Light Theme Migration | 🟡 IN PROGRESS — Phase 2b (Servers pilot) done | Direction B tokens applied globally, piloted/verified on Servers; sitewide rollout pending — see decisions #29/#30, `progress.md` |

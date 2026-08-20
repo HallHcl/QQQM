@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Brand palette — Razer-inspired dark theme (single, non-togglable).
+    /* Direction B / Deep Enterprise — light theme (single, non-togglable).
        Values are space-separated RGB channels (not hex/rgb()) so Tailwind's
        opacity-modifier syntax (bg-danger/10, hover:bg-warning/40, etc.) can
        wrap them as rgb(var(--x) / <alpha-value>) per Tailwind's documented
@@ -13,30 +13,51 @@
        every opacity-modified class using it silently render fully
        transparent instead of the intended tint (confirmed via the
        RowActions visual sweep: hover:bg-danger/10 rendered as
-       rgba(0,0,0,0)). Same visual colors as before — only reformatted.
-       #0a0a0a=10 10 10, #121212=18 18 18, #1a1a1a=26 26 26,
-       #262626=38 38 38, #44d62c=68 214 44, #58e840=88 232 64,
-       #f5f5f5=245 245 245, #a3a3a3=163 163 163,
-       #ff3b3b=255 59 59, #ffb800=255 184 0. */
-    --background: 10 10 10;
-    --surface: 18 18 18;
-    --surface-hover: 26 26 26;
-    --border: 38 38 38;
+       rgba(0,0,0,0)).
+       #ffffff=255 255 255, #f4f6f8=244 246 248, #d8dee4=216 222 228,
+       #12181f=18 24 31, #667085=102 112 133, #1d4ed8=29 78 216,
+       #1846c4=24 70 196, #153ba8=21 59 168, #0e7490=14 116 144,
+       #0c6277=12 98 119, #0a5265=10 82 101, #b91c1c=185 28 28,
+       #9f1717=159 23 23, #851212=133 18 18, #92400e=146 64 14,
+       #7a350c=122 53 12, #652c0a=101 44 10, #e9effc=233 239 252,
+       #e6f2f4=230 242 244, #f9e7e7=249 231 231, #f7ece1=247 236 225.
+       All values WCAG AA-verified against #ffffff background (Phase 2a,
+       Direction B) — see docs/decisions.md #30. `--surface-hover` has no
+       ticket-supplied value; reuses --border as a placeholder pending
+       human confirmation (see docs/decisions.md #30). */
+    --background: 255 255 255;
+    --surface: 244 246 248;
+    --surface-hover: 216 222 228;
+    --border: 216 222 228;
 
-    --accent: 68 214 44;
-    --accent-hover: 88 232 64;
+    --accent: 29 78 216;
+    --accent-hover: 24 70 196;
+    --accent-active: 21 59 168;
+    --accent-tint: 233 239 252;
 
-    --text-primary: 245 245 245;
-    --text-secondary: 163 163 163;
+    --status: 14 116 144;
+    --status-hover: 12 98 119;
+    --status-active: 10 82 101;
+    --status-tint: 230 242 244;
 
-    --danger: 255 59 59;
-    --warning: 255 184 0;
+    --text-primary: 18 24 31;
+    --text-secondary: 102 112 133;
+
+    --danger: 185 28 28;
+    --danger-hover: 159 23 23;
+    --danger-active: 133 18 18;
+    --danger-tint: 249 231 231;
+
+    --warning: 146 64 14;
+    --warning-hover: 122 53 12;
+    --warning-active: 101 44 10;
+    --warning-tint: 247 236 225;
 
     /* shadcn/ui semantic tokens mapped onto the palette above.
        Note: shadcn's own "accent" slot is used internally for generic
        hover fills (dropdown items, ghost buttons, etc.) and is kept
-       distinct from the brand --accent green above to avoid every
-       hover state turning neon green. Use the `brand` Tailwind color
+       distinct from the brand --accent blue above so hover fills read as
+       a neutral gray, not blue. Use the `brand` Tailwind color
        (bg-brand / text-brand / border-brand) for the real accent. */
     --foreground: var(--text-primary);
 

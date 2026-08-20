@@ -78,17 +78,37 @@ export default {
           DEFAULT: "rgb(var(--card) / <alpha-value>)",
           foreground: "rgb(var(--card-foreground) / <alpha-value>)",
         },
-        // Brand palette (Razer-inspired)
+        // Brand palette (Direction B / Deep Enterprise — blue action accent)
         brand: {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
           hover: "rgb(var(--accent-hover) / <alpha-value>)",
+          active: "rgb(var(--accent-active) / <alpha-value>)",
+          tint: "rgb(var(--accent-tint) / <alpha-value>)",
+        },
+        // Status/success accent (teal) — new in Direction B, no dark-theme
+        // precedent; see docs/decisions.md #30.
+        status: {
+          DEFAULT: "rgb(var(--status) / <alpha-value>)",
+          hover: "rgb(var(--status-hover) / <alpha-value>)",
+          active: "rgb(var(--status-active) / <alpha-value>)",
+          tint: "rgb(var(--status-tint) / <alpha-value>)",
         },
         surface: {
           DEFAULT: "rgb(var(--surface) / <alpha-value>)",
           hover: "rgb(var(--surface-hover) / <alpha-value>)",
         },
-        danger: "rgb(var(--danger) / <alpha-value>)",
-        warning: "rgb(var(--warning) / <alpha-value>)",
+        danger: {
+          DEFAULT: "rgb(var(--danger) / <alpha-value>)",
+          hover: "rgb(var(--danger-hover) / <alpha-value>)",
+          active: "rgb(var(--danger-active) / <alpha-value>)",
+          tint: "rgb(var(--danger-tint) / <alpha-value>)",
+        },
+        warning: {
+          DEFAULT: "rgb(var(--warning) / <alpha-value>)",
+          hover: "rgb(var(--warning-hover) / <alpha-value>)",
+          active: "rgb(var(--warning-active) / <alpha-value>)",
+          tint: "rgb(var(--warning-tint) / <alpha-value>)",
+        },
       },
       keyframes: {
         "accordion-down": {
