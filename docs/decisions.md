@@ -1067,5 +1067,5 @@ close — see the tracker below.
 | Known flaky tests / test-coverage backlog | 🟡 Tracked, not all actioned | See decision #27 |
 | Docker no-auto-rebuild-on-pull reminder | ℹ️ Standing workflow reminder | See decision #28 |
 | Resources detail-page modal-to-inline-edit migration | ⏭️ Deferred | No detail page exists yet for Resources — see `progress.md` |
-| Light Theme Migration | 🟡 Sitewide rollout audit complete, final independent verification pending | Direction B tokens applied globally, piloted/verified on Servers; all 7 remaining modules audited (only fix needed: Activity badge/dot mismatch); close-out items resolved — see decisions #29/#30/#31/#32/#33, `progress.md` |
+| Light Theme Migration | ✅ COMPLETE 2026-08-21 | Direction B tokens applied globally, piloted/verified on Servers; all 7 remaining modules audited (only fix needed: Activity badge/dot mismatch); close-out items resolved; final independent verification confirmed, zero discrepancies — see decisions #29/#30/#31/#32/#33, `progress.md` |
 | `status` (teal) token — zero live consumers app-wide | ✅ Closed 2026-08-21 — intentionally reserved, unwired | No genuine semantic fit found across the full sitewide rollout audit; stays reserved design capacity, not a defect — see decision #33 |

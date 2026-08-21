@@ -1,6 +1,6 @@
 # QQM — Progress Tracker
 
-Last updated: after UI/UX Polish (Design System & Interaction Refresh) phase closeout — 2026-08-20.
+Last updated: after Light Theme Migration closeout — 2026-08-21.
 
 See `decisions.md` for the reasoning behind blocked/skipped items, and
 `development-guide.md` for the rules every ticket follows.
@@ -10,8 +10,8 @@ See `decisions.md` for the reasoning behind blocked/skipped items, and
 ## Current status
 
 ```
-Current:  UI/UX Polish — Design System & Interaction Refresh COMPLETE
-Next:     Light Theme Migration — STARTING (not yet built)
+Current:  Light Theme Migration COMPLETE
+Next:     TBD
 ```
 
 ---
@@ -243,22 +243,38 @@ and `LoadingState` spinner size standardized to match sibling states.
 
 ---
 
-## Light Theme Migration — 🟡 STARTING (not yet built)
+## Light Theme Migration — ✅ COMPLETE (2026-08-21)
 
-Agreed with the project owner following UI/UX Polish closeout above; no implementation
-has started. Finalized decisions going in:
+Full switch of the app's background/surface tokens to a light palette (Direction B /
+"Deep Enterprise"), replacing the prior Razer-inspired dark theme — a color-token swap,
+not a structural redesign; spacing, radius, and the typography scale established in the
+UI/UX Polish phases above were untouched. See `decisions.md` #29-#33 for full detail
+rather than duplicating it here.
 
-- **Full light-mode background, not a dark/light toggle.** This is a single switch of
-  the app's background/surface tokens to a light palette — not a runtime-togglable
-  theme system with both modes maintained side by side.
-- **Dual-accent system** — blue for actions/links, teal for status/success — replacing
-  the current single Razer-inspired green accent.
-- **No other tokens change.** Spacing, radius, and the typography scale established in
-  this phase are untouched — this is a color-token swap, not a structural redesign.
-
-See `decisions.md` for the standing conventions this migration must respect, and the
-flagged stale dark-theme references in `architecture.md` that will need updating once
-this phase actually begins building.
+- **Phase 1 — token audit** (commit `3ace282`): audited every existing token for live
+  consumers before touching any value; 2 unused proprietary tokens (`subtle`, `brand-dim`)
+  removed as dead weight ahead of the swap.
+- **Phase 2a — palette direction selection**: Direction B locked as the target palette
+  (design decision, no code) — full light-mode background, not a dark/light toggle; a
+  dual-accent system (blue for actions/links, teal reserved for status/success).
+- **Phase 2b — token implementation + Servers pilot** (commit `174416a`): Direction B
+  token values applied globally in `globals.css`/`tailwind.config.js`; piloted and
+  independently verified on the Servers module before any other module was touched.
+- **Phase 2b close-out** (commit `d0e06b5`): resolved the two items Phase 2b's own
+  verification had flagged as pending — `--surface-hover`'s placeholder value replaced
+  with a real, contrast-checked one; `#46505A` recorded as a documented candidate value
+  with no live consumer, not wired to any token; `development-guide.md`'s stale
+  dark-theme guidance corrected to Direction B.
+- **Sitewide rollout audit** (commits `c95ce80`, `adc0de3`): all 7 remaining modules
+  (Clients, Projects, Environments/Servers/Infrastructure, People, Activity, Resources,
+  Schedule) individually audited for hardcoded colors, correct semantic token mapping,
+  and badge/status-element data accuracy. Found and fixed one genuine defect — Activity's
+  `ACTION_VARIANT`/`ACTION_DOT` color mismatch — and formally closed the `status` (teal)
+  token as intentionally reserved/unwired, with no genuine consumer found across the
+  entire audit.
+- **Final independent verification**: a fresh session (GitHub-connector-only access)
+  independently re-checked 9 claims from this phase's work against the actual repo state
+  — all 9 confirmed, zero discrepancies.
 
 ---
 
@@ -286,7 +302,7 @@ this phase actually begins building.
 | `usePagination` URL-state persistence (`decisions.md` #13) | ✅ 2026-08-15 |
 | UI/UX Polish — Phase 2 (module-by-module) | ✅ 2026-08-15 (Parts 29a-29g + 29-CLOSEOUT) |
 | UI/UX Polish — Design System & Interaction Refresh | ✅ 2026-08-20 |
-| Light Theme Migration | 🟡 STARTING — not yet built |
+| Light Theme Migration | ✅ 2026-08-21 |
 
 ---
 
