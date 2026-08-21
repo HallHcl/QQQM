@@ -22,12 +22,12 @@
        #7a350c=122 53 12, #652c0a=101 44 10, #e9effc=233 239 252,
        #e6f2f4=230 242 244, #f9e7e7=249 231 231, #f7ece1=247 236 225.
        All values WCAG AA-verified against #ffffff background (Phase 2a,
-       Direction B) — see docs/decisions.md #30. `--surface-hover` has no
-       ticket-supplied value; reuses --border as a placeholder pending
-       human confirmation (see docs/decisions.md #30). */
+       Direction B) — see docs/decisions.md #30. `--surface-hover` is
+       #ecf0f3=236 240 243, set per docs/decisions.md #31 (was a --border
+       placeholder pending human confirmation; now resolved). */
     --background: 255 255 255;
     --surface: 244 246 248;
-    --surface-hover: 216 222 228;
+    --surface-hover: 236 240 243;
     --border: 216 222 228;
 
     --accent: 29 78 216;

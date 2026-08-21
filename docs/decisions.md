@@ -919,6 +919,42 @@ rollout shouldn't ship one un-contrast-checked token alongside 20 verified ones.
 
 ---
 
+## 31. Light Theme Migration, Phase 2b close-out — `--surface-hover` resolved, `#46505A` recorded as a non-wired candidate value (2026-08-21)
+
+**`--surface-hover` placeholder replaced with a real Direction B value.** Decision
+#30 flagged that `--surface-hover` had no ticket-supplied value and was temporarily
+set equal to `--border` (`#D8DEE4` / `216 222 228`), which was too large a visual
+jump from `--surface` (`#F4F6F8`) for a hover state and had not been through the
+Phase 2a WCAG-contrast process. It is now set to `#ECF0F3` (`236 240 243`) —
+`frontend/src/styles/globals.css`'s `--surface-hover` var, consumed by
+`hover:bg-surface-hover` (8 sites) and shadcn's `--shadcn-accent` alias. No other
+Direction B token value was touched.
+
+**`#46505A` — recorded as a candidate value, not wired to any token.** Decision #30
+noted the original Phase 2a ticket listed `#46505A` as a candidate `text-secondary`
+role distinct from `muted-foreground`, but that it has zero live consumers: this
+codebase has only two real text tiers today, `text-primary` (`#12181F`) and
+`muted-foreground` / `--text-secondary` CSS var (`#667085`). Decision: do **not**
+create or wire a token for `#46505A` now. It is recorded here only as a candidate
+value, to be revisited if a genuine third text tier is ever needed. No new CSS
+variable, Tailwind token, or component reference was created for it.
+
+**`docs/development-guide.md` corrected from the old dark theme to the current
+locked Direction B light theme.** The guide still instructed contributors to use
+the old dark theme (background `#0A0A0A`, accent `#44D62C`), which is normative
+guidance a new contributor would actually follow — left uncorrected, it risked
+dark-theme styling being reintroduced in new components during the upcoming
+sitewide rollout. Updated to reference the current background (`#FFFFFF`), surface/
+border/surface-hover, brand (`#1D4ED8`), status (`#0E7490`), danger (`#B91C1C`),
+warning (`#92400E`), and their tint/hover/active variants per the Direction B table
+in decision #30.
+
+**How to apply:** both items decision #30 flagged as blocking ("Needs human
+confirmation") are now resolved — Phase 2 sitewide rollout to the remaining 7
+modules is unblocked on this front.
+
+---
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -942,4 +978,4 @@ rollout shouldn't ship one un-contrast-checked token alongside 20 verified ones.
 | Known flaky tests / test-coverage backlog | 🟡 Tracked, not all actioned | See decision #27 |
 | Docker no-auto-rebuild-on-pull reminder | ℹ️ Standing workflow reminder | See decision #28 |
 | Resources detail-page modal-to-inline-edit migration | ⏭️ Deferred | No detail page exists yet for Resources — see `progress.md` |
-| Light Theme Migration | 🟡 IN PROGRESS — Phase 2b (Servers pilot) done | Direction B tokens applied globally, piloted/verified on Servers; sitewide rollout pending — see decisions #29/#30, `progress.md` |
+| Light Theme Migration | 🟡 IN PROGRESS — Phase 2b (Servers pilot) done, close-out items resolved | Direction B tokens applied globally, piloted/verified on Servers; `--surface-hover`/`#46505A`/dev-guide close-out done; sitewide rollout pending — see decisions #29/#30/#31, `progress.md` |

@@ -79,20 +79,31 @@ spread further.
 
 ## 5. Match the existing visual theme exactly. Do not redesign.
 
-Razer-inspired dark theme: near-black `#0A0A0A` background, `#44D62C` green accent,
-sharp corners, Inter font, no shadows, existing shadcn/ui primitives and Tailwind
-semantic tokens. Match the layout/interaction pattern of the most similar
+Direction B / "Deep Enterprise" light theme (single, non-togglable — see
+`decisions.md` #29/#30/#31): `#FFFFFF` background, `#F4F6F8` surface, `#ECF0F3`
+surface-hover, `#D8DEE4` border, `#12181F` primary text, `#667085` secondary/muted
+text (`muted-foreground`), `#1D4ED8` brand/accent blue (hover `#1846C4`, active
+`#153BA8`, tint `#E9EFFC`), `#0E7490` status teal (hover `#0C6277`, active `#0A5265`,
+tint `#E6F2F4`), `#B91C1C` danger red (hover `#9F1717`, active `#851212`, tint
+`#F9E7E7`), `#92400E` warning amber (hover `#7A350C`, active `#652C0A`, tint
+`#F7ECE1`), sharp corners, Inter font, no shadows, existing shadcn/ui primitives and
+Tailwind semantic tokens. Always use the CSS variables/Tailwind classes (e.g.
+`bg-surface`, `text-muted-foreground`, `bg-danger/10`) — never hardcode a hex value
+in a component. Match the layout/interaction pattern of the most similar
 already-completed module rather than inventing new UI structure.
 
-**Note on phase**: this rule was written during the Frontend Functional Complete
-phase (Parts 19-27), when polish was explicitly out of scope (see `decisions.md` #3
-and #9). UI/UX Polish Phases 1 and 2 (Parts 28a-28f and 29a-29g) have since
-completed — see `progress.md` — and made deliberate, scoped visual/UX changes. If a
-future ticket explicitly continues the polish track, follow that ticket's own
-instructions on what "redesign" latitude you have rather than this rule's original
+**Note on phase**: this rule was originally written during the Frontend Functional
+Complete phase (Parts 19-27), when polish was explicitly out of scope (see
+`decisions.md` #3 and #9), and at the time described the project's now-retired dark
+theme. UI/UX Polish Phases 1 and 2 (Parts 28a-28f and 29a-29g) and the Light Theme
+Migration (Phases 1-2b, `decisions.md` #29/#30/#31) have since completed — see
+`progress.md` — replacing the dark theme with the Direction B light theme described
+above and making other deliberate, scoped visual/UX changes. If a future ticket
+explicitly continues the polish or theme-rollout track, follow that ticket's own
+instructions on what latitude you have rather than this rule's original
 functional-wiring-only framing; if your ticket is ordinary functional/bugfix work
-outside the polish track, this rule's original intent (don't redesign incidentally)
-still applies.
+outside those tracks, this rule's original intent (don't redesign or reintroduce the
+old dark theme incidentally) still applies.
 
 ## 6. Verify every downstream consumer before changing a hook's shape or signature.
 
