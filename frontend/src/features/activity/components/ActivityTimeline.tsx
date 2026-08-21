@@ -3,16 +3,19 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ActivityLog } from "@/types";
 
+// restore is treated as brand (same as create) — a lifecycle event bringing
+// an entity back into active use, conceptually closer to creation than to a
+// routine update. See docs/decisions.md #33.
 const ACTION_VARIANT: Record<ActivityLog["action"], "default" | "secondary" | "destructive"> = {
   create: "default",
   update: "secondary",
   delete: "destructive",
-  restore: "secondary",
+  restore: "default",
 };
 
 const ACTION_DOT: Record<ActivityLog["action"], string> = {
   create: "bg-brand",
-  update: "bg-warning",
+  update: "bg-muted-foreground",
   delete: "bg-danger",
   restore: "bg-brand",
 };

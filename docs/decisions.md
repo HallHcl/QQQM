@@ -994,6 +994,56 @@ inline.
 
 ---
 
+## 33. Decision #32 closed — `status` stays reserved/unwired; Activity's badge/dot mismatch resolved; sitewide rollout audit complete (2026-08-21)
+
+**Decision #32 is now closed.** `status` (teal, `#0E7490`) remains reserved and
+unwired, by deliberate choice — not a defect, not an oversight, and not something
+still pending. All three remaining audit groups (Resources+Schedule,
+Clients/Projects/Environments-Servers-Infrastructure, People+Activity) surfaced
+candidates for it (Schedule's `done`, Clients'-and-similar "active" states,
+Activity's `update`/`restore`) but none was a genuine semantic fit — every case was
+better served by `brand` ("the current/normal one") or plain neutral gray. Forcing
+`status` onto any of them to give the token a consumer would have been reverse-
+engineering meaning from an unused token rather than finding a real one, exactly the
+guardrail decision #32 set out to prevent. `status` stays defined in
+`globals.css`/`tailwind.config.js` as reserved design capacity for a genuine
+success/informational state, if one is ever found — option (b) from decision #32's
+three choices.
+
+**Activity's `ACTION_VARIANT`/`ACTION_DOT` mismatch (found by the People+Activity
+audit) is resolved.** `frontend/src/features/activity/components/ActivityTimeline.tsx`
+kept two independent color-lookup tables for the same `ActivityLog["action"]` field
+that disagreed with each other (`update`'s badge was neutral while its dot was
+`warning` amber; `restore`'s badge was neutral like `update`'s while its dot was
+`brand` like `create`'s). Agreed final mapping, now applied to both tables
+consistently:
+- `create` → brand (blue) — badge `default`, dot `bg-brand`
+- `restore` → brand (blue), same as `create` — a lifecycle event bringing an entity
+  back into active use, conceptually closer to creation than to a routine update —
+  badge `default`, dot `bg-brand`
+- `update` → neutral/muted gray — badge `secondary`, dot `bg-muted-foreground`
+  (previously `bg-warning`, the only value that actually changed)
+- `delete` → danger (red), unchanged — badge `destructive`, dot `bg-danger`
+
+`status` teal was explicitly **not** used for `update` — a generic lifecycle event
+doesn't carry a "success/informational" semantic just because the token was
+otherwise idle.
+
+**This also closes out the sitewide rollout audit phase.** All 7 remaining modules —
+Clients, Projects, Environments/Servers/Infrastructure, People, Activity, Resources,
+Schedule — have now been audited (token consumers, semantic mapping, badge/status
+reality checks, screenshot verification, console warnings) across three audit
+tickets. Across all seven, this Activity badge/dot mismatch was the **only** fix
+required — every other module came back clean.
+
+**How to apply:** treat `status` as settled reserved capacity, not an open question,
+until a genuinely new candidate surfaces (at which point it gets its own decision,
+not a silent wiring). The sitewide rollout audit phase is complete; only a final
+independent verification pass remains before the Light Theme Migration itself can
+close — see the tracker below.
+
+---
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -1017,5 +1067,5 @@ inline.
 | Known flaky tests / test-coverage backlog | 🟡 Tracked, not all actioned | See decision #27 |
 | Docker no-auto-rebuild-on-pull reminder | ℹ️ Standing workflow reminder | See decision #28 |
 | Resources detail-page modal-to-inline-edit migration | ⏭️ Deferred | No detail page exists yet for Resources — see `progress.md` |
-| Light Theme Migration | 🟡 IN PROGRESS — Phase 2b (Servers pilot) done, close-out items resolved | Direction B tokens applied globally, piloted/verified on Servers; `--surface-hover`/`#46505A`/dev-guide close-out done; sitewide rollout pending — see decisions #29/#30/#31, `progress.md` |
-| `status` (teal) token — zero live consumers app-wide | 🟡 OPEN, undecided | Surfaced by Resources+Schedule audit; do NOT wire a consumer just to use it — see decision #32 |
+| Light Theme Migration | 🟡 Sitewide rollout audit complete, final independent verification pending | Direction B tokens applied globally, piloted/verified on Servers; all 7 remaining modules audited (only fix needed: Activity badge/dot mismatch); close-out items resolved — see decisions #29/#30/#31/#32/#33, `progress.md` |
+| `status` (teal) token — zero live consumers app-wide | ✅ Closed 2026-08-21 — intentionally reserved, unwired | No genuine semantic fit found across the full sitewide rollout audit; stays reserved design capacity, not a defect — see decision #33 |
