@@ -955,6 +955,45 @@ modules is unblocked on this front.
 
 ---
 
+## 32. `status` (teal, `#0E7490`) Direction B token has zero live consumers app-wide — OPEN, undecided (2026-08-21, surfaced during the Resources+Schedule sitewide-rollout audit)
+
+**Fact, as of commit `d0e06b5`.** The `status` token (teal, `#0E7490`) has zero live
+consumers anywhere in the frontend — not just in Resources/Schedule, the two modules
+the audit ticket covered, but across the entire `frontend/src` tree. Confirmed via
+grep for `text-status`, `bg-status`, `border-status`, and `variant="status"` — zero
+hits for all four.
+
+**This is an OPEN item — not yet decided.** Three options are on the table, to be
+resolved once the module-by-module rollout audit (Resources+Schedule now done;
+People+Activity and Clients/Projects/Environments still pending) has covered the
+whole app:
+(a) wire `status` to a genuine state that fits teal's "success/informational"
+semantic, once one is identified during that ongoing audit;
+(b) keep it reserved/unused intentionally — some token sets deliberately carry a
+color that isn't needed yet;
+(c) reconsider or retire the token's role in a dedicated follow-up, if no genuine
+consumer ever turns up.
+
+**Explicit guardrail: do NOT create a consumer for this token solely to make it
+"used."** Any future wiring must be justified by a genuine semantic fit found during
+audit — the same discipline already applied to `#46505A` in decision #31 (a
+candidate value is not itself a reason to invent a consumer for it).
+
+**Cross-reference.** This was surfaced by the Resources+Schedule audit ticket, which
+separately flagged that Schedule's `done` status currently renders as `brand` (blue)
+via the `default` badge variant, not `status` (teal) — noted there as a *candidate*
+for this token, but explicitly **not decided** in that ticket, and not decided here
+either. Whether `done` should move to `status` teal is deferred pending the
+People+Activity and Clients/Projects/Environments audit results, in case a stronger
+or more obviously-teal candidate turns up elsewhere in the app first.
+
+**How to apply:** do not wire, rename, or repoint `status` in any module-specific
+ticket without an explicit decision recorded here first. Flag any genuine candidate
+found during the remaining audit passes back to this decision rather than wiring it
+inline.
+
+---
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -979,3 +1018,4 @@ modules is unblocked on this front.
 | Docker no-auto-rebuild-on-pull reminder | ℹ️ Standing workflow reminder | See decision #28 |
 | Resources detail-page modal-to-inline-edit migration | ⏭️ Deferred | No detail page exists yet for Resources — see `progress.md` |
 | Light Theme Migration | 🟡 IN PROGRESS — Phase 2b (Servers pilot) done, close-out items resolved | Direction B tokens applied globally, piloted/verified on Servers; `--surface-hover`/`#46505A`/dev-guide close-out done; sitewide rollout pending — see decisions #29/#30/#31, `progress.md` |
+| `status` (teal) token — zero live consumers app-wide | 🟡 OPEN, undecided | Surfaced by Resources+Schedule audit; do NOT wire a consumer just to use it — see decision #32 |
