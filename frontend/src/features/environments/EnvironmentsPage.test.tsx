@@ -97,10 +97,18 @@ const DELETED_ENVIRONMENT = {
 
 // EnvironmentsPage also fetches projects (to resolve project_id -> name for
 // display), so the GET mock must route by path.
-function mockGetByPath(handlers: { environments?: unknown; projects?: unknown }) {
+function mockGetByPath(handlers: {
+  environments?: unknown;
+  projects?: unknown;
+  servers?: unknown;
+}) {
   getMock.mockImplementation((path: string) => {
     if (path === "/api/environments") return Promise.resolve(handlers.environments ?? okResult([]));
     if (path === "/api/projects") return Promise.resolve(handlers.projects ?? okResult([]));
+    // Each rendered row fires one "N Servers" count query (useChildCounts).
+    // Left unhandled it would throw below and every row would silently render
+    // the count's error placeholder instead of a number.
+    if (path === "/api/servers") return Promise.resolve(handlers.servers ?? okResult([]));
     throw new Error(`Unexpected path in test: ${path}`);
   });
 }
@@ -415,6 +423,69 @@ describe("EnvironmentsPage", () => {
         actionsWrapperFor(screen.getByRole("button", { name: "Actions" })),
         "Environments"
       );
+    });
+  });
+
+  describe("related counters (N Servers per environment row)", () => {
+    it("renders the child count returned by the per-row count query, pluralized", async () => {
+      mockGetByPath({
+        environments: okResult([SAMPLE_ENVIRONMENT]),
+        projects: okResult([SAMPLE_PROJECT]),
+        // per_page=1 responses carry one row of data but the real total.
+        servers: okResult([{ id: "s1" }], 4),
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("4 Servers")).toBeInTheDocument();
+    });
+
+    it("uses the singular noun for a count of exactly 1", async () => {
+      mockGetByPath({
+        environments: okResult([SAMPLE_ENVIRONMENT]),
+        projects: okResult([SAMPLE_PROJECT]),
+        servers: okResult([{ id: "s1" }], 1),
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("1 Server")).toBeInTheDocument();
+    });
+
+    it("requests only active children, one page-of-one per row", async () => {
+      mockGetByPath({
+        environments: okResult([SAMPLE_ENVIRONMENT]),
+        projects: okResult([SAMPLE_PROJECT]),
+        servers: okResult([], 0),
+      });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(getMock.mock.calls.some(([path]) => path === "/api/servers")).toBe(true)
+      );
+      const countCall = getMock.mock.calls.find(([path]) => path === "/api/servers");
+      expect(countCall?.[1].params.query).toMatchObject({
+        environment_id: "e1",
+        per_page: 1,
+        deleted: "false",
+      });
+    });
+
+    it("never renders a failed count as a resolved zero", async () => {
+      mockGetByPath({
+        environments: okResult([SAMPLE_ENVIRONMENT]),
+        projects: okResult([SAMPLE_PROJECT]),
+        servers: apiError(500, "Something broke"),
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("Production")).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByTitle("Couldn't load server count")).toBeInTheDocument()
+      );
+      expect(screen.queryByText("0 Servers")).not.toBeInTheDocument();
     });
   });
 });

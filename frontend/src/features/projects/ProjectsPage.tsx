@@ -29,6 +29,8 @@ import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { RelatedCount } from "@/components/RelatedCount";
+import { ENVIRONMENTS_PER_PROJECT, useChildCounts } from "@/hooks/useChildCounts";
 import { apiErrorMessage } from "@/api/errors";
 import { getInitials } from "@/lib/initials";
 import { cn } from "@/lib/utils";
@@ -82,6 +84,14 @@ export default function ProjectsPage() {
   );
 
   const totalPages = pageInfo?.total_pages ?? 1;
+
+  // One "N Environments" count per rendered row, fanned out in parallel.
+  // Empty while the list itself is loading, so no count requests are issued
+  // until there are real rows to count.
+  const environmentCounts = useChildCounts(
+    projects.map((project) => project.id),
+    ENVIRONMENTS_PER_PROJECT
+  );
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | undefined>(undefined);
@@ -239,8 +249,16 @@ export default function ProjectsPage() {
                         >
                           {getInitials(project.name)}
                         </span>
-                        {project.name}
-                        {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {project.name}
+                            {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                          </div>
+                          <RelatedCount
+                            result={environmentCounts.get(project.id)}
+                            noun="Environment"
+                          />
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">

@@ -89,10 +89,19 @@ const SAMPLE_PROJECT = {
 
 // ProjectsPage also fetches clients (to resolve client_id -> name for
 // display), so the GET mock must route by path.
-function mockGetByPath(handlers: { projects?: unknown; clients?: unknown }) {
+function mockGetByPath(handlers: {
+  projects?: unknown;
+  clients?: unknown;
+  environments?: unknown;
+}) {
   getMock.mockImplementation((path: string) => {
     if (path === "/api/projects") return Promise.resolve(handlers.projects ?? okResult([]));
     if (path === "/api/clients") return Promise.resolve(handlers.clients ?? okResult([]));
+    // Each rendered row fires one "N Environments" count query
+    // (useChildCounts). Left unhandled it would throw below and every row
+    // would silently render the count's error placeholder instead of a number.
+    if (path === "/api/environments")
+      return Promise.resolve(handlers.environments ?? okResult([]));
     throw new Error(`Unexpected path in test: ${path}`);
   });
 }
@@ -431,6 +440,69 @@ describe("ProjectsPage", () => {
         actionsWrapperFor(screen.getByRole("button", { name: "Actions" })),
         "Projects"
       );
+    });
+  });
+
+  describe("related counters (N Environments per project row)", () => {
+    it("renders the child count returned by the per-row count query, pluralized", async () => {
+      mockGetByPath({
+        projects: okResult([SAMPLE_PROJECT]),
+        clients: okResult([SAMPLE_CLIENT]),
+        // per_page=1 responses carry one row of data but the real total.
+        environments: okResult([{ id: "e1" }], 3),
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("3 Environments")).toBeInTheDocument();
+    });
+
+    it("uses the singular noun for a count of exactly 1", async () => {
+      mockGetByPath({
+        projects: okResult([SAMPLE_PROJECT]),
+        clients: okResult([SAMPLE_CLIENT]),
+        environments: okResult([{ id: "e1" }], 1),
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("1 Environment")).toBeInTheDocument();
+    });
+
+    it("requests only active children, one page-of-one per row", async () => {
+      mockGetByPath({
+        projects: okResult([SAMPLE_PROJECT]),
+        clients: okResult([SAMPLE_CLIENT]),
+        environments: okResult([], 0),
+      });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(getMock.mock.calls.some(([path]) => path === "/api/environments")).toBe(true)
+      );
+      const countCall = getMock.mock.calls.find(([path]) => path === "/api/environments");
+      expect(countCall?.[1].params.query).toMatchObject({
+        project_id: "p1",
+        per_page: 1,
+        deleted: "false",
+      });
+    });
+
+    it("never renders a failed count as a resolved zero", async () => {
+      mockGetByPath({
+        projects: okResult([SAMPLE_PROJECT]),
+        clients: okResult([SAMPLE_CLIENT]),
+        environments: apiError(500, "Something broke"),
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("Migration")).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByTitle("Couldn't load environment count")).toBeInTheDocument()
+      );
+      expect(screen.queryByText("0 Environments")).not.toBeInTheDocument();
     });
   });
 });

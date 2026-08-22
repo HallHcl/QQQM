@@ -428,4 +428,61 @@ describe("ClientsPage", () => {
       expect(screen.queryByRole("option", { name: "All" })).not.toBeInTheDocument();
     });
   });
+
+  describe("related counters (N Projects per client row)", () => {
+    // Unlike the tests above, these must route by path: the page now issues
+    // both a /api/clients list call and one /api/projects count call per row.
+    function mockCounts(projectsResult: unknown) {
+      getMock.mockImplementation((path: string) => {
+        if (path === "/api/clients") return Promise.resolve(okResult([ACTIVE_CLIENT]));
+        if (path === "/api/projects") return Promise.resolve(projectsResult);
+        throw new Error(`Unexpected path in test: ${path}`);
+      });
+    }
+
+    it("renders the child count returned by the per-row count query, pluralized", async () => {
+      // per_page=1 responses carry one row of data but the real total.
+      mockCounts(okResult([{ id: "p1" }], 2));
+
+      renderPage();
+
+      expect(await screen.findByText("2 Projects")).toBeInTheDocument();
+    });
+
+    it("uses the singular noun for a count of exactly 1", async () => {
+      mockCounts(okResult([{ id: "p1" }], 1));
+
+      renderPage();
+
+      expect(await screen.findByText("1 Project")).toBeInTheDocument();
+    });
+
+    it("requests only active children, one page-of-one per row", async () => {
+      mockCounts(okResult([], 0));
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(getMock.mock.calls.some(([path]) => path === "/api/projects")).toBe(true)
+      );
+      const countCall = getMock.mock.calls.find(([path]) => path === "/api/projects");
+      expect(countCall?.[1].params.query).toMatchObject({
+        client_id: "1",
+        per_page: 1,
+        deleted: "false",
+      });
+    });
+
+    it("never renders a failed count as a resolved zero", async () => {
+      mockCounts(apiError(500, "Something broke"));
+
+      renderPage();
+
+      expect(await screen.findByText("Acme Corp")).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByTitle("Couldn't load project count")).toBeInTheDocument()
+      );
+      expect(screen.queryByText("0 Projects")).not.toBeInTheDocument();
+    });
+  });
 });

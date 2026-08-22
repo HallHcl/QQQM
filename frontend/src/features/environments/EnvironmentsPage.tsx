@@ -29,6 +29,8 @@ import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { RelatedCount } from "@/components/RelatedCount";
+import { SERVERS_PER_ENVIRONMENT, useChildCounts } from "@/hooks/useChildCounts";
 import { apiErrorMessage } from "@/api/errors";
 import { getInitials } from "@/lib/initials";
 import { cn } from "@/lib/utils";
@@ -70,6 +72,14 @@ export default function EnvironmentsPage() {
   const projectNameById = new Map(projects.map((p) => [p.id, p.name]));
 
   const totalPages = pageInfo?.total_pages ?? 1;
+
+  // One "N Servers" count per rendered row, fanned out in parallel. Empty
+  // while the list itself is loading, so no count requests are issued until
+  // there are real rows to count.
+  const serverCounts = useChildCounts(
+    environments.map((environment) => environment.id),
+    SERVERS_PER_ENVIRONMENT
+  );
 
   const [formOpen, setFormOpen] = useState(false);
   const [deletingEnvironment, setDeletingEnvironment] = useState<Environment | undefined>(undefined);
@@ -229,8 +239,16 @@ export default function EnvironmentsPage() {
                         >
                           {getInitials(environment.name)}
                         </span>
-                        {environment.name}
-                        {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {environment.name}
+                            {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                          </div>
+                          <RelatedCount
+                            result={serverCounts.get(environment.id)}
+                            noun="Server"
+                          />
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">

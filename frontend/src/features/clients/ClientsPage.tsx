@@ -26,7 +26,9 @@ import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { RelatedCount } from "@/components/RelatedCount";
 import { RowActions } from "@/components/RowActions";
+import { PROJECTS_PER_CLIENT, useChildCounts } from "@/hooks/useChildCounts";
 import { useHasRole } from "@/hooks/useHasRole";
 import { apiErrorMessage } from "@/api/errors";
 import { getInitials } from "@/lib/initials";
@@ -67,6 +69,14 @@ export default function ClientsPage() {
   });
 
   const totalPages = pageInfo?.total_pages ?? 1;
+
+  // One "N Projects" count per rendered row, fanned out in parallel. Empty
+  // while the list itself is loading, so no count requests are issued until
+  // there are real rows to count.
+  const projectCounts = useChildCounts(
+    clients.map((client) => client.id),
+    PROJECTS_PER_CLIENT
+  );
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | undefined>(undefined);
@@ -234,8 +244,13 @@ export default function ClientsPage() {
                         >
                           {getInitials(client.name)}
                         </span>
-                        {client.name}
-                        {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {client.name}
+                            {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                          </div>
+                          <RelatedCount result={projectCounts.get(client.id)} noun="Project" />
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
