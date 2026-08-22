@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A newer push to the same branch supersedes an in-flight run for it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (lint / build / test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 20 matches frontend/Dockerfile's node:20-alpine base.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # `build` is `tsc -b && vite build`, so this covers typecheck as well as
+      # the production bundle — there is no separate typecheck script.
+      - name: Typecheck and build
+        run: npm run build
+
+      # Vitest. Includes the Phase A touch-vs-hover row-actions regression
+      # guards (src/test/hoverActions.ts), which is the point of running this
+      # automatically rather than on request.
+      - name: Test
+        run: npm test
+
+  backend:
+    name: Backend (build / test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+
+    # The backend's Jest suite talks to a real Postgres — its tests open
+    # connections in beforeAll rather than mocking the driver — so CI needs a
+    # live database. This is GitHub Actions' own service-container mechanism,
+    # unrelated to the local docker-compose setup; the image tag is kept in
+    # step with docker-compose.yml's `db` service.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: client_project_mgmt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d client_project_mgmt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # The service container is port-mapped onto the runner, so it is reached
+      # at localhost — not docker-compose's `db` hostname, and not the 5433
+      # host port that compose publishes locally.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/client_project_mgmt
+      # Not a secret: this signs tokens only inside this ephemeral job against
+      # a throwaway database that is destroyed with the runner. Deliberately
+      # inlined rather than pulled from GitHub Secrets so the workflow runs on
+      # forks and needs no repo configuration to work.
+      JWT_SECRET: ci-only-throwaway-jwt-secret-not-used-anywhere-real
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 20 matches backend/Dockerfile's node:20-alpine base.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migrations
+        run: npm run migrate
+
+      # Required, not optional: the suite asserts against the seeded `admin`
+      # user and the `admin`/`member` role rows. 001_init.sql creates the
+      # roles TABLE but seed.ts inserts the ROWS, and several tests fail fast
+      # with "Seeded 'member' role not found. Run `npm run seed` first."
+      # against a migrated-but-unseeded database.
+      - name: Seed baseline data
+        run: npm run seed
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Test
+        run: npm test

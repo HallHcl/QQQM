@@ -203,3 +203,31 @@ and clearly flags it (in "Decisions made" and, if it's a genuine toss-up, "Needs
 Claude's attention") rather than either (a) silently picking one with no
 explanation, or (b) stopping work to ask before proceeding. Cite precedent from
 other modules where one exists; state your own reasoning clearly where none does.
+
+## 14. CI runs on every push and PR to `main`. A red pipeline invalidates a "done" report.
+
+`.github/workflows/ci.yml` runs two jobs automatically on every push and pull
+request targeting `main`, on Node 20 (matching both Dockerfiles):
+
+- **frontend** — `npm ci`, then `npm run lint` (oxlint), `npm run build`
+  (`tsc -b && vite build`, so this is the typecheck too — there is no separate
+  typecheck script), then `npm test` (Vitest).
+- **backend** — `npm ci` against a `postgres:16-alpine` service container, then
+  `npm run migrate`, `npm run seed`, `npm run build`, `npm test` (Jest). The seed
+  step is mandatory, not decorative: the suite authenticates as the seeded
+  `admin` user and looks up the `admin`/`member` role rows, so it fails fast on a
+  migrated-but-unseeded database.
+
+Playwright (`npm run test:visual-sweep`) is deliberately **not** in CI — it needs a
+dev server, backend, and database running simultaneously. It stays a local,
+on-demand check, which is why patterns it covers should also have a cheap Vitest
+guard where a regression would be silent (see rule 12 and
+`frontend/src/test/hoverActions.ts`).
+
+The practical rule: CI failing means the same thing as a failing local test run.
+Do not report a ticket as done while the pipeline is red on the work you pushed,
+and do not treat "it passed locally" as sufficient when CI disagrees — CI installs
+from the lockfiles with `npm ci` on a clean machine and a clean database, so it
+catches drift a warm local checkout hides. If CI fails for a reason you believe is
+unrelated to your change, say so explicitly in "Needs Claude's attention" rather
+than quietly moving on.
