@@ -338,4 +338,76 @@ describe("ServerDetailPage", () => {
       });
     });
   });
+
+  describe("credential-reference gating after the two-column shell refactor", () => {
+    // The audit warned that this section carries four distinct permission
+    // conditions (manageable + Add/Edit admin+member + Delete admin-only) and
+    // must move into the shell's `aside` as a unit rather than be re-derived.
+    // These lock all four in place from the page's own perspective.
+    const CREDENTIAL = {
+      id: "c1",
+      server_id: "s1",
+      label: "Vault path",
+      reference_location: "secret/servers/web-01",
+      notes: null,
+      created_at: "2026-01-01T00:00:00.000Z",
+      applies_to_access_method: "ssh",
+    };
+
+    it("shows Add and Edit but not Delete to a member", async () => {
+      mockGetByPath({ credentials: ok([CREDENTIAL]) });
+      useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });
+
+      renderPage();
+
+      expect(await screen.findByText("Vault path")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /add credential reference/i })).toBeInTheDocument();
+      // Two Edit buttons: the header's (server edit) and the credential's.
+      expect(screen.getAllByRole("button", { name: /^edit$/i })).toHaveLength(2);
+      expect(screen.queryByRole("button", { name: /^delete$/i })).not.toBeInTheDocument();
+    });
+
+    it("shows Add, Edit and Delete to an admin", async () => {
+      mockGetByPath({ credentials: ok([CREDENTIAL]) });
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+
+      renderPage();
+
+      expect(await screen.findByText("Vault path")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /add credential reference/i })).toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: /^edit$/i })).toHaveLength(2);
+      expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
+    });
+
+    it("shows no management affordances at all to a user with no role", async () => {
+      mockGetByPath({ credentials: ok([CREDENTIAL]) });
+      useAuthMock.mockReturnValue({ roles: [], isLoading: false });
+
+      renderPage();
+
+      // The list itself still renders — only the write affordances are gated.
+      expect(await screen.findByText("Vault path")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /add credential reference/i })
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^delete$/i })).not.toBeInTheDocument();
+    });
+
+    it("keeps its own inline loading text rather than adopting the shell's page-level LoadingState", async () => {
+      getMock.mockImplementation((path: string) => {
+        if (path === "/api/servers/{id}") return Promise.resolve(ok(SERVER_DETAIL));
+        // Credentials never resolve: the page itself must be fully rendered
+        // while only this nested section is still pending.
+        return new Promise(() => {});
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("Web 01")).toBeInTheDocument();
+      expect(screen.getByText("Loading credentials...")).toBeInTheDocument();
+      // The shell's page-level loading state must be gone by now.
+      expect(screen.queryByText(/loading server/i)).not.toBeInTheDocument();
+    });
+  });
 });
