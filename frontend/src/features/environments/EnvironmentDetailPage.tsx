@@ -1,15 +1,14 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DetailPageShell } from "@/components/DetailPageShell";
 import { EmptyState } from "@/components/state/EmptyState";
-import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
 import EnvironmentEditCard from "./components/EnvironmentEditCard";
 import { VpnResourceStatus } from "./components/VpnResourceStatus";
 import ServerCard from "@/features/infrastructure/components/ServerCard";
-import { useEnvironment } from "@/hooks/useEnvironments";
+import { useEnvironment, type EnvironmentDetail } from "@/hooks/useEnvironments";
 import { useServers } from "@/hooks/useServers";
 import { useHasRole } from "@/hooks/useHasRole";
 import { usePagination } from "@/hooks/usePagination";
@@ -42,22 +41,24 @@ export default function EnvironmentDetailPage() {
   const { data: servers = [], isLoading: serversLoading } = useServers(environment?.id);
 
   return (
-    <div className="space-y-6">
-      <Link
-        to="/environments"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to environments
-      </Link>
-
-      {isLoading ? (
-        <LoadingState message="Loading environment..." />
-      ) : isError ? (
-        <ErrorState error={error} onRetry={() => refetch()} />
-      ) : !environment ? (
-        <ErrorState title="Not found" message="This environment could not be found." />
-      ) : (
+    /**
+     * No `aside`: the Servers grid below is `sm:grid-cols-2 lg:grid-cols-3`
+     * and already uses the full content width well. Moving it into the
+     * shell's 400px rail would flatten it to a one-card-per-row list for no
+     * gain, so this page stays single-column and takes the shell purely to
+     * drop its duplicated back-link and loading/error/not-found chain.
+     */
+    <DetailPageShell<EnvironmentDetail>
+      backTo="/environments"
+      backLabel="Back to environments"
+      entity={environment}
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      loadingMessage="Loading environment..."
+      notFoundMessage="This environment could not be found."
+      main={(environment) => (
         <>
           <Card>
             {!isEditing && (
@@ -104,6 +105,10 @@ export default function EnvironmentDetailPage() {
               <CardTitle className="text-base">Servers ({servers.length})</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* This section owns its own query, so it keeps its own
+                  loading/empty chain — the shell's loading state is
+                  page-level and has already resolved by the time this
+                  renders. */}
               {serversLoading ? (
                 <LoadingState message="Loading servers..." />
               ) : servers.length === 0 ? (
@@ -119,6 +124,6 @@ export default function EnvironmentDetailPage() {
           </Card>
         </>
       )}
-    </div>
+    />
   );
 }

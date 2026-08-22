@@ -415,4 +415,37 @@ describe("EnvironmentDetailPage", () => {
       });
     });
   });
+
+  describe("single-column DetailPageShell adoption", () => {
+    it("renders no aside column — the Servers grid keeps the full content width", async () => {
+      mockGetByPath({});
+      const { container } = renderPage();
+
+      await screen.findByText("Production");
+      // The shell only emits its two-column grid when an `aside` is passed;
+      // this page passes none, so the 400px rail must never appear at any
+      // width. The Servers section's own responsive grid is unaffected.
+      expect(container.innerHTML).not.toContain("1fr_400px");
+    });
+
+    it("keeps the Servers section's own loading state while the page itself is fully rendered", async () => {
+      getMock.mockImplementation((path: string) => {
+        if (path === "/api/environments/{id}") return Promise.resolve(ok(ENVIRONMENT_DETAIL));
+        if (path === "/api/resources/{id}")
+          return Promise.resolve(apiError(404, "NOT_FOUND", "Resource not found"));
+        // Servers never resolve: only this nested section stays pending.
+        if (path === "/api/servers") return new Promise(() => {});
+        return Promise.resolve(
+          ok({ data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 1 } })
+        );
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("Production")).toBeInTheDocument();
+      expect(screen.getByText("Loading servers...")).toBeInTheDocument();
+      // The shell's page-level loading state has resolved and must be gone.
+      expect(screen.queryByText(/loading environment/i)).not.toBeInTheDocument();
+    });
+  });
 });
