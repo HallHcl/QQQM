@@ -15,8 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { MetricCard } from "@/components/MetricCard";
 import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
+import { useEnvironments } from "@/hooks/useEnvironments";
+import { useServers } from "@/hooks/useServers";
+import { useResources } from "@/hooks/useResources";
+import { useSchedules } from "@/hooks/useSchedules";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 
 export default function OverviewPage() {
@@ -33,36 +38,84 @@ export default function OverviewPage() {
   const { data: projects = [] } = useProjects(clientId);
   const { data: activity = [] } = useActivityLogs();
 
+  // System-wide KPI counts. Each is its own independent query asking for a
+  // single row and reading `pagination.total` off it — the same trick
+  // useChildCounts.ts uses per row, except this fires once per page load, not
+  // once per visible row. Independent queries are the point: one failing
+  // endpoint greys out its own tile and leaves the other five intact.
+  //
+  // These are separate cache entries from the pickers' own zero-arg calls
+  // above (`[KEY, {}]` vs `[KEY, { per_page: 1 }]`), so a tile costs one
+  // extra request rather than reusing the list — cheap, but not free.
+  //
+  // No "active"/"managed" qualifiers: Environments and Servers have no status
+  // concept in the data model (only `deleted_at`), and every hook already
+  // defaults to `deleted: "false"`, so these are non-deleted totals. Clients
+  // is a plain total for a different reason — GET /clients has no server-side
+  // `status` filter, so an active/inactive split isn't queryable at all.
+  const clientCount = useClients({ per_page: 1 });
+  const projectCount = useProjects(undefined, { per_page: 1 });
+  const environmentCount = useEnvironments(undefined, { per_page: 1 });
+  const serverCount = useServers(undefined, { per_page: 1 });
+  const resourceCount = useResources({ per_page: 1 });
+  const pendingScheduleCount = useSchedules({ status: "pending", per_page: 1 });
+
+  const metrics = [
+    { label: "Total Clients", query: clientCount },
+    { label: "Total Projects", query: projectCount },
+    { label: "Environments", query: environmentCount },
+    { label: "Servers", query: serverCount },
+    { label: "Resources", query: resourceCount },
+    { label: "Pending Schedules", query: pendingScheduleCount },
+  ];
+
   const recentActivity = activity.slice(0, 10);
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Overview"
-        actions={
-          <Select value={clientId} onValueChange={setClientId}>
-            <SelectTrigger className="w-64" aria-label="Client">
-              <SelectValue placeholder="Select a client" />
-            </SelectTrigger>
-            <SelectContent>
-              {clients.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        }
-      />
+      <PageHeader title="Overview" />
+
+      {/* 2 cols at 375px keeps each tile wide enough for a label like "Pending
+          Schedules" on two lines; 6 across at lg puts the whole system on one
+          row at laptop width without the tiles going narrower than their
+          longest label. */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        {metrics.map(({ label, query }) => (
+          <MetricCard
+            key={label}
+            label={label}
+            count={query.pagination?.total}
+            isLoading={query.isLoading}
+            isError={query.isError}
+          />
+        ))}
+      </div>
 
       {client && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>{client.name}</CardTitle>
-              <Badge variant={client.status === "active" ? "default" : "secondary"}>
-                {client.status}
-              </Badge>
+            {/* The client picker lives here rather than in PageHeader's
+                actions slot: it scopes this card only, and sitting above the
+                KPI tiles it read as though it scoped those too (it doesn't). */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <CardTitle className="truncate">{client.name}</CardTitle>
+                <Badge variant={client.status === "active" ? "default" : "secondary"}>
+                  {client.status}
+                </Badge>
+              </div>
+              <Select value={clientId} onValueChange={setClientId}>
+                <SelectTrigger className="w-64" aria-label="Client">
+                  <SelectValue placeholder="Select a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
