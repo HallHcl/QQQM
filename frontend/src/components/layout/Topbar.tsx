@@ -30,7 +30,7 @@ export default function Topbar() {
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4 shadow-none">
       <MobileNav />
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-2">
         <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
