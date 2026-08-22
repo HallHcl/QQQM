@@ -2,6 +2,7 @@ import { useState } from "react";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PaginationControls } from "@/components/PaginationControls";
+import { Toolbar } from "@/components/Toolbar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/state/EmptyState";
 import { ErrorState } from "@/components/state/ErrorState";
@@ -114,27 +115,32 @@ export default function PeoplePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="People"
-        actions={
-          <RequireRole roles={["admin", "member"]}>
-            <Button onClick={openCreateForm}>New person</Button>
-          </RequireRole>
-        }
-      />
+      <PageHeader title="People" />
 
-      <PeopleFilterBar
-        typeFilter={typeFilter}
-        onTypeFilterChange={setTypeFilter}
-        search={pagination.search}
-        onSearchChange={pagination.setSearch}
-        sort={pagination.sort}
-        onSortChange={pagination.setSort}
-        order={pagination.order}
-        onOrderChange={(v: SortOrder) => pagination.setOrder(v)}
-        deleted={pagination.deleted}
-        onDeletedChange={(v: DeletedFilter) => pagination.setDeleted(v)}
-      />
+      {/* Unified toolbar: filters and the primary action share one
+          visually-bounded surface instead of floating as separate elements
+          (Phase A UX pattern, piloted on Clients). People's filter group is
+          two stacked rows (role tabs above search/sort/order/status), so
+          items-start keeps the action button aligned to the first row rather
+          than floating against the block's vertical centre. */}
+      <Toolbar className="items-start">
+        <PeopleFilterBar
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
+          search={pagination.search}
+          onSearchChange={pagination.setSearch}
+          sort={pagination.sort}
+          onSortChange={pagination.setSort}
+          order={pagination.order}
+          onOrderChange={(v: SortOrder) => pagination.setOrder(v)}
+          deleted={pagination.deleted}
+          onDeletedChange={(v: DeletedFilter) => pagination.setDeleted(v)}
+        />
+
+        <RequireRole roles={["admin", "member"]}>
+          <Button onClick={openCreateForm}>New person</Button>
+        </RequireRole>
+      </Toolbar>
 
       {isLoading ? (
         <LoadingState message="Loading people..." />
