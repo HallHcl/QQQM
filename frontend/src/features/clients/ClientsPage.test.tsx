@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { actionsWrapperFor, expectHoverGatedRowActions } from "@/test/hoverActions";
 import ClientsPage from "./ClientsPage";
 
 const getMock = vi.fn();
@@ -384,6 +385,21 @@ describe("ClientsPage", () => {
       const row = nameCell.closest("tr")!;
       expect(row).not.toHaveAttribute("role", "button");
       expect(row).not.toHaveAttribute("tabIndex");
+    });
+  });
+
+  describe("row actions stay reachable on touch devices", () => {
+    it("hover-gates the row's Actions only on hover-capable devices, never unconditionally", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      getMock.mockResolvedValue(okResult([ACTIVE_CLIENT]));
+
+      renderPage();
+      await screen.findByText("Acme Corp");
+
+      expectHoverGatedRowActions(
+        actionsWrapperFor(screen.getByRole("button", { name: "Actions" })),
+        "Clients"
+      );
     });
   });
 

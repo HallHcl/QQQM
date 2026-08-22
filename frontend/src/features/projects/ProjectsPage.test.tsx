@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { actionsWrapperFor, expectHoverGatedRowActions } from "@/test/hoverActions";
 import ProjectsPage from "./ProjectsPage";
 
 const getMock = vi.fn();
@@ -415,6 +416,21 @@ describe("ProjectsPage", () => {
       expect(await screen.findByText("Migration")).toBeInTheDocument();
       expect(screen.getByText("Orphan Test Client")).toBeInTheDocument();
       expect(screen.queryByText("—")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("row actions stay reachable on touch devices", () => {
+    it("hover-gates the row's Actions only on hover-capable devices, never unconditionally", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      mockGetByPath({ projects: okResult([SAMPLE_PROJECT]), clients: okResult([SAMPLE_CLIENT]) });
+
+      renderPage();
+      await screen.findByText("Migration");
+
+      expectHoverGatedRowActions(
+        actionsWrapperFor(screen.getByRole("button", { name: "Actions" })),
+        "Projects"
+      );
     });
   });
 });

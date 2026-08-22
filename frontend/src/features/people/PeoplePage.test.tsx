@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { actionsWrapperFor, expectHoverGatedRowActions } from "@/test/hoverActions";
 import PeoplePage from "./PeoplePage";
 
 const getMock = vi.fn();
@@ -365,6 +366,21 @@ describe("PeoplePage", () => {
 
       await waitFor(() => expect(postMock).toHaveBeenCalledTimes(1));
       expect(screen.queryByText("This record changed")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("row actions stay reachable on touch devices", () => {
+    it("hover-gates the row's Actions only on hover-capable devices, never unconditionally", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      mockGetByPath({ people: ok(paginated([ACTIVE_PERSON])) });
+
+      renderPage();
+      await screen.findByText("Alex Rivera");
+
+      expectHoverGatedRowActions(
+        actionsWrapperFor(screen.getByRole("button", { name: "Actions" })),
+        "People"
+      );
     });
   });
 });

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { actionsWrapperFor, expectHoverGatedRowActions } from "@/test/hoverActions";
 import EnvironmentsPage from "./EnvironmentsPage";
 
 const getMock = vi.fn();
@@ -396,6 +397,24 @@ describe("EnvironmentsPage", () => {
       await waitFor(() => expect(getMock).toHaveBeenCalled());
       const call = getMock.mock.calls.find(([path]) => path === "/api/environments");
       expect(call?.[1].params.query.deleted).toBe("false");
+    });
+  });
+
+  describe("row actions stay reachable on touch devices", () => {
+    it("hover-gates the row's Actions only on hover-capable devices, never unconditionally", async () => {
+      useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
+      mockGetByPath({
+        environments: okResult([SAMPLE_ENVIRONMENT]),
+        projects: okResult([SAMPLE_PROJECT]),
+      });
+
+      renderPage();
+      await screen.findByText("Production");
+
+      expectHoverGatedRowActions(
+        actionsWrapperFor(screen.getByRole("button", { name: "Actions" })),
+        "Environments"
+      );
     });
   });
 });
