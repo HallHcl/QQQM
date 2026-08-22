@@ -3,6 +3,7 @@ import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FilterBar } from "@/components/FilterBar";
 import { PaginationControls } from "@/components/PaginationControls";
+import { Toolbar } from "@/components/Toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,7 +120,7 @@ export default function ClientsPage() {
       {/* Unified toolbar: search, filters, and the primary action share one
           visually-bounded surface instead of floating as separate elements
           (Phase A UX pilot — Clients module only). */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface p-3">
+      <Toolbar>
         <FilterBar>
           <Input
             placeholder="Search clients..."
@@ -170,7 +171,7 @@ export default function ClientsPage() {
         <RequireRole roles={["admin"]}>
           <Button onClick={openCreateForm}>New client</Button>
         </RequireRole>
-      </div>
+      </Toolbar>
 
       {isLoading ? (
         <LoadingState message="Loading clients..." />
