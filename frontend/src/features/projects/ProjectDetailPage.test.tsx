@@ -145,4 +145,69 @@ describe("ProjectDetailPage", () => {
     expect(await screen.findByText("Migration")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
   });
+
+  describe("single-column DetailPageShell adoption", () => {
+    it("renders no aside column — the Team roster keeps the full content width", async () => {
+      mockGetByPath({});
+      const { container } = renderPage();
+
+      await screen.findByText("Migration");
+      // The shell only emits its two-column grid when an `aside` is passed;
+      // this page passes none, so the 400px rail must never appear.
+      expect(container.innerHTML).not.toContain("1fr_400px");
+    });
+
+    it("keeps the roster's own loading state while the page itself is fully rendered", async () => {
+      getMock.mockImplementation((path: string) => {
+        if (path === "/api/projects/{id}") return Promise.resolve(ok(PROJECT_DETAIL));
+        // The roster query never resolves: only this nested section pends.
+        if (path === "/api/projects/{id}/people") return new Promise(() => {});
+        return Promise.resolve(ok([]));
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("Migration")).toBeInTheDocument();
+      expect(screen.getByText("Loading team...")).toBeInTheDocument();
+      // The shell's page-level loading state has resolved and must be gone.
+      expect(screen.queryByText(/loading project/i)).not.toBeInTheDocument();
+    });
+
+    it("keeps the roster's two mutually-exclusive client-link hints distinct, not a generic empty state", async () => {
+      // No people linked to the client at all.
+      mockGetByPath({ roster: ok([]), clientPeople: ok([]) });
+      const { unmount } = renderPage();
+
+      expect(
+        await screen.findByText(/No people are linked to this project's client yet/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/already on the team/i)
+      ).not.toBeInTheDocument();
+      unmount();
+
+      // Client has people, but all of them are already on the roster.
+      const PERSON = { id: "person1", name: "Ada Lovelace", email: null, type: "internal_engineer", deleted_at: null };
+      mockGetByPath({
+        roster: ok([
+          {
+            id: "pp1",
+            project_id: "p1",
+            role_in_project: "Lead engineer",
+            created_at: "2026-01-01T00:00:00.000Z",
+            person: PERSON,
+          },
+        ]),
+        clientPeople: ok([PERSON]),
+      });
+      renderPage();
+
+      expect(
+        await screen.findByText(/Everyone linked to this project's client is already on the team/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/No people are linked to this project's client yet/i)
+      ).not.toBeInTheDocument();
+    });
+  });
 });

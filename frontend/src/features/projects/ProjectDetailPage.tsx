@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { useParams } from "react-router-dom";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ErrorState } from "@/components/state/ErrorState";
-import { LoadingState } from "@/components/state/LoadingState";
+import { DetailPageShell } from "@/components/DetailPageShell";
 import ProjectFormDialog from "./components/ProjectFormDialog";
 import ProjectRoster from "./components/ProjectRoster";
 import { useProject } from "@/hooks/useProjects";
@@ -17,22 +15,24 @@ export default function ProjectDetailPage() {
   const [formOpen, setFormOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
-      <Link
-        to="/projects"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to projects
-      </Link>
-
-      {isLoading ? (
-        <LoadingState message="Loading project..." />
-      ) : isError ? (
-        <ErrorState error={error} onRetry={() => refetch()} />
-      ) : !project ? (
-        <ErrorState title="Not found" message="This project could not be found." />
-      ) : (
+    /**
+     * No `aside`: the Team roster is a management surface (table + assign
+     * form) that needs the full content width, not a 400px rail — it is the
+     * larger half of this page, not a sidebar's worth of related links. The
+     * shell is adopted here purely to drop the duplicated back-link and
+     * loading/error/not-found chain.
+     */
+    <DetailPageShell
+      backTo="/projects"
+      backLabel="Back to projects"
+      entity={project}
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      loadingMessage="Loading project..."
+      notFoundMessage="This project could not be found."
+      main={(project) => (
         <>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -58,6 +58,10 @@ export default function ProjectDetailPage() {
 
           <Card>
             <CardContent className="pt-6">
+              {/* ProjectRoster owns its own queries and its own
+                  loading/empty states, plus the two contextual hints about
+                  client-linked people — all independent of the shell's
+                  page-level chain. */}
               <ProjectRoster projectId={project.id} clientId={project.client_id} />
             </CardContent>
           </Card>
@@ -65,6 +69,6 @@ export default function ProjectDetailPage() {
           <ProjectFormDialog open={formOpen} onOpenChange={setFormOpen} project={project} />
         </>
       )}
-    </div>
+    />
   );
 }
