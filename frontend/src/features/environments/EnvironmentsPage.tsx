@@ -288,6 +288,9 @@ export default function EnvironmentsPage() {
             </TableBody>
           </Table>
 
+          {/* Capped at 50 (the shared default also offers 100): every rendered
+              row fires one extra child-count request, so the page size is what
+              bounds that fan-out. Other modules keep the 100 option. */}
           <PaginationControls
             page={pagination.page}
             totalPages={totalPages}
@@ -295,6 +298,7 @@ export default function EnvironmentsPage() {
             onPrevPage={pagination.prevPage}
             onNextPage={pagination.nextPage}
             onPerPageChange={pagination.setPerPage}
+            perPageOptions={[10, 20, 50]}
           />
         </>
       )}
