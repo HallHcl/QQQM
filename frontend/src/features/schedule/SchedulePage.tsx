@@ -4,6 +4,7 @@ import { RequireRole } from "@/components/auth/RequireRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FilterBar } from "@/components/FilterBar";
 import { PaginationControls } from "@/components/PaginationControls";
+import { Toolbar } from "@/components/Toolbar";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -147,14 +148,7 @@ export default function SchedulePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Schedule"
-        actions={
-          <RequireRole roles={["admin", "member"]}>
-            <Button onClick={openCreateForm}>New schedule</Button>
-          </RequireRole>
-        }
-      />
+      <PageHeader title="Schedule" />
 
       <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
         <ScheduleCalendar
@@ -164,63 +158,84 @@ export default function SchedulePage() {
         />
 
         <div className="min-w-0 space-y-4">
-          <FilterBar>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-40" aria-label="Schedule status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in_progress">In progress</SelectItem>
-                <SelectItem value="done">Done</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Unified toolbar: filters and the primary action share one
+              visually-bounded surface instead of floating as separate
+              elements (Phase A UX pattern, piloted on Clients). It sits in
+              the list column rather than spanning the grid, so it stays
+              aligned with the list it filters and not with the calendar. */}
+          <Toolbar>
+            <FilterBar>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="w-40" aria-label="Schedule status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in_progress">In progress</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={pagination.sort} onValueChange={pagination.setSort}>
-              <SelectTrigger className="w-44" aria-label="Sort by">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                {SORT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={pagination.sort} onValueChange={pagination.setSort}>
+                <SelectTrigger className="w-44" aria-label="Sort by">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select value={pagination.order} onValueChange={(v) => pagination.setOrder(v as SortOrder)}>
-              <SelectTrigger className="w-32" aria-label="Sort order">
-                <SelectValue placeholder="Order" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="asc">Ascending</SelectItem>
-                <SelectItem value="desc">Descending</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select
+                value={pagination.order}
+                onValueChange={(v) => pagination.setOrder(v as SortOrder)}
+              >
+                <SelectTrigger className="w-32" aria-label="Sort order">
+                  <SelectValue placeholder="Order" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">Ascending</SelectItem>
+                  <SelectItem value="desc">Descending</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select
-              value={pagination.deleted}
-              onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
-            >
-              <SelectTrigger className="w-40" aria-label="Record status filter">
-                <SelectValue placeholder="Record status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="false">Active</SelectItem>
-                <SelectItem value="true">Deleted</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select
+                value={pagination.deleted}
+                onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
+              >
+                <SelectTrigger className="w-40" aria-label="Record status filter">
+                  <SelectValue placeholder="Record status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">Active</SelectItem>
+                  <SelectItem value="true">Deleted</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                </SelectContent>
+              </Select>
 
-            {selectedDate && (
-              <Button variant="ghost" size="sm" onClick={() => setSelectedDate(undefined)}>
-                Clear date filter
+              {selectedDate && (
+                <Button variant="ghost" size="sm" onClick={() => setSelectedDate(undefined)}>
+                  Clear date filter
+                </Button>
+              )}
+            </FilterBar>
+
+            {/* ml-auto keeps the action right-aligned even when it wraps onto
+                its own flex line, which it does here but not on the
+                full-width modules: the calendar column leaves the list column
+                too narrow to fit four filters plus the button on one row, and
+                justify-between alone would left-align a lone wrapped item. */}
+            <RequireRole roles={["admin", "member"]}>
+              <Button className="ml-auto" onClick={openCreateForm}>
+                New schedule
               </Button>
-            )}
-          </FilterBar>
+            </RequireRole>
+          </Toolbar>
 
           {isLoading ? (
             <LoadingState message="Loading schedules..." />
