@@ -7,6 +7,7 @@ import { useHasRole } from "@/hooks/useHasRole";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FilterBar } from "@/components/FilterBar";
 import { PaginationControls } from "@/components/PaginationControls";
+import { Toolbar } from "@/components/Toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { apiErrorMessage } from "@/api/errors";
+import { getInitials } from "@/lib/initials";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import ServerFormDialog from "./components/ServerFormDialog";
@@ -140,63 +142,65 @@ export default function ServersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Servers"
-        actions={
-          // Server create/update is admin+member (requireAnyRole), NOT
-          // admin-only like Environments — verified against
-          // backend/src/routes/servers.routes.ts.
-          <RequireRole roles={["admin", "member"]}>
-            <Button onClick={openCreateForm}>New server</Button>
-          </RequireRole>
-        }
-      />
+      <PageHeader title="Servers" />
 
-      <FilterBar>
-        <Input
-          placeholder="Search servers..."
-          value={pagination.search}
-          onChange={(e) => pagination.setSearch(e.target.value)}
-          className="w-64"
-        />
-        <Select value={pagination.sort} onValueChange={pagination.setSort}>
-          <SelectTrigger className="w-40" aria-label="Sort by">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={pagination.order}
-          onValueChange={(v) => pagination.setOrder(v as SortOrder)}
-        >
-          <SelectTrigger className="w-32" aria-label="Sort order">
-            <SelectValue placeholder="Order" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="asc">Ascending</SelectItem>
-            <SelectItem value="desc">Descending</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={pagination.deleted}
-          onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
-        >
-          <SelectTrigger className="w-40" aria-label="Record status filter">
-            <SelectValue placeholder="Record status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="false">Active</SelectItem>
-            <SelectItem value="true">Deleted</SelectItem>
-            <SelectItem value="all">All</SelectItem>
-          </SelectContent>
-        </Select>
-      </FilterBar>
+      {/* Unified toolbar: search, filters, and the primary action share one
+          visually-bounded surface instead of floating as separate elements
+          (Phase A UX pattern, piloted on Clients). */}
+      <Toolbar>
+        <FilterBar>
+          <Input
+            placeholder="Search servers..."
+            value={pagination.search}
+            onChange={(e) => pagination.setSearch(e.target.value)}
+            className="w-64"
+          />
+          <Select value={pagination.sort} onValueChange={pagination.setSort}>
+            <SelectTrigger className="w-40" aria-label="Sort by">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={pagination.order}
+            onValueChange={(v) => pagination.setOrder(v as SortOrder)}
+          >
+            <SelectTrigger className="w-32" aria-label="Sort order">
+              <SelectValue placeholder="Order" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="asc">Ascending</SelectItem>
+              <SelectItem value="desc">Descending</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={pagination.deleted}
+            onValueChange={(v) => pagination.setDeleted(v as DeletedFilter)}
+          >
+            <SelectTrigger className="w-40" aria-label="Record status filter">
+              <SelectValue placeholder="Record status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="false">Active</SelectItem>
+              <SelectItem value="true">Deleted</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
+        </FilterBar>
+
+        {/* Server create/update is admin+member (requireAnyRole), NOT
+            admin-only like Environments — verified against
+            backend/src/routes/servers.routes.ts. */}
+        <RequireRole roles={["admin", "member"]}>
+          <Button onClick={openCreateForm}>New server</Button>
+        </RequireRole>
+      </Toolbar>
 
       {isLoading ? (
         <LoadingState message="Loading servers..." />
@@ -231,7 +235,7 @@ export default function ServersPage() {
                 return (
                   <TableRow
                     key={server.id}
-                    className={cn("cursor-pointer", isDeleted && "opacity-50")}
+                    className={cn("group cursor-pointer", isDeleted && "opacity-50")}
                     role="button"
                     tabIndex={0}
                     // Explicit aria-label so the row's accessible name doesn't
@@ -246,11 +250,24 @@ export default function ServersPage() {
                     }}
                   >
                     <TableCell className="font-medium">
+                      {/* Avatar sits beside the whole name block (not inside
+                          the title row) so the hostname subtext stays aligned
+                          under display_name rather than under the avatar. */}
                       <div className="flex items-center gap-2">
-                        {server.display_name}
-                        {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                        <span
+                          aria-hidden="true"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-caption font-semibold text-foreground"
+                        >
+                          {getInitials(server.display_name)}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {server.display_name}
+                            {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{server.hostname}</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">{server.hostname}</p>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       <div className="flex items-center gap-1.5">
@@ -298,22 +315,38 @@ export default function ServersPage() {
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.stopPropagation()}
                     >
-                      {isDeleted ? (
-                        <RequireRole roles={["admin"]}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setRestoringServer(server)}
-                          >
-                            Restore
-                          </Button>
-                        </RequireRole>
-                      ) : (
-                        <RowActions
-                          onEdit={canEdit ? () => openEditForm(server) : undefined}
-                          onDelete={canDelete ? () => setDeletingServer(server) : undefined}
-                        />
-                      )}
+                      {/* Hover-reveal is scoped to mouse-capable devices via
+                          the `hover: hover` media feature, so touch/mobile
+                          viewports (which never match it) keep actions at
+                          their base opacity-100 — always visible, never
+                          hover-gated. Kept as opacity (not display/visibility)
+                          so the buttons stay in the tab order and reveal on
+                          keyboard focus too. */}
+                      <div
+                        className={cn(
+                          "inline-flex opacity-100 transition-opacity",
+                          "[@media(hover:hover)]:opacity-0",
+                          "[@media(hover:hover)]:group-hover:opacity-100",
+                          "[@media(hover:hover)]:group-focus-within:opacity-100"
+                        )}
+                      >
+                        {isDeleted ? (
+                          <RequireRole roles={["admin"]}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setRestoringServer(server)}
+                            >
+                              Restore
+                            </Button>
+                          </RequireRole>
+                        ) : (
+                          <RowActions
+                            onEdit={canEdit ? () => openEditForm(server) : undefined}
+                            onDelete={canDelete ? () => setDeletingServer(server) : undefined}
+                          />
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
