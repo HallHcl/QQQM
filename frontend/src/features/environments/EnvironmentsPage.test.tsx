@@ -4,6 +4,11 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { actionsWrapperFor, expectHoverGatedRowActions } from "@/test/hoverActions";
 import EnvironmentsPage from "./EnvironmentsPage";
+import {
+  useCreateServer,
+  useDeleteServer,
+  useRestoreServer,
+} from "@/hooks/useServers";
 
 const getMock = vi.fn();
 const postMock = vi.fn();
@@ -486,6 +491,116 @@ describe("EnvironmentsPage", () => {
         expect(screen.getByTitle("Couldn't load server count")).toBeInTheDocument()
       );
       expect(screen.queryByText("0 Servers")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("count invalidation after a Server mutation (cross-entity, cross-page)", () => {
+    // The Environments page renders the "N Servers" count, but nothing on
+    // this page mutates servers — that happens on ServersPage or a detail
+    // page, against the same QueryClient. Mounting a harness that drives the
+    // real mutation hooks reproduces that, so what's under test is this app's
+    // wiring: whether useServers'
+    // `invalidateQueries({ queryKey: ["servers"] })` prefix-matches the count
+    // query's `["servers", { environment_id, ... }]` key.
+    function ServerMutationHarness() {
+      const createServer = useCreateServer();
+      const deleteServer = useDeleteServer();
+      const restoreServer = useRestoreServer();
+      return (
+        <div>
+          <button
+            onClick={() =>
+              createServer.mutate({
+                environment_id: "e1",
+                display_name: "web-01",
+                hostname: "web-01.internal",
+                service_type: "application",
+                access_method: "ssh",
+                access_host: "web-01.internal",
+              })
+            }
+          >
+            harness-create
+          </button>
+          <button onClick={() => deleteServer.mutate("s1")}>harness-delete</button>
+          <button onClick={() => restoreServer.mutate("s1")}>harness-restore</button>
+        </div>
+      );
+    }
+
+    function renderWithHarness() {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <EnvironmentsPage />
+            <ServerMutationHarness />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+    }
+
+    /**
+     * Serves the server count from a mutable cell so a refetch after the
+     * mutation observes a genuinely different total — the only way to tell a
+     * real refetch from a cache read.
+     */
+    function mockCountThatChanges(initialTotal: number, totalAfterMutation: number) {
+      const total = { current: initialTotal };
+      getMock.mockImplementation((path: string) => {
+        if (path === "/api/environments")
+          return Promise.resolve(okResult([SAMPLE_ENVIRONMENT]));
+        if (path === "/api/projects") return Promise.resolve(okResult([SAMPLE_PROJECT]));
+        if (path === "/api/servers")
+          return Promise.resolve(okResult([{ id: "s1" }], total.current));
+        throw new Error(`Unexpected path in test: ${path}`);
+      });
+      const okMutation = {
+        data: { id: "s1" },
+        error: undefined,
+        response: new Response(null, { status: 200 }),
+      };
+      postMock.mockImplementation(() => {
+        total.current = totalAfterMutation;
+        return Promise.resolve(okMutation);
+      });
+      deleteMock.mockImplementation(() => {
+        total.current = totalAfterMutation;
+        return Promise.resolve(okMutation);
+      });
+    }
+
+    it("refetches the count after a server is created", async () => {
+      mockCountThatChanges(1, 2);
+      renderWithHarness();
+
+      expect(await screen.findByText("1 Server")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("harness-create"));
+
+      expect(await screen.findByText("2 Servers")).toBeInTheDocument();
+    });
+
+    it("refetches the count after a server is deleted", async () => {
+      mockCountThatChanges(2, 1);
+      renderWithHarness();
+
+      expect(await screen.findByText("2 Servers")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("harness-delete"));
+
+      expect(await screen.findByText("1 Server")).toBeInTheDocument();
+    });
+
+    it("refetches the count after a server is restored", async () => {
+      mockCountThatChanges(1, 2);
+      renderWithHarness();
+
+      expect(await screen.findByText("1 Server")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("harness-restore"));
+
+      expect(await screen.findByText("2 Servers")).toBeInTheDocument();
     });
   });
 });

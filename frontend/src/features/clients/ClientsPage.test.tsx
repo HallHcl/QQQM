@@ -4,6 +4,11 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { actionsWrapperFor, expectHoverGatedRowActions } from "@/test/hoverActions";
 import ClientsPage from "./ClientsPage";
+import {
+  useCreateProject,
+  useDeleteProject,
+  useRestoreProject,
+} from "@/hooks/useProjects";
 
 const getMock = vi.fn();
 const postMock = vi.fn();
@@ -483,6 +488,109 @@ describe("ClientsPage", () => {
         expect(screen.getByTitle("Couldn't load project count")).toBeInTheDocument()
       );
       expect(screen.queryByText("0 Projects")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("count invalidation after a Project mutation (cross-entity, cross-page)", () => {
+    // The Clients page renders the "N Projects" count, but nothing on this
+    // page mutates projects — the mutation happens elsewhere (ProjectsPage,
+    // a detail page) against the same QueryClient. These tests reproduce that
+    // by mounting ClientsPage alongside a harness that drives the real
+    // mutation hooks, so what's under test is this app's own invalidation
+    // wiring: whether useProjects' `invalidateQueries({ queryKey: ["projects"] })`
+    // prefix-matches the count query's `["projects", { client_id, ... }]` key.
+    // Calling queryClient.invalidateQueries directly here would only test
+    // React Query itself.
+    function ProjectMutationHarness() {
+      const createProject = useCreateProject();
+      const deleteProject = useDeleteProject();
+      const restoreProject = useRestoreProject();
+      return (
+        <div>
+          <button
+            onClick={() =>
+              createProject.mutate({ client_id: "1", name: "New Project" })
+            }
+          >
+            harness-create
+          </button>
+          <button onClick={() => deleteProject.mutate("p1")}>harness-delete</button>
+          <button onClick={() => restoreProject.mutate("p1")}>harness-restore</button>
+        </div>
+      );
+    }
+
+    function renderWithHarness() {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <ClientsPage />
+            <ProjectMutationHarness />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+    }
+
+    /**
+     * Routes GETs by path and serves the project count from a mutable cell,
+     * so a refetch after the mutation observes a genuinely different total —
+     * the only way to tell a real refetch from a cache read.
+     */
+    function mockCountThatChanges(initialTotal: number, totalAfterMutation: number) {
+      const total = { current: initialTotal };
+      getMock.mockImplementation((path: string) => {
+        if (path === "/api/clients") return Promise.resolve(okResult([ACTIVE_CLIENT]));
+        if (path === "/api/projects")
+          return Promise.resolve(okResult([{ id: "p1" }], total.current));
+        throw new Error(`Unexpected path in test: ${path}`);
+      });
+      const okMutation = {
+        data: { id: "p1" },
+        error: undefined,
+        response: new Response(null, { status: 200 }),
+      };
+      postMock.mockImplementation(() => {
+        total.current = totalAfterMutation;
+        return Promise.resolve(okMutation);
+      });
+      deleteMock.mockImplementation(() => {
+        total.current = totalAfterMutation;
+        return Promise.resolve(okMutation);
+      });
+    }
+
+    it("refetches the count after a project is created", async () => {
+      mockCountThatChanges(1, 2);
+      renderWithHarness();
+
+      expect(await screen.findByText("1 Project")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("harness-create"));
+
+      expect(await screen.findByText("2 Projects")).toBeInTheDocument();
+    });
+
+    it("refetches the count after a project is deleted", async () => {
+      mockCountThatChanges(2, 1);
+      renderWithHarness();
+
+      expect(await screen.findByText("2 Projects")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("harness-delete"));
+
+      expect(await screen.findByText("1 Project")).toBeInTheDocument();
+    });
+
+    it("refetches the count after a project is restored", async () => {
+      mockCountThatChanges(1, 2);
+      renderWithHarness();
+
+      expect(await screen.findByText("1 Project")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("harness-restore"));
+
+      expect(await screen.findByText("2 Projects")).toBeInTheDocument();
     });
   });
 });
