@@ -207,16 +207,25 @@ other modules where one exists; state your own reasoning clearly where none does
 ## 14. CI runs on every push and PR to `main`. A red pipeline invalidates a "done" report.
 
 `.github/workflows/ci.yml` runs two jobs automatically on every push and pull
-request targeting `main`, on Node 20 (matching both Dockerfiles):
+request targeting `main`:
 
-- **frontend** — `npm ci`, then `npm run lint` (oxlint), `npm run build`
+- **frontend** (Node 24) — `npm ci`, then `npm run lint` (oxlint), `npm run build`
   (`tsc -b && vite build`, so this is the typecheck too — there is no separate
   typecheck script), then `npm test` (Vitest).
-- **backend** — `npm ci` against a `postgres:16-alpine` service container, then
-  `npm run migrate`, `npm run seed`, `npm run build`, `npm test` (Jest). The seed
-  step is mandatory, not decorative: the suite authenticates as the seeded
-  `admin` user and looks up the `admin`/`member` role rows, so it fails fast on a
-  migrated-but-unseeded database.
+- **backend** (Node 20) — `npm ci` against a `postgres:16-alpine` service
+  container, then `npm run migrate`, `npm run seed`, `npm run build`, `npm test`
+  (Jest). The seed step is mandatory, not decorative: the suite authenticates as
+  the seeded `admin` user and looks up the `admin`/`member` role rows, so it
+  fails fast on a migrated-but-unseeded database.
+
+The two jobs deliberately run different Node versions. Both Dockerfiles use
+`node:20-alpine`, and the backend stays on 20 to match its runtime. The frontend
+**cannot** run its tests there: Vitest's jsdom environment pulls in
+`undici@8.10.0`, which requires Node >=22.19.0 and crashes every test worker on
+Node 20 with `webidl.util.markAsUncloneable is not a function`. `npm ci` does not
+flag it, because engine constraints on transitive dependencies are advisory. If
+you bump the frontend job's Node version, keep it at 22.19+ or the whole suite
+dies before the first test.
 
 Playwright (`npm run test:visual-sweep`) is deliberately **not** in CI — it needs a
 dev server, backend, and database running simultaneously. It stays a local,

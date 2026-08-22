@@ -23,10 +23,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Node 20 matches frontend/Dockerfile's node:20-alpine base.
+      # Node 24, NOT the node:20-alpine of frontend/Dockerfile. That base is
+      # right for building and serving the production bundle, but the test
+      # toolchain cannot run on it: Vitest's jsdom environment pulls in
+      # undici@8.10.0, which declares `engines: node >=22.19.0` and on Node 20
+      # dies at require time with "webidl.util.markAsUncloneable is not a
+      # function", failing every worker before a single test runs. `npm ci`
+      # does not catch this because engine constraints on transitive
+      # dependencies are advisory unless engine-strict is set. Verified: the
+      # suite fails on Node 20 and passes on Node 24 (Node 22.19+ would also
+      # satisfy undici; 24 is used because it matches local development).
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -89,7 +98,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Node 20 matches backend/Dockerfile's node:20-alpine base.
+      # Node 20 matches backend/Dockerfile's node:20-alpine base. Unlike the
+      # frontend, the backend's toolchain has no newer-Node requirement and
+      # its suite is green on 20, so this job stays on the runtime version.
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
