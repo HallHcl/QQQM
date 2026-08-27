@@ -100,9 +100,12 @@
            supersede it, but the remap is not part of this ticket.
          - --status-*: the Direction B teal accent, now orphaned (0 usages
            in any .tsx file).
-         - --danger-hover/-active, --warning-hover/-active: Direction C
-           specifies no hover/active steps for these families, so they remain
-           on the old red/amber ramps and no longer match their new bases. */
+       Resolved in Phase 1.1c: --danger-hover/-active and --warning-hover/
+       -active no longer belong in this list — they were recomputed off
+       their Direction C bases and now carry hex comments like the rest of
+       the palette. */
+    /* --background and --muted intentionally kept white — canvas
+       (#F7F8FA) adoption for page background was explicitly deferred. */
     --background: 255 255 255;
 
     --status: 14 116 144;
@@ -110,11 +113,11 @@
     --status-active: 10 82 101;
     --status-tint: 230 242 244;
 
-    --danger-hover: 159 23 23;
-    --danger-active: 133 18 18;
+    --danger-hover: 148 32 23;    /* #942017 */
+    --danger-active: 119 26 19;   /* #771A13 */
 
-    --warning-hover: 122 53 12;
-    --warning-active: 101 44 10;
+    --warning-hover: 147 59 9;    /* #933B09 */
+    --warning-active: 115 47 8;   /* #732F08 */
 
     /* shadcn/ui semantic tokens mapped onto the palette above.
        Note: shadcn's own "accent" slot is used internally for generic
@@ -144,10 +147,10 @@
     --shadcn-accent-foreground: var(--text-primary);
 
     --destructive: var(--danger);
-    --destructive-foreground: var(--text-primary);
+    --destructive-foreground: var(--text-on-primary);
 
     --input: var(--border);
-    --ring: var(--accent);
+    --ring: var(--focus-ring);
   }
 
   * {
