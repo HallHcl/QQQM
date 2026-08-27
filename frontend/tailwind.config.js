@@ -74,6 +74,8 @@ export default {
         foreground: "rgb(var(--foreground) / <alpha-value>)",
         primary: {
           DEFAULT: "rgb(var(--primary) / <alpha-value>)",
+          hover: "rgb(var(--primary-hover) / <alpha-value>)",
+          active: "rgb(var(--primary-active) / <alpha-value>)",
           foreground: "rgb(var(--primary-foreground) / <alpha-value>)",
         },
         secondary: {
@@ -123,6 +125,7 @@ export default {
         surface: {
           DEFAULT: "rgb(var(--surface) / <alpha-value>)",
           hover: "rgb(var(--surface-hover) / <alpha-value>)",
+          sunken: "rgb(var(--surface-sunken) / <alpha-value>)",
         },
         danger: {
           DEFAULT: "rgb(var(--danger) / <alpha-value>)",
