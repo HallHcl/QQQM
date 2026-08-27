@@ -129,12 +129,38 @@ export default {
           hover: "rgb(var(--danger-hover) / <alpha-value>)",
           active: "rgb(var(--danger-active) / <alpha-value>)",
           tint: "rgb(var(--danger-tint) / <alpha-value>)",
+          border: "rgb(var(--danger-border) / <alpha-value>)",
+          text: "rgb(var(--danger-text) / <alpha-value>)",
         },
         warning: {
           DEFAULT: "rgb(var(--warning) / <alpha-value>)",
           hover: "rgb(var(--warning-hover) / <alpha-value>)",
           active: "rgb(var(--warning-active) / <alpha-value>)",
           tint: "rgb(var(--warning-tint) / <alpha-value>)",
+          border: "rgb(var(--warning-border) / <alpha-value>)",
+          text: "rgb(var(--warning-text) / <alpha-value>)",
+        },
+        // Remaining Phase 1.1 semantic status families. These tokens were
+        // locked in globals.css but had no Tailwind mapping, so nothing could
+        // reach them - which is why "success" states currently render as
+        // --accent violet. Mapping only; no component is wired to them here.
+        success: {
+          DEFAULT: "rgb(var(--success) / <alpha-value>)",
+          tint: "rgb(var(--success-tint) / <alpha-value>)",
+          border: "rgb(var(--success-border) / <alpha-value>)",
+          text: "rgb(var(--success-text) / <alpha-value>)",
+        },
+        info: {
+          DEFAULT: "rgb(var(--info) / <alpha-value>)",
+          tint: "rgb(var(--info-tint) / <alpha-value>)",
+          border: "rgb(var(--info-border) / <alpha-value>)",
+          text: "rgb(var(--info-text) / <alpha-value>)",
+        },
+        neutral: {
+          DEFAULT: "rgb(var(--neutral) / <alpha-value>)",
+          tint: "rgb(var(--neutral-tint) / <alpha-value>)",
+          border: "rgb(var(--neutral-border) / <alpha-value>)",
+          text: "rgb(var(--neutral-text) / <alpha-value>)",
         },
       },
       keyframes: {
