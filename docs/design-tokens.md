@@ -20,7 +20,8 @@ These generate utility classes like `text-heading-page`, `text-body`, etc.
 | `heading-section` | `text-heading-section` | 1.125 rem (18 px) | 1.75 rem | 600 | Section headings — h2-equivalent inside a page |
 | `heading-card` | `text-heading-card` | 1 rem (16 px) | 1.5 rem | 600 | Card / subsection headings — h3-equivalent |
 | `body` | `text-body` | 0.875 rem (14 px) | 1.25 rem | 400 | Body copy — matches default Tailwind `text-sm` |
-| `label` | `text-label` | 0.875 rem (14 px) | 1.25 rem | 500 (medium) | Form labels |
+| `body-sm` | `text-body-sm` | 0.8125 rem (13 px) | 1.25 rem | 400 | Secondary table rows |
+| `label` | `text-label` | 0.8125 rem (13 px) | 1.125 rem | 500 (medium) | Form labels |
 | `caption` | `text-caption` | 0.75 rem (12 px) | 1 rem | 400 | Captions, timestamps, meta text |
 
 ### Migration policy
@@ -62,16 +63,45 @@ Defined as CSS variables in `src/styles/globals.css` and aliased in
 
 ## Border Radius
 
-**Decision (finalized)**: `rounded-sm` / `rounded-md` are the accepted tokens.
-No sharp-corner cleanup was done; these are confirmed as the de facto convention.
-Do not change without a dedicated decision.
+Defined in `tailwind.config.js` as `theme.extend.borderRadius`. Staged Foundation
+tokens — defined but **not yet applied to any component**. Named by component role
+(not size) to avoid colliding with Tailwind's built-in `sm` / `md` / `lg` keys,
+which differ in value and already have 53 live usages. See `decisions.md` #35.
+
+| Token | Class | Value | Intended for |
+|-------|-------|-------|--------------|
+| `control` | `rounded-control` | `6px` | Button, Input, Select, Badge, Checkbox |
+| `panel` | `rounded-panel` | `10px` | Card, Table container, Toolbar |
+| `modal` | `rounded-modal` | `14px` | Dialog, Sheet, Popover |
+| `pill` | `rounded-pill` | `9999px` | Avatar, Pill Chip, Status Dot |
+
+**Live usage today**: `rounded-md` (×31), `rounded-sm` (×22), `rounded-full` (×4)
+and `rounded-none` (×3) remain in place, untouched. Migration to the semantic
+scale happens per-component in a later phase.
+
+**Known overlap**: `pill` (`9999px`) is identical in value to the pre-existing
+`rounded-full` utility (4 live usages) — resolve at migration time.
 
 ---
 
 ## Shadows
 
-**Decision (finalized)**: `shadow-none` is already consistent across the app.
-No shadow tokens are needed beyond Tailwind defaults.
+Defined in `tailwind.config.js` as `theme.extend.boxShadow`. Staged Foundation
+tokens — defined but **not yet applied to any component**. The live baseline is
+still flat: `shadow-none` is applied at all 11 sites that would normally carry a
+shadow, a deliberate override of shadcn/ui's defaults. Per-component adoption
+happens in a later phase, pilot-first. See `decisions.md` #34.
+
+| Token | Class | Value | Intended for |
+|-------|-------|-------|--------------|
+| `elev-0` | `shadow-elev-0` | `none` | Current baseline (unchanged) |
+| `elev-1` | `shadow-elev-1` | `0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)` | Card, Table |
+| `elev-2` | `shadow-elev-2` | `0 4px 8px -2px rgba(16,24,40,.08), 0 2px 4px -2px rgba(16,24,40,.06)` | Dropdown, Popover, Select |
+| `elev-3` | `shadow-elev-3` | `0 20px 24px -4px rgba(16,24,40,.10), 0 8px 8px -4px rgba(16,24,40,.04)` | Dialog, Sheet |
+
+**Known overlap**: `elev-0` (`none`) is identical in value to the pre-existing
+`shadow-none` utility (11 live usages). Whether migration retires `shadow-none`
+in favor of `elev-0`, or keeps both, is not yet decided — revisit at migration time.
 
 ---
 

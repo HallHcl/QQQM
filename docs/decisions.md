@@ -1044,6 +1044,58 @@ close — see the tracker below.
 
 ---
 
+## 34. [Direction C — Foundation] Elevation Model: Flat Baseline + Staged Shadow Scale
+
+**Context:** Phase 1.2 audit (VSCode Agent) confirmed `shadow-none` is
+applied at all 11 sites that would normally carry a shadow (card, dialog,
+dropdown-menu, popover, select, sheet, toast, calendar, tabs, Topbar) —
+a deliberate override of shadcn/ui's own defaults, not drift.
+
+**Decision:** Keep the flat baseline as the live behavior for now.
+Introduce a formal 4-level elevation scale as a staged Foundation token
+in Phase 1.2 — defined in tailwind.config.js only, not yet applied to
+any component. Per-component adoption happens in a later phase,
+pilot-first, exactly like Direction C's color tokens.
+
+| Token | Value | Intended for |
+|---|---|---|
+| `elev-0` | `none` | current baseline (unchanged) |
+| `elev-1` | `0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)` | Card, Table |
+| `elev-2` | `0 4px 8px -2px rgba(16,24,40,.08), 0 2px 4px -2px rgba(16,24,40,.06)` | Dropdown, Popover, Select |
+| `elev-3` | `0 20px 24px -4px rgba(16,24,40,.10), 0 8px 8px -4px rgba(16,24,40,.04)` | Dialog, Sheet |
+
+**Known overlap:** `elev-0` (`none`) is identical in value to the
+pre-existing `shadow-none` utility (11 live usages). Whether the future
+per-component migration retires `shadow-none` in favor of `elev-0`, or
+keeps both, is not yet decided — revisit at migration time.
+
+## 35. [Direction C — Foundation] Border Radius Scale
+
+**Context:** Phase 1.2 audit confirmed no `--radius` token or
+`borderRadius` config existed; the codebase used Tailwind's built-in
+scale directly (`rounded-md` ×31, `rounded-sm` ×22, `rounded-full` ×4,
+`rounded-none` ×3).
+
+**Decision:** Introduce a semantic radius scale as staged Foundation
+tokens, named by component role (not size) to avoid colliding with
+Tailwind's built-in `sm`/`md`/`lg` keys, which differ in value and
+already have 53 live usages.
+
+| Token | Value | Intended for |
+|---|---|---|
+| `control` | `6px` | Button, Input, Select, Badge, Checkbox |
+| `panel` | `10px` | Card, Table container, Toolbar |
+| `modal` | `14px` | Dialog, Sheet, Popover |
+| `pill` | `9999px` | Avatar, Pill Chip, Status Dot |
+
+**Note:** Existing `rounded-sm`/`rounded-md`/`rounded-lg`/`rounded-full`
+usages are untouched by this ticket; migration to the new semantic
+scale happens per-component in a later phase.
+
+**Known overlap:** `pill` (`9999px`) is identical in value to the
+pre-existing `rounded-full` utility (4 live usages). Same open question
+as above — resolve at migration time.
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |

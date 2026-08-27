@@ -28,14 +28,28 @@ export default {
         "heading-card":    ["1rem",     { lineHeight: "1.5rem",  fontWeight: "600" }],
         // Body copy — existing Tailwind text-sm default, kept as-is
         "body":            ["0.875rem", { lineHeight: "1.25rem" }],
-        // Form labels
-        "label":           ["0.875rem", { lineHeight: "1.25rem", fontWeight: "500" }],
+        // 13px/20px, 400 — secondary table rows
+        "body-sm":         ["0.8125rem", { lineHeight: "1.25rem" }],
+        // Form labels — 13px/18px/500
+        "label":           ["0.8125rem", { lineHeight: "1.125rem", fontWeight: "500" }],
         // Captions / meta / timestamps
         "caption":         ["0.75rem",  { lineHeight: "1rem" }],
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
+      },
+      boxShadow: {
+        'elev-0': 'none',
+        'elev-1': '0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)',
+        'elev-2': '0 4px 8px -2px rgba(16,24,40,.08), 0 2px 4px -2px rgba(16,24,40,.06)',
+        'elev-3': '0 20px 24px -4px rgba(16,24,40,.10), 0 8px 8px -4px rgba(16,24,40,.04)',
+      },
+      borderRadius: {
+        control: '6px',   // Button, Input, Select, Badge, Checkbox
+        panel: '10px',    // Card, Table container, Toolbar
+        modal: '14px',    // Dialog, Sheet, Popover
+        pill: '9999px',   // Avatar, Pill Chip, Status Dot
       },
       // Every entry below wraps its CSS variable as
       // `rgb(var(--x) / <alpha-value>)` rather than a bare `var(--x)` —
