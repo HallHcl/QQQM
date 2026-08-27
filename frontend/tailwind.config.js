@@ -40,6 +40,14 @@ export default {
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       boxShadow: {
+        // Input/Textarea/SelectTrigger underline treatment (Phase 2 pilot).
+        // Implemented as an inset box-shadow rather than a border-bottom so
+        // the 1px -> 2px focus change costs zero layout: box-shadow is not a
+        // layout property, so the control's border box is byte-identical idle
+        // vs focused. A border-bottom-width swap would reflow the content box.
+        'underline': 'inset 0 -1px 0 0 rgb(var(--input-underline))',
+        'underline-focus': 'inset 0 -2px 0 0 rgb(var(--focus-ring))',
+        'underline-disabled': 'inset 0 -1px 0 0 rgb(var(--input-underline) / 0.4)',
         'elev-0': 'none',
         'elev-1': '0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)',
         'elev-2': '0 4px 8px -2px rgba(16,24,40,.08), 0 2px 4px -2px rgba(16,24,40,.06)',
@@ -79,6 +87,11 @@ export default {
         muted: {
           DEFAULT: "rgb(var(--muted) / <alpha-value>)",
           foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
+        },
+        // Disabled form-control text (Phase 2 pilot). --text-disabled already
+        // existed in globals.css but had no Tailwind mapping.
+        disabled: {
+          foreground: "rgb(var(--text-disabled) / <alpha-value>)",
         },
         accent: {
           DEFAULT: "rgb(var(--shadcn-accent) / <alpha-value>)",
