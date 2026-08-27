@@ -46,7 +46,7 @@ export default function MobileNav() {
                 cn(
                   "flex items-center gap-3 border-l-2 border-transparent px-3 py-2 text-sm font-medium transition-colors duration-150",
                   isActive
-                    ? "border-brand bg-surface-hover text-foreground"
+                    ? "border-brand bg-[rgb(var(--surface-active))] text-foreground"
                     : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
                 )
               }
