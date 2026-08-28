@@ -107,7 +107,12 @@ export default {
           DEFAULT: "rgb(var(--card) / <alpha-value>)",
           foreground: "rgb(var(--card-foreground) / <alpha-value>)",
         },
-        // Brand palette (Direction B / Deep Enterprise — blue action accent)
+        // `brand` resolves to --accent violet (#6C4BF4). Per decision #36 this
+        // role is reserved for selection and navigation state only (e.g. the
+        // Sidebar active item) — it is NOT a general-purpose action color.
+        // Jade --primary is the system's primary action color, including focus
+        // rings. The alias name predates that split and is kept only because
+        // call sites still reference it; do not reach for it for new actions.
         brand: {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
           hover: "rgb(var(--accent-hover) / <alpha-value>)",
@@ -165,6 +170,17 @@ export default {
           border: "rgb(var(--neutral-border) / <alpha-value>)",
           text: "rgb(var(--neutral-text) / <alpha-value>)",
         },
+      },
+      // Documented exception to the `rgb(var(--x) / <alpha-value>)` rule
+      // above. --overlay (globals.css:90-92) is a composite rgba() value with
+      // its alpha baked in, not a space-separated channel triplet, so it
+      // cannot go through that wrapper — it is referenced as a bare var().
+      // Consequence: `bg-overlay` works, but an opacity modifier on it
+      // (`bg-overlay/50`) silently no-ops. This is the only color-shaped entry
+      // in the theme with that shape; it lives here rather than in `colors` so
+      // it cannot be mistaken for a channel-triplet token.
+      backgroundColor: {
+        overlay: "var(--overlay)",
       },
       keyframes: {
         "accordion-down": {
