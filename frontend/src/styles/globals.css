@@ -92,14 +92,17 @@
     --overlay: rgba(16, 24, 40, 0.48);
 
     /* --- Not specified by the Direction C Phase 1.1 token set ---
-       Left at their Direction B values deliberately: this ticket is scoped to
-       the tokens listed above, and inventing replacements would be guessing.
-       Each is still consumed by tailwind.config.js, so removing them would
-       break the build. Flagged for Phase 1.2 / Phase 2:
+       Left at its Direction B value deliberately; inventing a replacement
+       would be guessing. Flagged for a later phase:
          - --background: body canvas; Direction C's --canvas appears to
-           supersede it, but the remap is not part of this ticket.
-         - --status-*: the Direction B teal accent, now orphaned (0 usages
-           in any .tsx file).
+           supersede it, but the remap is not part of that ticket.
+       The --status-* teal family that also lived here was deleted in the
+       Phase 2 pre-merge cleanup — 0 consumers; see
+       docs/phase2-token-cleanup.md. The note that previously stood here,
+       claiming these tokens were "still consumed by tailwind.config.js, so
+       removing them would break the build", was wrong: a Tailwind color key
+       referencing an undefined CSS variable is not a build error, and an
+       unused key emits nothing at all under JIT.
        Resolved in Phase 1.1c: --danger-hover/-active and --warning-hover/
        -active no longer belong in this list — they were recomputed off
        their Direction C bases and now carry hex comments like the rest of
@@ -107,11 +110,6 @@
     /* --background and --muted intentionally kept white — canvas
        (#F7F8FA) adoption for page background was explicitly deferred. */
     --background: 255 255 255;
-
-    --status: 14 116 144;
-    --status-hover: 12 98 119;
-    --status-active: 10 82 101;
-    --status-tint: 230 242 244;
 
     --danger-hover: 148 32 23;    /* #942017 */
     --danger-active: 119 26 19;   /* #771A13 */
@@ -148,9 +146,6 @@
 
     --destructive: var(--danger);
     --destructive-foreground: var(--text-on-primary);
-
-    --input: var(--border);
-    --ring: var(--focus-ring);
   }
 
   * {

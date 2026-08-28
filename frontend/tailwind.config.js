@@ -68,8 +68,6 @@ export default {
       // opacity-modified class using that color instead of erroring.
       colors: {
         border: "rgb(var(--border) / <alpha-value>)",
-        input: "rgb(var(--input) / <alpha-value>)",
-        ring: "rgb(var(--ring) / <alpha-value>)",
         background: "rgb(var(--background) / <alpha-value>)",
         foreground: "rgb(var(--foreground) / <alpha-value>)",
         primary: {
@@ -118,14 +116,6 @@ export default {
           hover: "rgb(var(--accent-hover) / <alpha-value>)",
           active: "rgb(var(--accent-active) / <alpha-value>)",
           tint: "rgb(var(--accent-tint) / <alpha-value>)",
-        },
-        // Status/success accent (teal) — new in Direction B, no dark-theme
-        // precedent; see docs/decisions.md #30.
-        status: {
-          DEFAULT: "rgb(var(--status) / <alpha-value>)",
-          hover: "rgb(var(--status-hover) / <alpha-value>)",
-          active: "rgb(var(--status-active) / <alpha-value>)",
-          tint: "rgb(var(--status-tint) / <alpha-value>)",
         },
         surface: {
           DEFAULT: "rgb(var(--surface) / <alpha-value>)",
