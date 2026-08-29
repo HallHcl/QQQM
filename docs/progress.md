@@ -485,16 +485,81 @@ the post-#42 commit, `/schedule` changed by exactly the calendar repair.
 
 ---
 
+## Standalone follow-up — `info` migrated to a blue family; Phase 4 blocker cleared — ✅ COMPLETE (2026-08-30)
+
+**Not itself part of Phase 4.** A standalone ticket that *unblocks* Phase 4,
+same category as Pilots 7/8 and the #42/#43 cleanups. Full reasoning in
+`decisions.md` #44.
+
+**Four CSS variables changed. Nothing else.**
+
+| token | was (violet, ≡ `--accent`) | now (blue) |
+|---|---|---|
+| `--info` | `#6C4BF4` | **`#1968C0`** |
+| `--info-tint` | `#F1EDFE` | **`#F0F7FF`** |
+| `--info-border` | `#B9A7F9` | **`#9AC1F3`** |
+| `--info-text` | `#4A2CC0` | **`#0C4F97`** |
+
+**No component or config edit was needed, and that was verified rather than
+assumed.** `tailwind.config.js` already mapped all four `info` sub-tokens and
+`badge.tsx:31` already read them (wired at #42c), so changing the CSS variables
+was sufficient — the token indirection worked as designed.
+
+**Derivation** (summary; full working in `decisions.md` #44c): OKLCH
+lightness/chroma template taken from the median of the three chromatic
+non-collided families (`success`/`warning`/`danger`), hue swept 225°–275°, 255°
+chosen as the balance point between `--accent` violet (284.4°) and the cyan
+boundary. Contrast **AAA on every axis** — text-on-tint **7.54:1**,
+text-on-white **8.14:1**, base-on-white **5.55:1** — matching the de-facto bar
+every shipped family clears, not merely the written AA minimum. Colour-blind
+separability checked (Viénot–Brettel–Mollon 1999, ΔE in OKLab) against all five
+existing hues; worst case **0.036**, above the palette's own shipped floor of
+0.033 (`warning` vs `danger`). The computation script self-tested by
+reproducing all 15 published contrast figures from the prior audit exactly
+before being trusted — see `decisions.md` #19.
+
+**🟡 `success` ≡ `primary` ≡ `focus-ring` remains a known, accepted collision —
+not a blocker.** Left open by explicit architect decision when `info` was
+fixed; this ticket did not touch `--primary`, `--success` or `--focus-ring`.
+See `decisions.md` #44b.
+
+**🟡 Tritanopia caveat, flagged forward.** Blue collapses toward teal under
+tritanopia (ΔE 0.036 vs jade) — unavoidable for any blue. Whether Phase 4 needs
+a non-colour affordance (icon/label) is a design question raised, not resolved,
+here. See `decisions.md` #44d.
+
+**Verified:** 599/599 tests (62 files, matching the #43 baseline), lint clean,
+build clean. Playwright confirmed the rendered `info` badge's computed
+`background-color` / `border-color` / `color` are exactly `rgb(240,247,255)` /
+`rgb(154,193,243)` / `rgb(12,79,151)`, and asserted `--accent` (+ its three
+sub-tokens), `--focus-ring`, `--primary` and `--success` are all unchanged.
+
+---
+
 ## Next up — Phase 4 (semantic status remap)
 
 **Not started.** Phase 4 is the next phase to plan.
 
-**🔴 Blocking open question, must be resolved before Phase 4 begins:** the `info`
-status token (`#6C4BF4`) is identical to `--accent` violet. Under decision #36
-violet is now formally scoped to selection/navigation only, so this shared value
-is a **conflict, not a coincidence** — it was previously logged as an unconfirmed
-dual-use question. `info` very likely needs its own distinct color **before** any
-status is remapped onto it. See `decisions.md` #36 and its tracker table.
+**✅ The blocking open question is RESOLVED (2026-08-30, `decisions.md` #44).**
+The `info` status token was identical to `--accent` violet, which decision #36
+had scoped exclusively to selection/navigation — a conflict, not a coincidence.
+`info` now has its own blue family (`#1968C0` / `#F0F7FF` / `#9AC1F3` /
+`#0C4F97`, OKLCH hue 255°), AAA on every contrast axis and colour-blind ΔE
+checked against all five existing hues. **Phase 4 is no longer blocked on
+`info`.**
+
+**Two things Phase 4 must still carry, neither of them blockers:**
+
+- **`success` ≡ `primary` ≡ `focus-ring`** (all `#0E7C5A`) is a second complete
+  four-token collision, surfaced by the same audit and **explicitly left open
+  by architect decision**. It is *accepted*, not blocking — but under the
+  planned remap `done`→`success` still renders in the primary action colour.
+  See `decisions.md` #44b.
+- **Colour alone may not carry status.** Under tritanopia blue collapses toward
+  teal (ΔE 0.036 vs jade) — above the palette's own shipped floor and
+  unavoidable for *any* blue. If status must be readable without colour, Phase 4
+  should pair each status with an icon or text label. Flagged, not decided —
+  see `decisions.md` #44d.
 
 ---
 
@@ -506,7 +571,7 @@ status is remapped onto it. See `decisions.md` #36 and its tracker table.
 | `PersonDetailDialog` account-visibility (Part 25c) | ⏭️ Skipped | `decisions.md` #7 |
 | Third role tier | ⏭️ Not scheduled | `decisions.md` #8 |
 | `Sidebar.tsx:21` `focus-visible:outline-brand` still resolves to violet — a violation of decision #36's jade-focus-ring rule | 🟡 OPEN — explicitly deferred; not blocking, no ticket opened yet (was out of Pilot 3 scope) | `decisions.md` #36 |
-| `info` status token (`#6C4BF4`) is identical to `--accent` violet | 🟡 OPEN — must be resolved before Phase 4 remaps any status | `decisions.md` #36 |
+| `info` status token (`#6C4BF4`) is identical to `--accent` violet | ✅ RESOLVED 2026-08-30 by #44 — `info` now has its own blue family (`#1968C0` / `#F0F7FF` / `#9AC1F3` / `#0C4F97`, OKLCH hue 255°). AAA contrast, colour-blind ΔE verified. **Phase 4 blocker cleared** | `decisions.md` #36, #44 |
 | `Card` + `Toolbar` → `panel` radius, `Card` → `elev-1` | ✅ DONE 2026-08-30 — closed the gap that reopened Phase 2 | `decisions.md` #37 |
 | "Table container" named by `decisions.md` #35 but no such component exists | 🟡 OPEN — deferred out of the Card pilot; creating one is a design change | `decisions.md` #37 |
 | 10 hand-rolled `rounded-md border border-border` panel-like sites | 🟡 OPEN — deferred; needs a per-site sweep (5 avatar squares are `control`/`pill`, not `panel`) | `decisions.md` #37 |
@@ -520,6 +585,9 @@ status is remapped onto it. See `decisions.md` #36 and its tracker table.
 | `brand.border` / `brand.text` Tailwind mapping | ✅ DONE 2026-08-30 — mapping only, **deliberately applied to no component**. Maps to the pre-existing `--accent-border` / `--accent-text` (**there are no `--brand-*` CSS vars** — the ticket's names were wrong). Unblocks `badge.tsx` `default` for Phase 4 | `decisions.md` #43b |
 | `calendar.tsx` weekday headers / week numbers rendering un-muted | ✅ FIXED 2026-08-30 as a side effect of #43 — `text-muted-foreground` was being silently deleted by the old merger; headers had been rendering at `rgb(16,24,40)` instead of `rgb(71,84,103)`. Nobody had reported it | `decisions.md` #43a-i |
 | Master Plan doc vs `tailwind.config.js` token-value conflict | ✅ RESOLVED 2026-08-30 — **`tailwind.config.js` is the source of truth** (Architect decision). `text-heading-card` = 16px/24px/600/tracking `normal`; `text-body` = 14px/20px/400. The external Master Plan is historical/aspirational where it conflicts | `decisions.md` #43c |
+| `info` migrated to its own blue family | ✅ DONE 2026-08-30 — **standalone ticket, not itself part of Phase 4.** `#1968C0` / `#F0F7FF` / `#9AC1F3` / `#0C4F97` (OKLCH hue 255°), AAA on every contrast axis, colour-blind ΔE checked against all 5 existing hues. Only 4 CSS variables changed — no component or config edit was needed | `decisions.md` #44 |
+| `success` ≡ `primary` ≡ `focus-ring` (all `#0E7C5A`) | 🟡 OPEN — **accepted collision, NOT a blocker.** Second complete four-token collision, previously unrecorded; explicitly left open by architect decision when `info` was fixed. Under Phase 4's remap `done`→`success` still renders in the primary action colour | `decisions.md` #44b |
+| Status colour is the only status signal (tritanopia) | 🟡 OPEN — Phase 4 design question, raised not resolved. Blue collapses toward teal under tritanopia (ΔE 0.036 vs jade), above the shipped floor and unavoidable for any blue. If status must read without colour, pair each with an icon or label | `decisions.md` #44d |
 
 ---
 

@@ -74,10 +74,10 @@
     --danger-border: 253 162 155;    /* #FDA29B */
     --danger-text: 145 32 24;        /* #912018 */
     /* Info */
-    --info: 108 75 244;              /* #6C4BF4 */
-    --info-tint: 241 237 254;        /* #F1EDFE */
-    --info-border: 185 167 249;      /* #B9A7F9 */
-    --info-text: 74 44 192;          /* #4A2CC0 */
+    --info: 25 104 192;              /* #1968C0 */
+    --info-tint: 240 247 255;        /* #F0F7FF */
+    --info-border: 154 193 243;      /* #9AC1F3 */
+    --info-text: 12 79 151;          /* #0C4F97 */
     /* Neutral */
     --neutral: 71 84 103;            /* #475467 */
     --neutral-tint: 242 244 247;     /* #F2F4F7 */

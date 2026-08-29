@@ -1128,6 +1128,10 @@ by switching Button's default variant to jade and unifying its focus
 ring to jade, resolving a color divergence between Button and the
 Pilot 1 Input/Textarea/Select underline treatment.
 
+> **↪ RESOLVED 2026-08-30 by decision #44.** `info` now has its own blue
+> family (`#1968C0`); it is no longer identical to `--accent`. The paragraph
+> below records the state at the time #36 was written.
+
 **Consequence for Phase 4:** The `info` status token (`#6C4BF4`) is
 identical to `--accent` — previously flagged as an open, unconfirmed
 dual-use question. Under this decision it's no longer just a coincidence
@@ -1795,6 +1799,106 @@ activity feed's relative timestamps ticking over between runs, not the code.
 The per-state renders are otherwise deterministic (verified by shooting the
 same state twice and getting identical bytes).
 
+## 44. [Direction C — Foundation] `info` migrated to a blue family (Candidate B, hue 255°) — the `info` ≡ `--accent` Phase 4 blocker is closed (standalone, 2026-08-30)
+
+**Decision:** `info` gets its own blue. The four `--info-*` variables in
+`globals.css` are replaced with the architect-approved **Candidate B** values.
+**Four lines changed, nothing else** — no component, no Tailwind config, no
+other token.
+
+| token | was (violet, ≡ `--accent`) | now (blue) |
+|---|---|---|
+| `--info` | `108 75 244` `#6C4BF4` | **`25 104 192`** `#1968C0` |
+| `--info-tint` | `241 237 254` `#F1EDFE` | **`240 247 255`** `#F0F7FF` |
+| `--info-border` | `185 167 249` `#B9A7F9` | **`154 193 243`** `#9AC1F3` |
+| `--info-text` | `74 44 192` `#4A2CC0` | **`12 79 151`** `#0C4F97` |
+
+### 44a. The collision this closes
+
+`info` was **byte-identical to `--accent`** across all four sub-tokens.
+Decision #36 scoped violet exclusively to selection and navigation state, so
+the shared value was a **conflict, not a coincidence** — Phase 4's planned
+`in_progress`→`info` remap would have painted a status badge in the reserved
+navigation colour. That blocker, open since #36 and re-confirmed by the
+2026-08-30 audit, **is now closed.**
+
+### 44b. ⚠️ `success` ≡ `primary` ≡ `focus-ring` remains OPEN — deliberately
+
+The same audit found a **second, previously unrecorded** four-token collision:
+`--success` is byte-identical to `--primary`, and both equal `--focus-ring`
+(all `#0E7C5A`). **This ticket does not touch it, by explicit architect
+decision.** It is an *accepted* collision, **not a blocker**.
+
+Consequence to carry into Phase 4: under the planned remap, `done`→`success`
+still renders in the primary action colour. Two of the four remapped statuses
+sat on a reserved role colour; **this decision fixes one of them.**
+
+### 44c. How the value was derived
+
+Not picked by eye. Method, in brief (full working was produced in the
+2026-08-30 proposal ticket and is not reproduced here):
+
+1. **Structure taken from what already ships.** OKLCH lightness/chroma were
+   measured for every role across the three chromatic non-collided families
+   (`success`/`warning`/`danger`) and the **median** used as a template —
+   base `L .5212 / C .1562`, tint `.9725 / .0137`, border `.8014 / .0826`,
+   text `.4322 / .1337`. Candidate B's chroma lands within `0.0001` of that
+   median, i.e. it is exactly as saturated as `warning`.
+2. **Hue swept 225°–275°.** Every hue in that range clears the contrast bar,
+   so contrast was *not* the discriminator — hue placement was. 255° is the
+   balance point: far enough from `--accent` violet (**284.4°**) to read as a
+   different colour, far enough from cyan to still read as blue, and not
+   drifting into indigo the way 260°+ does.
+3. **Contrast: AAA on every axis**, matching the de-facto bar every shipped
+   family clears (not merely the WCAG AA ≥4.5:1 minimum written at #19):
+
+   | | text-on-tint | text-on-white | base-on-white |
+   |---|---|---|---|
+   | shipped range | 7.03–9.49 | 7.52–10.46 | 5.19–7.69 |
+   | **info (new)** | **7.54:1** | **8.14:1** | **5.55:1** |
+
+   Border-on-tint `1.72:1`, inside the shipped 1.34–1.84 decorative range.
+4. **Colour-blind separability was checked** — the 2026-08-30 audit noted this
+   had *never* been done anywhere in this project. Viénot–Brettel–Mollon (1999)
+   dichromat simulation, difference as ΔE in OKLab, against all five existing
+   hues. Calibrated against the palette's own floor rather than an invented
+   threshold: the worst pair **already shipping** is `warning` vs `danger` at
+   **ΔE 0.033**. Candidate B's worst case is **0.036**, above that floor.
+
+**Verification discipline:** the computation script self-tested by reproducing
+all 15 published contrast figures from the prior audit exactly before being
+trusted to propose anything — see #19, which records this project having twice
+shipped wrong hand-computed contrast numbers.
+
+### 44d. ⚠️ Tritanopia caveat — a Phase 4 design question, NOT resolved here
+
+**Under tritanopia, blue collapses toward teal** (`#1968C0` → `#007D8A`),
+landing near jade `success` at **ΔE 0.036**. This is above the shipped floor
+and no worse than the `warning`/`danger` pair already in production, **but it
+is inherent to tritanopia collapsing the blue–yellow axis — no blue avoids
+it.** Choosing a different blue would not have helped.
+
+**Recommendation carried forward to Phase 4, not decided here:** if schedule
+status must be distinguishable without relying on colour, the remap should
+pair each status with a **non-colour affordance** — an icon or a text label —
+rather than colour alone. That is a design decision for Phase 4's own ticket.
+
+### 44e. No config or component change was required
+
+Confirmed before editing, not assumed: `tailwind.config.js` already maps all
+four `info` sub-tokens (`DEFAULT`/`tint`/`border`/`text`), and `badge.tsx:31`
+already reads `bg-info-tint border-info-border text-info-text` (wired at #42c).
+Changing the CSS variables was therefore sufficient — **the token indirection
+worked as designed.**
+
+**Verified:** 599/599 tests (62 files, matching the #43 baseline), lint clean,
+build clean. Playwright confirmed the rendered badge's computed
+`background-color` / `border-color` / `color` are **exactly**
+`rgb(240,247,255)` / `rgb(154,193,243)` / `rgb(12,79,151)`, and asserted
+`--accent`, `--accent-tint`, `--accent-border`, `--accent-text`,
+`--focus-ring`, `--primary` and `--success` are **all unchanged**. `info` no
+longer equals `accent`.
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -1820,7 +1924,7 @@ same state twice and getting identical bytes).
 | Resources detail-page modal-to-inline-edit migration | ⏭️ Deferred | No detail page exists yet for Resources — see `progress.md` |
 | Light Theme Migration | ✅ COMPLETE 2026-08-21 | Direction B tokens applied globally, piloted/verified on Servers; all 7 remaining modules audited (only fix needed: Activity badge/dot mismatch); close-out items resolved; final independent verification confirmed, zero discrepancies — see decisions #29/#30/#31/#32/#33, `progress.md` |
 | `status` (teal) token — zero live consumers app-wide | ✅ Closed 2026-08-21 — intentionally reserved, unwired | No genuine semantic fit found across the full sitewide rollout audit; stays reserved design capacity, not a defect — see decision #33 |
-| `info` status token (`#6C4BF4`) is identical to `--accent` violet | 🟡 OPEN | Violet is now scoped to selection/nav only, so the shared value is a conflict, not a coincidence — `info` likely needs its own color before Phase 4 remaps any status to it; see decision #36 |
+| `info` status token (`#6C4BF4`) is identical to `--accent` violet | ✅ CLOSED 2026-08-30 by #44 | `info` migrated to its own blue family (Candidate B, OKLCH hue 255°): `#1968C0` / `#F0F7FF` / `#9AC1F3` / `#0C4F97`. AAA on every axis, colour-blind ΔE checked against all 5 existing hues. Four CSS variables changed; no component or config edit was needed. **Phase 4 blocker cleared** — see decisions #36 and #44 |
 | `Sidebar.tsx:21` `focus-visible:outline-brand` | 🟡 OPEN | Leftover violet focus ring under decision #36's jade-focus rule, not yet migrated (out of Pilot 3 scope) |
 | `Card` + `Toolbar` → `panel` radius, `Card` → `elev-1` | ✅ Done 2026-08-30 | Phase 2 Card pilot; applies #34/#35. `--card`/`--card-foreground` deliberately kept, not collapsed to `--surface` — see decision #37 |
 | "Table container" named by #35 but no such component exists | 🟡 OPEN | `table.tsx` root is `relative w-full overflow-auto` — no border/radius/bg. Creating one is a design change, not a token migration; deferred — see decision #37 |
@@ -1835,3 +1939,5 @@ same state twice and getting identical bytes).
 | `tailwind-merge` custom `fontSize` registration | ✅ Closed 2026-08-30 by #43 — supersedes the OPEN row above | `cn()` now uses `extendTailwindMerge` with all 7 custom type keys in the `font-size` group. Fixed **both** directions, including the worse one #42 missed: a plain text-color was silently deleting the size token. **Not inert** — repaired a live defect in `calendar.tsx` (weekday headers/week numbers were rendering at full foreground, not muted). Guarded by `src/lib/utils.test.ts`, which cross-checks the registration list against the config — see decision #43 |
 | `brand.border` / `brand.text` Tailwind mapping | ✅ Done 2026-08-30 — mapping only, deliberately unused | Maps to the pre-existing `--accent-border` / `--accent-text` (**there are no `--brand-*` CSS vars**). Unblocks `badge.tsx` `default` for Phase 4; **applied to no component** — see decision #43b |
 | Master Plan doc vs `tailwind.config.js` token-value conflict | ✅ Resolved 2026-08-30 — **config is the source of truth** | Actual values: `text-heading-card` = 16px/24px/600/tracking `normal`; `text-body` = 14px/20px/400. The external Master Plan is historical/aspirational where it conflicts — see decision #43c |
+| `success` ≡ `primary` ≡ `focus-ring` (all `#0E7C5A`) | 🟡 OPEN — **accepted, not a blocker** | Second complete four-token collision, found during the 2026-08-30 audit and previously unrecorded. Explicitly left open by architect decision when `info` was fixed at #44. Consequence: under Phase 4's remap, `done`→`success` still renders in the primary action colour — see decision #44b |
+| Status colour is the only status signal (tritanopia) | 🟡 OPEN — Phase 4 design question | Under tritanopia blue collapses toward teal (ΔE 0.036 vs jade) — above the shipped floor and unavoidable for any blue. If status must be distinguishable without colour, Phase 4 should pair each status with an icon or text label. Not decided at #44 — see decision #44d |
