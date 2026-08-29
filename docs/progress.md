@@ -10,11 +10,12 @@ See `decisions.md` for the reasoning behind blocked/skipped items, and
 ## Current status
 
 ```
-Current:  Direction C — Component Primitives (Phase 2) PARTIALLY CLOSED.
-          Pilots 1/3/4/5 done. Dialog/Sheet radius + shadow never
-          migrated (modal/elev-3 targets) — reopened as a blocker.
-Next:     Dialog/Sheet radius/shadow pilot (values not yet decided),
-          then Phase 4 — semantic status remap.
+Current:  Direction C — Component Primitives (Phase 2) — all known
+          pilots complete. Dialog/Sheet radius + shadow shipped
+          2026-08-30 (decision #39), closing the stated blocker.
+          NOT marked closed: final status left to the architect.
+Next:     Architect to set Phase 2 status, then Phase 4 — semantic
+          status remap.
 ```
 
 ---
@@ -281,14 +282,15 @@ rather than duplicating it here.
 
 ---
 
-## Direction C — Component Primitives (Phase 2) — 🟡 PARTIALLY CLOSED — Dialog/Sheet radius/shadow pilot pending
+## Direction C — Component Primitives (Phase 2) — 🟡 ALL PILOTS DONE — final status pending architect review
 
 Migration of the shared UI primitives onto the Direction C tokens: jade
 `--primary` as the system action color, violet `--accent` scoped to selection and
 navigation state only (**decision #36**).
 
-**🟡 Status: PARTIALLY CLOSED — Dialog/Sheet radius/shadow pilot pending.**
-Pilots 1, 3, 4 and 5 (Card + Toolbar) are complete. One gap remains open.
+**🟡 Status: ALL PILOTS DONE — final phase status pending architect review.**
+Pilots 1, 3, 4, 5 (Card + Toolbar) and 6 (Dialog/Sheet) are all complete. No
+known migration gap remains open in this phase.
 
 **Pilot 4 migrated only half of Dialog/Sheet.** It moved the overlay to the
 `--overlay` token and unified the focus ring to jade — both ✅ done and not
@@ -302,15 +304,22 @@ undone here — but left **radius and shadow** on their pre-Direction-C values:
   a fact to decide on, not an omission to assume.
 
 This was recorded as a 🟡 OPEN tracker item after the Card pilot audit rather
-than as a blocker. **Hello has now decided it counts as a Phase 2 blocker — the
+than as a blocker. **Hello then decided it counts as a Phase 2 blocker — the
 same class of gap as Card**: a component that a Phase 2 pilot was supposed to
-bring onto the Direction C scales, but which still sits on pre-Direction-C
-values. Phase 2 is therefore reopened as partially complete, pending a
-Dialog/Sheet radius/shadow pilot. **This is a scope split, not a reversal of
-Pilot 4** — the overlay and focus-ring work stays ✅ DONE.
+bring onto the Direction C scales, but which still sat on pre-Direction-C
+values. **This was a scope split, not a reversal of Pilot 4** — the overlay and
+focus-ring work stayed ✅ DONE throughout.
 
-The actual target values are not yet decided; `decisions.md` is deliberately
-untouched by this correction and gets its entry in a later ticket.
+**✅ That gap is now closed.** Pilot 5 shipped 2026-08-30 (**decision #39**):
+`Dialog` → `rounded-modal` at all breakpoints + `shadow-elev-3`; `Sheet` →
+`shadow-elev-3` with its square radius deliberately preserved.
+
+**🟡 Phase 2 is deliberately NOT marked closed here.** Pilot 5 closed the stated
+blocker, but the overall phase status is left for the architect to set after
+reviewing the Pilot 5 report — there is a scope question outstanding
+(`Popover`/`DropdownMenu`/`Select` are now visibly desynced from `Dialog`, by
+explicit scope decision), and a referenced **decision #38 that does not exist**
+to cross-reference first. See `decisions.md` #39.
 
 **Merged to `main` as merge commit `290c173`** via **PR #1**, from
 `phase-2/input-underline-pilot` — 8 commits, 15 files, +964/-43.
@@ -327,7 +336,7 @@ been CI-tested before this.
 | 3 | `Button` → jade primary, `focus-visible` ring unified to jade. Surfaced and recorded **decision #36** (primary/accent role definition) | `fdf8484`, `c0ecf2e`, `21f2d73` | `decisions.md` #36 |
 | 4 | `Dialog` / `Sheet` **overlay + focus ring** — ✅ **DONE.** Overlay → `--overlay` token, focus ring unified to jade. `Popover` and `DropdownMenu` audited and closed as no-change *(scope limited to overlay/focus ring — radius and shadow were never in this pilot; see row 6)* | `0345c3d` | `phase2-overlay-pilot.md` |
 | 5 | `Card` + `Toolbar` — ✅ **DONE.** Both migrated to `rounded-panel` (10px); `Card` additionally to `shadow-elev-1`. `--card`/`--card-foreground` alias deliberately kept, not collapsed to `--surface` | `9ca8c82` | `decisions.md` #37 |
-| 6 | `Dialog` / `Sheet` **radius + shadow** — ❌ **NOT DONE.** `dialog.tsx:39` still `shadow-none` + `sm:rounded-md` (breakpoint-scoped only, no base radius); `sheet.tsx:32` still `shadow-none`, no radius class. Targets `modal` (14px) / `elev-3` per #34/#35, never applied. **Blocker — reopens Phase 2** | *(none)* | *(pending)* |
+| 6 | `Dialog` / `Sheet` **radius + shadow** — ✅ **DONE.** `Dialog` → `rounded-modal` (14px, **all** breakpoints — was `sm:`-scoped, so 0px below 640px) + `shadow-elev-3`; `Sheet` → `shadow-elev-3`, radius intentionally left square (edge-anchored drawer). Consciously overrides Pilot 4 §9 | *(this commit)* | `decisions.md` #39 |
 | — | **Pre-merge dead-token cleanup**: deleted `--input`, `--ring` and the four `--status-*` teal tokens (all zero-consumer); `dropdown-menu.tsx` bare `border` → `border-border` | `daf5208` | `phase2-token-cleanup.md` |
 
 **⚠️ Pilot-numbering gap (recorded as-found, not reconciled).** The repo documents
@@ -377,7 +386,9 @@ status is remapped onto it. See `decisions.md` #36 and its tracker table.
 | `Card` + `Toolbar` → `panel` radius, `Card` → `elev-1` | ✅ DONE 2026-08-30 — closed the gap that reopened Phase 2 | `decisions.md` #37 |
 | "Table container" named by `decisions.md` #35 but no such component exists | 🟡 OPEN — deferred out of the Card pilot; creating one is a design change | `decisions.md` #37 |
 | 10 hand-rolled `rounded-md border border-border` panel-like sites | 🟡 OPEN — deferred; needs a per-site sweep (5 avatar squares are `control`/`pill`, not `panel`) | `decisions.md` #37 |
-| `Dialog`/`Sheet` radius + shadow never migrated | 🔴 **BLOCKER** — reopens Phase 2 as of 2026-08-30; `modal`/`elev-3` targets from #34/#35 never applied; Pilot 4 covered overlay + focus ring only. Target values not yet decided | `decisions.md` #34/#35; this file, Phase 2 section |
+| `Dialog`/`Sheet` radius + shadow | ✅ DONE 2026-08-30 — `Dialog` → `rounded-modal` (all breakpoints) + `elev-3`; `Sheet` → `elev-3`, radius intentionally square. Closed the blocker that reopened Phase 2 | `decisions.md` #39 |
+| `Popover`/`DropdownMenu`/`Select` content still `rounded-md` + `shadow-none` | 🟡 OPEN — now visibly desynced from `Dialog` after Pilot 5 (explicit scope decision). `decisions.md` #35 gives Dropdown/Select **no** radius target — needs extending first | `decisions.md` #39 |
+| Decision **#38** does not exist | 🟡 OPEN — #39 was ticketed by number, leaving a gap after #37. Confirm #38 is coming or renumber | `decisions.md` #39 |
 
 ---
 
@@ -396,7 +407,7 @@ status is remapped onto it. See `decisions.md` #36 and its tracker table.
 | UI/UX Polish — Phase 2 (module-by-module) | ✅ 2026-08-15 (Parts 29a-29g + 29-CLOSEOUT) |
 | UI/UX Polish — Design System & Interaction Refresh | ✅ 2026-08-20 |
 | Light Theme Migration | ✅ 2026-08-21 |
-| Direction C — Component Primitives (Phase 2) | 🟡 PARTIALLY COMPLETE — Pilots 1/3/4/5 done (Card + Toolbar shipped 2026-08-30, decision #37); **Dialog/Sheet radius + shadow outstanding** |
+| Direction C — Component Primitives (Phase 2) | 🟡 ALL PILOTS DONE 2026-08-30 — Card + Toolbar (#37) and Dialog/Sheet (#39) both shipped; **final phase status pending architect review** |
 
 ---
 

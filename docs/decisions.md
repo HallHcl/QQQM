@@ -1183,6 +1183,83 @@ intermediate state of a pilot-first migration, not drift.
 "applies the base layout classes" — is unchanged; only the expected radius
 token moved.
 
+## 39. [Direction C — Component Primitives] Dialog/Sheet radius + shadow migration (Phase 2 Pilot 5, 2026-08-30)
+
+> **⚠️ Numbering note:** this entry is #39 as ticketed, but **no decision #38
+> exists** — the highest previously recorded is #37. The ticket referenced "a
+> decision #38 note about final scope" that has not been written. The gap is
+> deliberate and preserved rather than silently renumbering this to #38, so
+> that a later #38 can still be inserted. **Architect: confirm #38 is coming,
+> or renumber this entry.**
+
+**Decision:** `Dialog` and `Sheet` migrate to the `elev-3` shadow; `Dialog`
+additionally to the `modal` radius, applied at **all** breakpoints.
+
+| Component | Before | After |
+|---|---|---|
+| `dialog.tsx:39` | `sm:rounded-md` (6px ≥640px, **0px below**) + `shadow-none` | `rounded-modal` (14px, all widths) + `shadow-elev-3` |
+| `sheet.tsx:32` | *(no radius class)* + `shadow-none` | *(no radius class — unchanged)* + `shadow-elev-3` |
+
+`modal` = `14px`; `elev-3` = `0 20px 24px -4px rgba(16,24,40,.10), 0 8px 8px -4px
+rgba(16,24,40,.04)` — both read from `tailwind.config.js`, applying standing
+decisions #34/#35. No new value was invented.
+
+**(a) Scope is Dialog + Sheet ONLY.** `popover.tsx`, `dropdown-menu.tsx` and
+`select.tsx` were **not** touched, by explicit architect decision (scope option
+a), not oversight. This is a known, accepted consequence: those three carry a
+recipe character-identical to Dialog's former one
+(`rounded-md border border-border bg-popover text-popover-foreground shadow-none`
+at `popover.tsx:20`, `dropdown-menu.tsx:48`, `dropdown-menu.tsx:66`,
+`select.tsx:94`). **Dialog has now visibly desynchronised from four surfaces it
+previously matched exactly** — 14px + elev-3 against their 6px + no shadow.
+Deferred to a future ticket. Note #35 assigns `modal` radius to "Dialog, Sheet,
+Popover" but gives Dropdown and Select **no radius target at all**, so that
+future ticket needs #35 extended before it can proceed.
+
+**(b) This consciously OVERRIDES Pilot 4's shadow recommendation.**
+`phase2-overlay-pilot.md` §9 measured the Dialog surface against the live
+blurred overlay and concluded the flat surface "reads as **visually complete,
+not under-separated**", that the 48% navy tint plus 4px blur "does the depth
+work that an elevation shadow would otherwise do", and explicitly: "**No
+elevation change is recommended from this pilot.**" §8 further justified keeping
+`shadow-none` as "consistent with Card/Button precedent."
+
+That reasoning is now obsolete: **decision #37 moved `Card` to `elev-1`**,
+breaking the flat-baseline precedent Pilot 4's argument depended on. The
+override is deliberate and recorded here rather than applied silently. Pilot 4's
+measurement was not wrong when taken — the surrounding system changed under it.
+
+**(c) Sheet's radius is intentionally UNCHANGED, not missed.** `Sheet` carries
+no radius class at all and now renders `border-radius: 0px` (verified in
+browser). It is an edge-anchored, full-height drawer — the shadcn/Linear/Stripe
+convention is square corners flush to the viewport edge. #35 lists Sheet under
+`modal`, but applying that literally would round a panel that has no free
+corners on its anchored edge. **Do not "fix" this in a future sweep without a
+new decision.**
+
+**(d) ⚠️ ARCHITECT: DOUBLE-CHECK THIS ONE — Dialog's radius now applies at all
+breakpoints.** Previously `sm:rounded-md` was breakpoint-scoped, so **below
+640px the dialog rendered with fully square corners** (verified: 0px measured at
+375px before this change; 14px after). Removing the `sm:` prefix is an
+**architect assumption carried by the ticket**, not a value derived from #34/#35
+— neither decision says anything about breakpoint scoping. If the square-corner
+mobile treatment was deliberate (a full-bleed-ish mobile dialog is a common
+pattern), this change reverses it. It was not possible to tell from the code
+whether the `sm:` scoping was intentional or inherited unchanged from shadcn's
+default template.
+
+**Verified:** 593/593 tests pass (61 files, matching the #37 baseline), lint
+clean, build clean. Browser-verified at two viewports — Dialog 6px→14px at
+1280px, **0px→14px at 375px**, shadow none→elev-3 at both; Sheet radius 0px
+unchanged, shadow none→elev-3.
+
+**No test changes were required** — unlike #37's `Toolbar.test.tsx`, no test in
+the suite asserts `rounded-md`, `sm:rounded-md`, or `shadow-none` on these
+components. There are no dedicated `dialog.test.tsx`/`sheet.test.tsx` files.
+
+**Incidental fact recorded:** `sm:rounded-md` is no longer emitted in the
+production CSS at all — `Dialog` was its only consumer app-wide.
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -1213,4 +1290,6 @@ token moved.
 | `Card` + `Toolbar` → `panel` radius, `Card` → `elev-1` | ✅ Done 2026-08-30 | Phase 2 Card pilot; applies #34/#35. `--card`/`--card-foreground` deliberately kept, not collapsed to `--surface` — see decision #37 |
 | "Table container" named by #35 but no such component exists | 🟡 OPEN | `table.tsx` root is `relative w-full overflow-auto` — no border/radius/bg. Creating one is a design change, not a token migration; deferred — see decision #37 |
 | 10 hand-rolled `rounded-md border border-border` panel-like sites | 🟡 OPEN | Do not follow `Card` automatically; 5 further 32px avatar squares share the string but are `control`/`pill`, not `panel`. Needs a per-site sweep — see decision #37 |
-| `Dialog`/`Sheet` still `sm:rounded-md` + `shadow-none` | 🟡 OPEN | `modal` (14px) / `elev-3` targets from #34/#35 never applied; Pilot 4 migrated only overlay + focus ring. Untracked until now |
+| `Dialog`/`Sheet` radius + shadow | ✅ Done 2026-08-30 | Pilot 5: Dialog → `rounded-modal` (all breakpoints) + `elev-3`; Sheet → `elev-3`, radius intentionally left square. Consciously overrides Pilot 4 §9's no-elevation finding — see decision #39 |
+| `Popover`/`DropdownMenu`/`Select` content still `rounded-md` + `shadow-none` | 🟡 OPEN | Now visibly desynced from Dialog after Pilot 5 (scope option a). #35 gives Dropdown/Select **no** radius target — needs extending first — see decision #39 |
+| Decision **#38** does not exist | 🟡 OPEN | #39 was ticketed by number, leaving a gap after #37. Confirm #38 is coming or renumber #39 |
