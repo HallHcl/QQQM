@@ -272,7 +272,7 @@ unaffected by this pilot and is not a stacking regression.
 | `shadow-none` on both surfaces | Consistent with Card/Button precedent; separation observation in section 9 |
 | Sheet content `bg-surface` vs Dialog/Popover `bg-popover` | Both resolve to `#FFFFFF` today, would diverge if `--popover` is repointed — flagged, out of scope |
 | Sheet close lacks Dialog's `rounded-sm p-2` | Pre-existing size divergence; only `data-[state=open]:bg-accent` was unified this ticket |
-| `dropdown-menu.tsx:48,66` bare `border` | Separate minor cleanup, explicitly out of scope |
+| ~~`dropdown-menu.tsx:48,66` bare `border`~~ | ~~Separate minor cleanup, explicitly out of scope~~ — **✅ RESOLVED after this pilot** by the Phase 2 pre-merge token cleanup (`daf5208`, see `phase2-token-cleanup.md`). Both lines now read `border border-border`. Row retained struck-through rather than deleted, since this document is a point-in-time pilot record |
 | `borderRadius.modal: '14px'` (`tailwind.config.js:59`) | Defined for Dialog/Sheet/Popover but unused — Dialog renders `sm:rounded-md` = 6px measured. Pre-existing, unrelated to this pilot |
 | Remaining `outline-brand` sites | `Sidebar.tsx:21`, `tabs.tsx:32,47`, `toast.tsx:65,80`, `calendar.tsx:202` — this pilot closed 2 of ~8; the rest are their own tickets |
 | `prefers-reduced-motion` | No handling exists anywhere in the codebase; pre-existing gap, noted not fixed |

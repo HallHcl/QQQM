@@ -1178,19 +1178,75 @@ analogous. Do not "tidy" this away in a future sweep without a new decision.
 their own unmigrated `modal`/`elev-3` gap). This divergence is the expected
 intermediate state of a pilot-first migration, not drift.
 
+> **↪ Superseded in part by decision #39 (2026-08-30).** The `Dialog`/`Sheet`
+> half of that sentence is no longer true: Pilot 6 migrated `Dialog` to
+> `rounded-modal` (14px) + `elev-3`, and `Sheet` to `elev-3`. The paragraph is
+> left as written because it accurately records the state at the time #37 was
+> taken. The 10 hand-rolled sites remain on `rounded-md` and are still
+> correctly described.
+
 **Test-file consequence:** `Toolbar.test.tsx` asserted `toHaveClass(...,
 "rounded-md", ...)` and was updated to `"rounded-panel"`. The test's purpose —
 "applies the base layout classes" — is unchanged; only the expected radius
 token moved.
 
-## 39. [Direction C — Component Primitives] Dialog/Sheet radius + shadow migration (Phase 2 Pilot 5, 2026-08-30)
+## 38. [Direction C — Component Primitives] Phase 2 blocker bar, final scope (retroactive, recorded 2026-08-30)
 
-> **⚠️ Numbering note:** this entry is #39 as ticketed, but **no decision #38
-> exists** — the highest previously recorded is #37. The ticket referenced "a
-> decision #38 note about final scope" that has not been written. The gap is
-> deliberate and preserved rather than silently renumbering this to #38, so
-> that a later #38 can still be inserted. **Architect: confirm #38 is coming,
-> or renumber this entry.**
+> **Retroactive entry.** This decision was taken verbally during the Phase 2
+> closeout sequence but was never committed to this document at the time. It is
+> recorded here after the fact, in its correct sequential position. Decision #39
+> was written and shipped (`7d3a184`) before this entry existed, which is why
+> #39 originally carried a "no #38 exists" callout — now resolved.
+
+**Context:** Phase 2 was reopened twice on the same reasoning — that a component
+a Phase 2 pilot was supposed to bring onto the Direction C scales, but which
+still sat on pre-Direction-C values, constitutes a Phase 2 blocker. That bar
+reopened the phase for `Card` (2026-08-29) and again for `Dialog`/`Sheet`
+(2026-08-30). Applied without limit, the same reasoning could reopen Phase 2
+indefinitely, since several known items technically fit the shape.
+
+**Decision: the "same class of gap" bar is closed at exactly those two items.**
+`Card` and `Dialog`/`Sheet` were the only two qualifying gaps. Both are now
+migrated (#37, #39). The bar is spent.
+
+**The following were explicitly evaluated and ruled OUT.** They do **not**
+qualify as Phase 2 blockers, and **must not** be used to reopen Phase 2 again
+without a fresh, explicit decision recorded in this document:
+
+| Ruled-out item | Where tracked |
+|---|---|
+| `Sidebar.tsx:21` violet `focus-visible:outline-brand` | decision #36 |
+| 10 hand-rolled `rounded-md border border-border` panel-like sites | decision #37 |
+| 5 avatar-square (32px) sites — semantically `control`/`pill`, not `panel` | decision #37 |
+| `elev-0` vs `shadow-none` — the twice-deferred overlap question | decisions #34, #37 |
+| "Table container" — #35 names it, but no such component exists in the code | decisions #35, #37 |
+
+**Stated explicitly: Phase 2 will not reopen a third time on
+"same-class-of-gap" reasoning for any of the five items above.** They remain
+tracked as ordinary deferred work with no deadline, not as blockers. Reopening
+the phase for any of them requires a new decision that says so in as many words.
+
+**What distinguishes a qualifying gap from a ruled-out one:** `Card` and
+`Dialog`/`Sheet` were **undiscovered misses** — work a pilot was scoped to cover
+and silently did not. The five items above are **known, recorded, deliberate
+deferrals**, each already carrying its own tracker entry and rationale. The
+distinction is discovery, not similarity of symptom. See decision #39 and
+`progress.md`'s Phase 2 closing note for how this same test was applied to
+`Popover`/`DropdownMenu`/`Select`.
+
+## 39. [Direction C — Component Primitives] Dialog/Sheet radius + shadow migration (Phase 2 Pilot 6, 2026-08-30)
+
+> **↪ Numbering resolved.** This entry was written and shipped (`7d3a184`)
+> while **decision #38 did not yet exist**, and originally carried a callout
+> flagging that gap. **#38 has since been recorded** (retroactively, in its
+> correct position above) as "Phase 2 blocker bar, final scope". The sequence
+> 37 → 38 → 39 is now continuous and this entry keeps its number.
+>
+> **Pilot numbering:** the originating ticket labelled this work "Pilot 5".
+> That conflicted with `progress.md`, whose pilot table already lists
+> Card + Toolbar (#37) as row 5 and Dialog/Sheet as row 6. **Canonical
+> numbering is now: Card + Toolbar = Pilot 5, Dialog/Sheet = Pilot 6.** This
+> heading was corrected from "Pilot 5" to "Pilot 6" accordingly.
 
 **Decision:** `Dialog` and `Sheet` migrate to the `elev-3` shadow; `Dialog`
 additionally to the `modal` radius, applied at **all** breakpoints.
@@ -1237,6 +1293,18 @@ convention is square corners flush to the viewport edge. #35 lists Sheet under
 corners on its anchored edge. **Do not "fix" this in a future sweep without a
 new decision.**
 
+> **Premise correction (recorded 2026-08-30).** The ticket that commissioned
+> this pilot stated Sheet was used "primarily `side="right"`". That is wrong,
+> and the correct facts are recorded here so the premise is not repeated:
+> **`Sheet` has exactly one call site app-wide — `MobileNav.tsx:31`, with
+> `side="left"`** — and `sheet.tsx`'s own `defaultVariants` is also
+> `side: "left"`. No `side="right"` usage exists anywhere in the codebase.
+> The `left` variant renders `inset-y-0 left-0 h-full w-60 border-r`, i.e.
+> full-height and flush to the left edge, **so the edge-anchored /
+> square-radius conclusion above is unaffected** — only the stated premise was
+> inaccurate. Note also that `SheetTrigger` is `md:hidden`, so Sheet is only
+> reachable below 768px.
+
 **(d) ⚠️ ARCHITECT: DOUBLE-CHECK THIS ONE — Dialog's radius now applies at all
 breakpoints.** Previously `sm:rounded-md` was breakpoint-scoped, so **below
 640px the dialog rendered with fully square corners** (verified: 0px measured at
@@ -1259,6 +1327,20 @@ components. There are no dedicated `dialog.test.tsx`/`sheet.test.tsx` files.
 
 **Incidental fact recorded:** `sm:rounded-md` is no longer emitted in the
 production CSS at all — `Dialog` was its only consumer app-wide.
+
+**CLOSING NOTE (2026-08-30) — point (d) is RESOLVED: the all-breakpoints
+radius STAYS AS SHIPPED.** Point (d) above flagged the removal of the `sm:`
+prefix for architect double-checking, since it changed the sub-640px dialog
+from square corners to 14px. **That has been reviewed and confirmed: keep it.**
+`Dialog` renders `rounded-modal` at every viewport width, and this is now
+settled, not open.
+
+Differentiating the mobile radius — whether a small-viewport dialog should use
+a different corner treatment from a desktop one — is **explicitly deferred to a
+future "mobile polish" pass after Phase 7**. It is **not** a Phase 2 item,
+**not** a blocker, and **not** urgent. Recorded here so it is not re-litigated
+as an open Phase 2 question; per decision #38 it is a deliberate deferral, not
+a qualifying gap.
 
 ## Open / deferred items tracker (quick reference)
 
@@ -1290,6 +1372,6 @@ production CSS at all — `Dialog` was its only consumer app-wide.
 | `Card` + `Toolbar` → `panel` radius, `Card` → `elev-1` | ✅ Done 2026-08-30 | Phase 2 Card pilot; applies #34/#35. `--card`/`--card-foreground` deliberately kept, not collapsed to `--surface` — see decision #37 |
 | "Table container" named by #35 but no such component exists | 🟡 OPEN | `table.tsx` root is `relative w-full overflow-auto` — no border/radius/bg. Creating one is a design change, not a token migration; deferred — see decision #37 |
 | 10 hand-rolled `rounded-md border border-border` panel-like sites | 🟡 OPEN | Do not follow `Card` automatically; 5 further 32px avatar squares share the string but are `control`/`pill`, not `panel`. Needs a per-site sweep — see decision #37 |
-| `Dialog`/`Sheet` radius + shadow | ✅ Done 2026-08-30 | Pilot 5: Dialog → `rounded-modal` (all breakpoints) + `elev-3`; Sheet → `elev-3`, radius intentionally left square. Consciously overrides Pilot 4 §9's no-elevation finding — see decision #39 |
-| `Popover`/`DropdownMenu`/`Select` content still `rounded-md` + `shadow-none` | 🟡 OPEN | Now visibly desynced from Dialog after Pilot 5 (scope option a). #35 gives Dropdown/Select **no** radius target — needs extending first — see decision #39 |
-| Decision **#38** does not exist | 🟡 OPEN | #39 was ticketed by number, leaving a gap after #37. Confirm #38 is coming or renumber #39 |
+| `Dialog`/`Sheet` radius + shadow | ✅ Done 2026-08-30 | **Pilot 6**: Dialog → `rounded-modal` (14px, all breakpoints) + `elev-3`; Sheet → `elev-3`, radius intentionally left square. Consciously overrides Pilot 4 §9's no-elevation finding. Mobile radius differentiation deferred to a post-Phase-7 mobile polish pass — see decision #39 |
+| `Popover`/`DropdownMenu`/`Select` content still `rounded-md` + `shadow-none` | 🟡 OPEN — tracked future ticket, not urgent, no deadline | Visibly desynced from `Dialog` after Pilot 6. **Does not qualify as a Phase 2 blocker under #38**: it was an explicit, informed scope decision (option a, taken knowing the desync would result), not an undiscovered miss. If ever picked up as scope option (b), **#35 must be amended first** — it gives `DropdownMenu` and `Select` no radius target at all. See decisions #38/#39 |
+| Phase 2 blocker bar — closed at Card and Dialog/Sheet | ✅ Closed 2026-08-30 | Five known-deferred items explicitly ruled out; Phase 2 will not reopen a third time on "same-class-of-gap" reasoning for any of them — see decision #38 |
