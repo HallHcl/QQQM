@@ -1069,6 +1069,10 @@ pre-existing `shadow-none` utility (11 live usages). Whether the future
 per-component migration retires `shadow-none` in favor of `elev-0`, or
 keeps both, is not yet decided — revisit at migration time.
 
+> **↪ ANSWERED 2026-08-30 by decision #41.** `shadow-none` is retired.
+> `elev-0` is now the sole way to express zero elevation, and `shadow-none`
+> has zero occurrences in the codebase.
+
 ## 35. [Direction C — Foundation] Border Radius Scale
 
 **Context:** Phase 1.2 audit confirmed no `--radius` token or
@@ -1444,6 +1448,78 @@ measurements. No test asserts these classes, so no test file changed.
 `elev-0`-vs-`shadow-none` question is still unanswered and is now the only
 elevation item left open.
 
+> **↪ Superseded 2026-08-30 by decision #41.** Those 4 remaining usages were
+> migrated to `shadow-elev-0` and `shadow-none` was retired: the census is now
+> **zero**, and the elev-0-vs-shadow-none question is answered, not open. The
+> paragraph is left as written because it recorded the state at the time #40
+> was taken.
+
+## 41. [Direction C — Component Primitives] Retire `shadow-none`; `elev-0` is the sole zero-elevation token (Pilot 8, 2026-08-30)
+
+**Decision:** the four remaining `shadow-none` usages migrate to
+**`shadow-elev-0`**. `shadow-none` is retired from the codebase. Going forward
+**any need to express zero elevation uses `shadow-elev-0`** — `shadow-none`
+should not reappear.
+
+| File | Line | Element | Note |
+|---|---|---|---|
+| `Topbar.tsx` | 31 | `<header>` | bare class |
+| `calendar.tsx` | 71 | `dropdown_root` | bare class — see dead-path note below |
+| `tabs.tsx` | 32 | `TabsTrigger` | **state-scoped**: `data-[state=active]:shadow-none` → `data-[state=active]:shadow-elev-0` |
+| `toast.tsx` | 28 | toast root | bare class |
+
+**This closes a question deferred three times.** #34 introduced the elevation
+scale and flagged the overlap: "`elev-0` (`none`) is identical in value to the
+pre-existing `shadow-none` utility… Whether the future per-component migration
+retires `shadow-none` in favor of `elev-0`, or keeps both, is not yet decided —
+revisit at migration time." It was left open again at #37 (Card → `elev-1`) and
+at #39 (Dialog/Sheet → `elev-3`). **Answer: retire `shadow-none`.** One concept,
+one token. #34 has been annotated with a pointer here.
+
+**This is a pure rename, not a visual change.** `elev-0` and `shadow-none`
+resolve to the identical value (`none`), confirmed via `resolveConfig`:
+`boxShadow['elev-0'] === boxShadow.none` is `true`. The emitted CSS rule for
+`.shadow-elev-0` is byte-identical to what `.shadow-none` produced
+(`--tw-shadow: 0 0 #0000; …`). Browser-measured computed `box-shadow` is
+unchanged on every reachable site, before and after.
+
+**The elevation model is now fully applied.** Every component #34 named now
+carries an explicit `elev-*` token, and **`shadow-none` has zero occurrences
+codebase-wide**:
+
+| Level | Components |
+|---|---|
+| `elev-0` | Topbar, calendar (`dropdown_root`), tabs (active), toast |
+| `elev-1` | Card *(Table container still does not exist — see #37)* |
+| `elev-2` | Popover, DropdownMenu (×2), Select content — #40 |
+| `elev-3` | Dialog, Sheet — #39 |
+
+**Two facts recorded during this migration:**
+
+- **`calendar.tsx:71` is a dead path under current usage.** That class sits on
+  react-day-picker's `dropdown_root`, which only renders when
+  `captionLayout="dropdown"`. `calendar.tsx:16` defaults `captionLayout` to
+  `"label"`, and the app's only `Calendar` consumer (`ScheduleCalendar`) does not
+  override it. **The class is therefore never rendered today** and could not be
+  browser-verified — nothing puts it in the DOM. It was migrated anyway for
+  consistency, so the codebase-wide `shadow-none` count reaches zero and the
+  class is already correct if a dropdown caption is ever enabled.
+- **`tabs.tsx:32` is the only state-scoped instance.** It is a
+  `data-[state=active]:` variant rather than a bare class; the variant prefix is
+  preserved and the utility compiles normally.
+
+**`shadow-none` still exists as a Tailwind built-in** — this decision retires it
+from *our* code, it does not and cannot remove it from Tailwind. It is simply no
+longer emitted in the production CSS, having no consumer. A future
+`npx shadcn add` will generate components using `shadow-*` defaults; those need
+converting to the `elev-*` scale on arrival, the same caveat
+`phase2-token-cleanup.md` records for `border-input` / `ring-ring`.
+
+**Verified:** 593/593 tests pass (61 files, matching baseline), lint clean, build
+clean, **zero `shadow-none` occurrences codebase-wide**. Browser-verified on
+3 of 4 sites (the 4th is the unrenderable calendar path): computed `box-shadow`
+identical before and after. No test asserts these classes, so no test changed.
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -1476,4 +1552,5 @@ elevation item left open.
 | 10 hand-rolled `rounded-md border border-border` panel-like sites | 🟡 OPEN | Do not follow `Card` automatically; 5 further 32px avatar squares share the string but are `control`/`pill`, not `panel`. Needs a per-site sweep — see decision #37 |
 | `Dialog`/`Sheet` radius + shadow | ✅ Done 2026-08-30 | **Pilot 6**: Dialog → `rounded-modal` (14px, all breakpoints) + `elev-3`; Sheet → `elev-3`, radius intentionally left square. Consciously overrides Pilot 4 §9's no-elevation finding. Mobile radius differentiation deferred to a post-Phase-7 mobile polish pass — see decision #39 |
 | `Popover`/`DropdownMenu`/`Select` content shadow | ✅ Done 2026-08-30 | **Pilot 7**, standalone ticket under no phase: all three → `shadow-elev-2`, executing #34's existing assignment. Radius unchanged at `rounded-md` (6px). `Popover` regrouped out of #35's `modal` row into the new Floating Layer group; #35's Dropdown/Select radius gap closed at the same time. Phase 2 stays ✅ CLOSED — see decision #40 |
+| `elev-0` vs `shadow-none` — the thrice-deferred overlap question | ✅ Closed 2026-08-30 | **Answered: `shadow-none` retired.** 4 remaining sites (Topbar, calendar, tabs, toast) → `shadow-elev-0`; zero `shadow-none` occurrences remain codebase-wide. Elevation model now fully applied across every component #34 named — see decision #41 |
 | Phase 2 blocker bar — closed at Card and Dialog/Sheet | ✅ Closed 2026-08-30 | Five known-deferred items explicitly ruled out; Phase 2 will not reopen a third time on "same-class-of-gap" reasoning for any of them — see decision #38 |
