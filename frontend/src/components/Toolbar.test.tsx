@@ -26,7 +26,7 @@ describe("Toolbar", () => {
       "items-center",
       "justify-between",
       "gap-3",
-      "rounded-md",
+      "rounded-panel",
       "border",
       "border-border",
       "bg-surface",

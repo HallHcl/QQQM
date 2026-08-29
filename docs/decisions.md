@@ -1118,6 +1118,71 @@ to double-check: violet's role is now formally scoped to selection/nav,
 which has nothing to do with "info" status semantics. `info` should very
 likely get its own distinct color before Phase 4 remaps any status to it.
 
+## 37. [Direction C — Component Primitives] Card + Toolbar migrated to `panel` radius; Card to `elev-1` (Phase 2 Card pilot, 2026-08-30)
+
+**Decision:** `Card` and `Toolbar` migrate together to the `panel` radius
+(`10px`). `Card` additionally adopts the `elev-1` shadow. This applies the
+standing Foundation decisions #34 (elevation) and #35 (radius) — both of which
+defined these scales as staged tokens "not yet applied to any component", with
+per-component adoption to happen pilot-first in a later phase. This is that
+pilot. No new design value was invented.
+
+| Component | Before | After |
+|---|---|---|
+| `card.tsx:12` | `rounded-md` (6px) + `shadow-none` | `rounded-panel` (10px) + `shadow-elev-1` |
+| `Toolbar.tsx:20` | `rounded-md` (6px) | `rounded-panel` (10px) |
+
+**Why together:** the two shared a near-identical base recipe (`rounded-md
+border border-border`, plus the same resolved background reached through
+different aliases — `bg-card` → `--card` → `--surface` for Card, `bg-surface`
+directly for Toolbar). Decision #35 groups "Card, Table container, Toolbar"
+under `panel`. Migrating one alone would visibly desynchronise two components
+the scale explicitly groups — the same reasoning that made SelectTrigger travel
+with Input in Pilot 1.
+
+**Toolbar does not get `elev-1`.** It carries no shadow utility at all today —
+not even `shadow-none` — so nothing in its existing recipe implied one, and
+#34 assigns `elev-1` to "Card, Table", not Toolbar. Only the radius was
+unified. Toolbar therefore renders `box-shadow: none` after this change,
+verified in-browser.
+
+**`--card` / `--card-foreground` are explicitly KEPT, not collapsed.** Card
+reaches `--surface`/`--text-primary` through these shadcn aliases, and Card is
+`--card`'s only consumer. The alias could have been collapsed to `bg-surface`
+the way `--input` and `--ring` were deleted in the Phase 2 pre-merge cleanup
+(`daf5208`, see `phase2-token-cleanup.md`). **It was deliberately not**, by
+explicit decision at pilot time. `--input`/`--ring` were removed because they
+had *zero* consumers; `--card` has a live one, so the two cases are not
+analogous. Do not "tidy" this away in a future sweep without a new decision.
+
+**Two deferrals recorded, both explicitly out of scope for this ticket:**
+
+- **"Table container" has no implementation.** #35 assigns `panel` radius to a
+  Table container, but `table.tsx`'s root wrapper is
+  `relative w-full overflow-auto` — no border, no radius, no background. Table
+  styles borders per-section instead. Giving `panel` radius to a container that
+  does not exist would mean *creating* one, which is a design change, not a
+  token migration. Left for a future ticket.
+- **10 hand-rolled panel-like sites are untouched.** `ScheduleCalendar`,
+  `VersionHistoryPanel`, `ErrorState`, `EmptyState`, `ResourceList`,
+  `ServerDetailPage:122`, `CredentialRefList`, and two `<fieldset>`s
+  (`ServerEditCard`, `ServerFormDialog`) all inline `rounded-md border
+  border-border`. They do not follow `Card` automatically. Separately, five
+  32px avatar squares share the same utility string but are semantically
+  `control`/`pill`, **not** `panel` — a blind find-and-replace would be wrong.
+  A future sweep must decide per-site.
+
+**Known consequence, accepted:** `Card` and `Toolbar` are now visibly rounder
+(10px vs 6px) than every other `rounded-md` surface in the app, including the
+10 sites above and `Dialog`/`Sheet` (still `sm:rounded-md` + `shadow-none`,
+their own unmigrated `modal`/`elev-3` gap). This divergence is the expected
+intermediate state of a pilot-first migration, not drift.
+
+**Test-file consequence:** `Toolbar.test.tsx` asserted `toHaveClass(...,
+"rounded-md", ...)` and was updated to `"rounded-panel"`. The test's purpose —
+"applies the base layout classes" — is unchanged; only the expected radius
+token moved.
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -1145,3 +1210,7 @@ likely get its own distinct color before Phase 4 remaps any status to it.
 | `status` (teal) token — zero live consumers app-wide | ✅ Closed 2026-08-21 — intentionally reserved, unwired | No genuine semantic fit found across the full sitewide rollout audit; stays reserved design capacity, not a defect — see decision #33 |
 | `info` status token (`#6C4BF4`) is identical to `--accent` violet | 🟡 OPEN | Violet is now scoped to selection/nav only, so the shared value is a conflict, not a coincidence — `info` likely needs its own color before Phase 4 remaps any status to it; see decision #36 |
 | `Sidebar.tsx:21` `focus-visible:outline-brand` | 🟡 OPEN | Leftover violet focus ring under decision #36's jade-focus rule, not yet migrated (out of Pilot 3 scope) |
+| `Card` + `Toolbar` → `panel` radius, `Card` → `elev-1` | ✅ Done 2026-08-30 | Phase 2 Card pilot; applies #34/#35. `--card`/`--card-foreground` deliberately kept, not collapsed to `--surface` — see decision #37 |
+| "Table container" named by #35 but no such component exists | 🟡 OPEN | `table.tsx` root is `relative w-full overflow-auto` — no border/radius/bg. Creating one is a design change, not a token migration; deferred — see decision #37 |
+| 10 hand-rolled `rounded-md border border-border` panel-like sites | 🟡 OPEN | Do not follow `Card` automatically; 5 further 32px avatar squares share the string but are `control`/`pill`, not `panel`. Needs a per-site sweep — see decision #37 |
+| `Dialog`/`Sheet` still `sm:rounded-md` + `shadow-none` | 🟡 OPEN | `modal` (14px) / `elev-3` targets from #34/#35 never applied; Pilot 4 migrated only overlay + focus ring. Untracked until now |

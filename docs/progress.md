@@ -10,11 +10,11 @@ See `decisions.md` for the reasoning behind blocked/skipped items, and
 ## Current status
 
 ```
-Current:  Direction C — Component Primitives (Phase 2) PARTIALLY CLOSED.
-          Pilots 1/3/4 + token cleanup merged to main as 290c173
-          (PR #1, CI green). Card pilot never done — outstanding.
-Next:     Card pilot (audit complete, migration ticket pending), then
-          Phase 4 — semantic status remap (one blocking open question).
+Current:  Direction C — Component Primitives (Phase 2) COMPLETE.
+          Pilots 1/3/4 + token cleanup merged as 290c173 (PR #1);
+          Card + Toolbar pilot shipped 2026-08-30 (decision #37).
+Next:     Phase 4 — semantic status remap. NOT started; one blocking
+          open question first (see "Next up — Phase 4" below).
 ```
 
 ---
@@ -281,20 +281,21 @@ rather than duplicating it here.
 
 ---
 
-## Direction C — Component Primitives (Phase 2) — 🟡 PARTIALLY CLOSED — Card pilot pending
+## Direction C — Component Primitives (Phase 2) — ✅ CLOSED (2026-08-30)
 
 Migration of the shared UI primitives onto the Direction C tokens: jade
 `--primary` as the system action color, violet `--accent` scoped to selection and
 navigation state only (**decision #36**).
 
-**🟡 Status: PARTIALLY CLOSED — Card pilot pending.** Pilots 1, 3 and 4 and the
-pre-merge token cleanup are complete and merged to `main`. **`Card` (`card.tsx`)
-was intended to be part of this phase's component-primitive work but was never
-migrated — no commit in the phase touched the file.** This was discovered during
-the Phase 2 closeout documentation review on 2026-08-29; it was **not descoped
-intentionally**. Phase 2 is therefore reopened as partially complete, pending a
-Card pilot. A read-only Card audit has been completed; the migration itself is a
-separate ticket, to follow the design decisions taken from that audit.
+**✅ Status: CLOSED.** Phase 2 was briefly reopened as 🟡 PARTIALLY CLOSED on
+2026-08-29 for one reason only — `Card` (`card.tsx`) had never been migrated; no
+commit in the phase touched the file. That was the sole blocker, and it is now
+resolved: the **Card pilot shipped 2026-08-30**, migrating `Card` and `Toolbar`
+together to `panel` radius with `elev-1` on `Card` (**decision #37**, applying
+standing decisions #34/#35). With that gap closed, Phase 2 returns to ✅ CLOSED.
+Items deferred *out of* the pilot — the non-existent "Table container", the 10
+hand-rolled panel-like sites, and `Dialog`/`Sheet`'s own radius/shadow gap — are
+tracked separately in `decisions.md`'s tracker and were never Phase 2 scope.
 
 **Merged to `main` as merge commit `290c173`** via **PR #1**, from
 `phase-2/input-underline-pilot` — 8 commits, 15 files, +964/-43.
@@ -310,7 +311,7 @@ been CI-tested before this.
 | 2 | ⚠️ **No pilot was ever numbered 2** — see note below. The work occupying this slot: 3 new `Badge` variants + mapping of the remaining Phase 1.1 status tokens | `56b91f8` | *(no pilot doc)* |
 | 3 | `Button` → jade primary, `focus-visible` ring unified to jade. Surfaced and recorded **decision #36** (primary/accent role definition) | `fdf8484`, `c0ecf2e`, `21f2d73` | `decisions.md` #36 |
 | 4 | `Dialog` / `Sheet` overlay → `--overlay` token, focus ring unified to jade. `Popover` and `DropdownMenu` were audited and **closed as no-change** | `0345c3d` | `phase2-overlay-pilot.md` |
-| 5 | `Card` — ❌ **NOT DONE.** Never migrated; no commit in this phase touched `card.tsx`. Reopened as pending: audit complete, migration ticket outstanding | *(none)* | *(pending)* |
+| 5 | `Card` + `Toolbar` — ✅ **DONE.** Both migrated to `rounded-panel` (10px); `Card` additionally to `shadow-elev-1`. `--card`/`--card-foreground` alias deliberately kept, not collapsed to `--surface` | *(this commit)* | `decisions.md` #37 |
 | — | **Pre-merge dead-token cleanup**: deleted `--input`, `--ring` and the four `--status-*` teal tokens (all zero-consumer); `dropdown-menu.tsx` bare `border` → `border-border` | `daf5208` | `phase2-token-cleanup.md` |
 
 **⚠️ Pilot-numbering gap (recorded as-found, not reconciled).** The repo documents
@@ -318,8 +319,8 @@ Pilots 1, 3 and 4; the string "Pilot 2" appears nowhere in `docs/` or any commit
 message. `card.tsx` was **never modified** by any commit in this phase. If Pilot 2
 was intended to cover Card/Badge, only the Badge half landed (`56b91f8`, +3
 variants) and it was committed as Phase 1.1 status-token work rather than as a
-Phase 2 pilot. **The Card half was never done at all** — see the status callout
-above; this is the reason Phase 2 is no longer recorded as closed.
+Phase 2 pilot. **The Card half was never done at all** until the Card pilot
+shipped on 2026-08-30 (decision #37), which is what returned Phase 2 to closed.
 
 **⚠️ PR #1 was not opened as a draft.** It was intended to be (its title still
 reads "DRAFT … not ready to merge") but was created ready-for-review and merged
@@ -357,7 +358,10 @@ status is remapped onto it. See `decisions.md` #36 and its tracker table.
 | Third role tier | ⏭️ Not scheduled | `decisions.md` #8 |
 | `Sidebar.tsx:21` `focus-visible:outline-brand` still resolves to violet — a violation of decision #36's jade-focus-ring rule | 🟡 OPEN — explicitly deferred; not blocking, no ticket opened yet (was out of Pilot 3 scope) | `decisions.md` #36 |
 | `info` status token (`#6C4BF4`) is identical to `--accent` violet | 🟡 OPEN — must be resolved before Phase 4 remaps any status | `decisions.md` #36 |
-| `Card` (`card.tsx`) never migrated during Phase 2 — Card pilot outstanding | 🟡 OPEN — Phase 2 reopened as partially complete; audit done, migration ticket pending | this file, Phase 2 section |
+| `Card` + `Toolbar` → `panel` radius, `Card` → `elev-1` | ✅ DONE 2026-08-30 — closed the gap that reopened Phase 2 | `decisions.md` #37 |
+| "Table container" named by `decisions.md` #35 but no such component exists | 🟡 OPEN — deferred out of the Card pilot; creating one is a design change | `decisions.md` #37 |
+| 10 hand-rolled `rounded-md border border-border` panel-like sites | 🟡 OPEN — deferred; needs a per-site sweep (5 avatar squares are `control`/`pill`, not `panel`) | `decisions.md` #37 |
+| `Dialog`/`Sheet` still `sm:rounded-md` + `shadow-none` | 🟡 OPEN — `modal`/`elev-3` targets never applied; Pilot 4 did overlay + focus ring only | `decisions.md` #34/#35/#37 |
 
 ---
 
@@ -376,7 +380,7 @@ status is remapped onto it. See `decisions.md` #36 and its tracker table.
 | UI/UX Polish — Phase 2 (module-by-module) | ✅ 2026-08-15 (Parts 29a-29g + 29-CLOSEOUT) |
 | UI/UX Polish — Design System & Interaction Refresh | ✅ 2026-08-20 |
 | Light Theme Migration | ✅ 2026-08-21 |
-| Direction C — Component Primitives (Phase 2) | 🟡 PARTIALLY COMPLETE 2026-08-29 — Pilots 1/3/4 + token cleanup merged `290c173` via PR #1, CI green (2 checks); **Card pilot outstanding** |
+| Direction C — Component Primitives (Phase 2) | ✅ 2026-08-30 — Pilots 1/3/4 + token cleanup merged `290c173` via PR #1; Card + Toolbar pilot shipped (decision #37) |
 
 ---
 

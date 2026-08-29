@@ -17,7 +17,7 @@ export const Toolbar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTM
     <div
       ref={ref}
       className={cn(
-        "flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface p-3",
+        "flex flex-wrap items-center justify-between gap-3 rounded-panel border border-border bg-surface p-3",
         className
       )}
       {...props}
