@@ -402,6 +402,43 @@ here. Flagged, not back-filled — see "Needs attention" in the close-out report
 
 ---
 
+## Standalone follow-up — Card/Button/Badge typography & style cleanup — ✅ COMPLETE (2026-08-30)
+
+**Not under any phase.** Same category as the Popover/DropdownMenu/Select
+ticket (Pilot 7) and the `shadow-none` retirement (Pilot 8): residual work
+picked up after Phase 2 closed. **Phase 2 was not reopened and stays
+✅ CLOSED** per `decisions.md` #38. Full reasoning in `decisions.md` #42.
+
+Three gaps closed, all typography/shape — no radius, shadow or color token
+was touched on any of the three components:
+
+| File | Change |
+|---|---|
+| `card.tsx` | `CardTitle`: `text-2xl font-semibold leading-none tracking-tight` → `text-heading-card`. Left over from #37, which migrated Card's radius + shadow only. |
+| `button.tsx` | `default` variant loses `uppercase tracking-wide text-xs`, falling through to the base's existing `text-sm font-medium`. Left over from Pilot 3, which migrated jade brand colors only. |
+| `badge.tsx` | Outline → **Soft Badge** (tint bg + subtle border + high-contrast text) on the 5 status families; `uppercase tracking-wide` removed from the base for all 8 variants. Badge's *shape* had never been assigned a decision number — Phase 1.1 gave it status *colors* only. |
+| 3 call sites | `EnvironmentDetailPage.tsx:105`, `ServerCard.tsx:40`, `ServerDetailPage.tsx:190` — dropped an obsolete `className="text-base"` that would otherwise have stacked against the new token instead of being deduped by `twMerge`. |
+
+**Two ticket premises were wrong and are corrected in #42.** The Button
+casing was on the `default` **variant**, not the shared base — the other five
+variants were already sentence case at 14px, so there was no cross-variant
+split to repair. And `text-heading-card` carries **no** `tracking` and
+`text-body` is 14px/**20px** with no weight, not the values the ticket quoted;
+the tokens were used exactly as `tailwind.config.js` defines them.
+
+**Verified:** 593/593 tests (61 files, matching baseline) — no test asserted
+any replaced class, so none changed. Lint clean, build clean. Before/after
+browser sweep at 1280px via `tests/visual-sweep/typography-cleanup.spec.ts`
+with computed styles read off the DOM.
+
+**🟡 One open item handed to the Architect.** `Badge`'s `default`, `secondary`
+and `outline` variants could **not** be converted without inventing token
+values, so they keep the outline treatment. The result is a visible
+two-treatment split — on `/schedule`, `pending`/`cancelled` render soft while
+`done`/`in progress` stay outline. See `decisions.md` #42c.
+
+---
+
 ## Next up — Phase 4 (semantic status remap)
 
 **Not started.** Phase 4 is the next phase to plan.
@@ -431,6 +468,9 @@ status is remapped onto it. See `decisions.md` #36 and its tracker table.
 | Elevation model — `shadow-none` retired, `elev-0` sole zero-elevation token | ✅ DONE 2026-08-30 — **elevation model now fully closed**: every component `decisions.md` #34 named carries an explicit `elev-*` token, and **zero components remain on the old ad-hoc `shadow-none`** (0 occurrences codebase-wide). Final 4 sites migrated: Topbar, calendar, tabs, toast. Standalone ticket (Pilot 8), not under any Phase | `decisions.md` #41 |
 | `Popover`/`DropdownMenu`/`Select` content shadow | ✅ DONE 2026-08-30 — **completed as a standalone ticket (Pilot 7), not under any Phase.** All three → `shadow-elev-2`, executing `decisions.md` #34's existing assignment; radius unchanged at `rounded-md` (6px). Resolves the `Dialog` desync. **Phase 2 was not reopened and stays ✅ CLOSED** | `decisions.md` #40 |
 | Phase 2 blocker bar — closed at Card and Dialog/Sheet | ✅ CLOSED 2026-08-30 — five known-deferred items explicitly ruled out; no third reopening on "same-class-of-gap" grounds | `decisions.md` #38 |
+| `Card`/`Button`/`Badge` typography + Badge shape | ✅ DONE 2026-08-30 — **standalone ticket, not under any Phase.** `CardTitle` → `text-heading-card`; `Button` `default` loses `uppercase tracking-wide text-xs` (it was variant-scoped, **not** the shared base — ticket premise corrected); `Badge` → Soft Badge on the 5 status families, `uppercase` gone from all 8. **Phase 2 was not reopened and stays ✅ CLOSED** | `decisions.md` #42 |
+| `Badge` `default`/`secondary`/`outline` still outline-style | 🟡 OPEN — not convertible without inventing values: `brand` has no `-border`/`-text` Tailwind mapping (the `globals.css` vars exist), and `secondary`/`outline` have no status token set at all. Leaves a visible two-treatment split in the `/schedule` status column. **Needs an Architect decision** | `decisions.md` #42c |
+| `tailwind-merge` does not recognise our custom `fontSize` keys | 🟡 OPEN — `twMerge("text-heading-card","text-base")` emits **both** classes instead of deduping, so a call-site font-size override silently stacks against a governed token rather than replacing it. Worked around per-site during #42 (3 obsolete overrides removed); the systemic fix is a `tailwind-merge` custom config, not yet done | `decisions.md` #42a |
 
 ---
 

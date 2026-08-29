@@ -37,7 +37,7 @@ export default function ServerCard({ server }: Props) {
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-2">
         <div>
-          <CardTitle className="text-base">
+          <CardTitle>
             <Link to={`/servers/${server.id}`} className="hover:underline">
               {server.display_name}
             </Link>

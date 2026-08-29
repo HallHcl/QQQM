@@ -187,7 +187,7 @@ export default function ServerDetailPage() {
       aside={(server) => (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Credential references</CardTitle>
+            <CardTitle>Credential references</CardTitle>
           </CardHeader>
           <CardContent>
             {/* manageable: this is the management surface for credential

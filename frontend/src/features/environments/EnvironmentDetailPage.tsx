@@ -102,7 +102,7 @@ export default function EnvironmentDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Servers ({servers.length})</CardTitle>
+              <CardTitle>Servers ({servers.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {/* This section owns its own query, so it keeps its own

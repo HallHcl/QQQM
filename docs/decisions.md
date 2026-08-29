@@ -1520,6 +1520,125 @@ clean, **zero `shadow-none` occurrences codebase-wide**. Browser-verified on
 3 of 4 sites (the 4th is the unrenderable calendar path): computed `box-shadow`
 identical before and after. No test asserts these classes, so no test changed.
 
+## 42. [Direction C — Component Primitives] Card/Button/Badge typography cleanup — `heading-card` title, sentence-case buttons, Soft Badge (standalone, 2026-08-30)
+
+**Decision:** three residual style/typography gaps left over from earlier
+component work are closed together. **This is not a Phase 2 reopening.**
+Phase 2 stays ✅ **CLOSED** per decision #38, which spent the blocker bar and
+ruled that Phase 2 will not reopen a third time on same-class-of-gap
+reasoning. This ticket is **standalone follow-up work under no phase** — the
+same category as the Popover/DropdownMenu/Select ticket recorded at #40.
+
+The three gaps and their provenance:
+
+| Component | Gap | Left over from |
+|---|---|---|
+| `CardTitle` | `text-2xl` (24px) — never migrated to the governed type scale | **#37** (Card pilot migrated radius + shadow only) |
+| `Button` `default` | `uppercase tracking-wide text-xs` | **Pilot 3** (jade brand-color migration only) |
+| `Badge` | outline shape, `uppercase` | **never assigned a decision number** — Phase 1.1 gave Badge status *colors*, but its *shape* was never migrated |
+
+### 42a. `CardTitle` → `text-heading-card`
+
+`"text-2xl font-semibold leading-none tracking-tight"` → `"text-heading-card"`.
+All four classes go: the token bundles size, line-height and weight
+(`1rem / 1.5rem / 600`, confirmed via `resolveConfig`), and `leading-none`
+would have overridden the token's line-height. Browser-verified
+`24px/24px/600/-0.6px` → `16px/24px/600/normal`.
+
+**Corrected two mistaken claims in the ticket** while doing this:
+
+- The ticket described `text-heading-card` as carrying `tracking -0.01em`.
+  **It does not** — `tailwind.config.js` defines no `letterSpacing` for it.
+  The token was used exactly as defined; no letter-spacing was invented. The
+  net effect is that CardTitle's tracking goes from `-0.6px` to `normal`.
+- The ticket described `text-body` as `14px/22px/400`. The config says
+  `0.875rem / 1.25rem` with **no** `fontWeight` — i.e. 14px/20px. See 42b.
+
+**Three call sites lost an obsolete override.** `EnvironmentDetailPage.tsx:105`,
+`ServerCard.tsx:40` and `ServerDetailPage.tsx:190` each passed
+`className="text-base"` purely to shrink CardTitle back down from 24px. Those
+are now redundant *and actively harmful*: `cn()` is `twMerge`, and
+**`tailwind-merge` does not recognise our custom fontSize keys** as font-size
+classes (verified directly — `twMerge("text-heading-card", "text-base")`
+returns *both* classes rather than deduping). Left in place, `text-base` would
+not have replaced `text-heading-card`; both rules would have emitted and the
+cascade would have decided, silently dropping the token's bundled
+`font-weight: 600`. The overrides were removed.
+
+### 42b. `Button` — `default` variant only; base left alone
+
+**The ticket's premise was wrong and is corrected here.** `uppercase
+tracking-wide text-xs` was **not** on the shared base class — it lived on the
+`default` **variant** alone. Every other variant (`destructive`, `outline`,
+`secondary`, `ghost`, `link`) already inherited the base's
+`text-sm font-medium` and was already sentence case at 14px. Browser-verified
+on the "before" pass: `default` at `12px/uppercase/ls 0.3px`, all five others
+at `14px/none/normal`. So the fix is a three-class deletion from `default`;
+there was never a cross-variant split to repair.
+
+**Base deliberately kept as `text-sm font-medium`, not changed to
+`text-body`.** The two are byte-identical (`0.875rem / 1.25rem`) — the config's
+own comment on `body` says so: *"Body copy — existing Tailwind text-sm default,
+kept as-is."* Swapping in `text-body` would have bought zero visual change
+while introducing the same `twMerge` blindness described in 42a: `text-sm`
+correctly dedupes against a call-site override, `text-body` would not.
+`NotificationBell.tsx` has a live Button passing `text-[10px]`, which today
+correctly beats `text-sm` — under `text-body` it would collide instead. The
+spec target ("sentence case 14px / font-medium") is already met exactly by the
+existing base.
+
+### 42c. `Badge` — Soft Badge on the five status families only
+
+Base loses `uppercase tracking-wide` **and** `bg-transparent` (the tint now
+supplies the background). It keeps `text-xs font-medium` = 12px / 500, which
+is already the Master Plan target — no token change was needed.
+
+Shape converted to tint background + subtle border + high-contrast text using
+each family's existing Phase 1 `-tint` / `-border` / `-text` sub-tokens:
+
+| Variant | After |
+|---|---|
+| `destructive` | `bg-danger-tint border-danger-border text-danger-text` |
+| `warning` | `bg-warning-tint border-warning-border text-warning-text` |
+| `success` | `bg-success-tint border-success-border text-success-text` |
+| `info` | `bg-info-tint border-info-border text-info-text` |
+| `neutral` | `bg-neutral-tint border-neutral-border text-neutral-text` |
+
+**Three variants were deliberately NOT converted** — `default`, `secondary`,
+`outline`. They keep their outline treatment and `bg-transparent`, and receive
+only the base-level uppercase removal. Reasons, per variant:
+
+- **`default`** maps to `brand` (`--accent`). `brand` has a `tint` mapping in
+  `tailwind.config.js` but **no `border` or `text` mapping**. The underlying
+  CSS variables `--accent-border` and `--accent-text` *do* exist in
+  `globals.css:57-58` — only the Tailwind mapping is missing. Adding it is a
+  `tailwind.config.js` change beyond this ticket's three-file scope.
+- **`secondary`** and **`outline`** have **no status token set at all**. They
+  are not status families; `secondary` is the "Deleted" tag and `outline` is
+  the type-label badge. Assigning them to `neutral` would be a semantic
+  remap — a design decision, not a token migration.
+
+Converting any of the three would have meant inventing values, which this
+ticket explicitly forbids.
+
+**The consequence is a visible split, and it is not cosmetic.** On
+`/schedule`, `pending` (warning) and `cancelled` (destructive) now render as
+soft tinted badges while `done` (default) and `in progress` (secondary) stay
+outline — four status badges in one column, two treatments. This is
+**captured in `typography-cleanup-after/3-schedule-badges.png`** and needs an
+Architect decision; see the tracker row and the Badge entry below.
+
+**Verified:** 593/593 tests pass (61 files, matching the #37/#39/#40/#41
+baseline), lint clean (2 pre-existing `only-export-components` warnings on the
+`cva` exports, unchanged by this ticket), build clean. **No test asserts any
+of the replaced classes** — a codebase-wide grep for `text-2xl`, `uppercase`,
+`tracking-wide` and `text-xs` across every `*.test.ts`/`*.test.tsx` returned
+exactly one unrelated hit (`initials.test.ts:19`, a string-casing assertion),
+so no test needed changing. Browser-verified before/after at 1280px via
+`tests/visual-sweep/typography-cleanup.spec.ts`, computed styles read straight
+off the DOM; every rendered badge colour matches its `globals.css` value
+exactly.
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -1554,3 +1673,6 @@ identical before and after. No test asserts these classes, so no test changed.
 | `Popover`/`DropdownMenu`/`Select` content shadow | ✅ Done 2026-08-30 | **Pilot 7**, standalone ticket under no phase: all three → `shadow-elev-2`, executing #34's existing assignment. Radius unchanged at `rounded-md` (6px). `Popover` regrouped out of #35's `modal` row into the new Floating Layer group; #35's Dropdown/Select radius gap closed at the same time. Phase 2 stays ✅ CLOSED — see decision #40 |
 | `elev-0` vs `shadow-none` — the thrice-deferred overlap question | ✅ Closed 2026-08-30 | **Answered: `shadow-none` retired.** 4 remaining sites (Topbar, calendar, tabs, toast) → `shadow-elev-0`; zero `shadow-none` occurrences remain codebase-wide. Elevation model now fully applied across every component #34 named — see decision #41 |
 | Phase 2 blocker bar — closed at Card and Dialog/Sheet | ✅ Closed 2026-08-30 | Five known-deferred items explicitly ruled out; Phase 2 will not reopen a third time on "same-class-of-gap" reasoning for any of them — see decision #38 |
+| `Card`/`Button`/`Badge` typography + Badge shape | ✅ Done 2026-08-30 | Standalone ticket under no phase, same category as #40. `CardTitle` → `text-heading-card`; `Button` `default` loses `uppercase tracking-wide text-xs` (it was variant-scoped, **not** base — ticket premise corrected); `Badge` → Soft Badge on the 5 status families. Phase 2 stays ✅ CLOSED — see decision #42 |
+| `Badge` `default`/`secondary`/`outline` still outline-style | 🟡 OPEN | Not convertible without inventing values: `brand` has no `-border`/`-text` Tailwind mapping (the CSS vars exist), and `secondary`/`outline` have no status token set. Produces a visible two-treatment split in the `/schedule` status column. Needs an Architect decision — see decision #42c |
+| `tailwind-merge` does not recognise our custom `fontSize` keys | 🟡 OPEN | `twMerge("text-heading-card","text-base")` emits **both** — custom scale keys are not deduped against Tailwind's built-in sizes, so a call-site override silently stacks instead of replacing. Worked around per-site at #42; the systemic fix is a `tailwind-merge` custom config, not yet done — see decision #42a |
