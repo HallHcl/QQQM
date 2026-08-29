@@ -116,6 +116,13 @@ export default {
           hover: "rgb(var(--accent-hover) / <alpha-value>)",
           active: "rgb(var(--accent-active) / <alpha-value>)",
           tint: "rgb(var(--accent-tint) / <alpha-value>)",
+          // Mapping only, added by decision #43. `--accent-border` and
+          // `--accent-text` already existed in globals.css (lines 57-58) but
+          // had no Tailwind mapping, which is why badge.tsx's `default`
+          // variant could not be converted to Soft Badge at #42c. NOT applied
+          // to any component here — the status remap is Phase 4 work.
+          border: "rgb(var(--accent-border) / <alpha-value>)",
+          text: "rgb(var(--accent-text) / <alpha-value>)",
         },
         surface: {
           DEFAULT: "rgb(var(--surface) / <alpha-value>)",

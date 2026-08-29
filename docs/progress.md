@@ -439,6 +439,52 @@ two-treatment split — on `/schedule`, `pending`/`cancelled` render soft while
 
 ---
 
+## Standalone follow-up — `tailwind-merge` systemic fix + `brand` token mapping — ✅ COMPLETE (2026-08-30)
+
+**Not under any phase.** Tooling and token plumbing, closing the two systemic
+gaps that the Card/Button/Badge cleanup surfaced. Full reasoning in
+`decisions.md` #43.
+
+| File | Change |
+|---|---|
+| `src/lib/utils.ts` | `twMerge` → `extendTailwindMerge`, registering all **7** custom `fontSize` keys (`heading-page`, `heading-section`, `heading-card`, `body`, `body-sm`, `label`, `caption`) in the `font-size` class group. |
+| `tailwind.config.js` | `brand.border` → `--accent-border`, `brand.text` → `--accent-text`. **Mapping only — applied to no component.** |
+| `src/lib/utils.test.ts` | **New**, 6 tests. Pins both merge directions and cross-checks the registration list against `theme.extend.fontSize`, so an unregistered new type token fails CI. |
+
+**⚠️ This was NOT the inert change it was expected to be.** #42 recorded the
+hazard as purely latent. A full audit of every `className` literal proved
+otherwise: **`calendar.tsx` was live-broken.** Its `weekday` and `week_number`
+strings put `text-muted-foreground` *before* `text-caption`, and because the
+old merger mistook `text-caption` for a color it **deleted the real color**.
+The calendar's weekday headers and week numbers had been rendering at full
+foreground (`rgb(16,24,40)`) instead of muted (`rgb(71,84,103)`). Browser-
+verified before and after. **This ticket repairs that** — the component always
+asked for the muted color and finally gets it.
+
+The other 11 flagged literals (`MetricCard` ×5, six list-avatar squares) are
+**false positives**: they set `className` directly on a plain DOM element, so
+`cn()` never ran on them.
+
+**Ticket corrections, both verified against the repo:**
+- The expected fontSize key list named `table-head` and `mono`. **Neither is a
+  fontSize token** — `table-head` does not exist anywhere; `mono` is a
+  `fontFamily` entry.
+- The CSS variables were named `--brand-border` / `--brand-text`. **No
+  `--brand-*` variable exists.** The real names are `--accent-border` /
+  `--accent-text` (`globals.css:57-58`); Tailwind's `brand.*` namespace has
+  always aliased `--accent*`. No new CSS variable was created.
+
+**Scope held:** no badge variant's classes changed; `ScheduleList.tsx`,
+`ClientsPage.tsx`, `OverviewPage.tsx` and every other status call site are
+untouched. The semantic remap remains Phase 4 work.
+
+**Verified:** **599/599 tests (62 files) — the baseline moves from 593 to 599**
+(+6 / +1 file, all the new guard; no pre-existing test changed). Lint clean,
+build clean. Visual sweep at 1280px: login/Overview/People byte-identical to
+the post-#42 commit, `/schedule` changed by exactly the calendar repair.
+
+---
+
 ## Next up — Phase 4 (semantic status remap)
 
 **Not started.** Phase 4 is the next phase to plan.
@@ -469,8 +515,11 @@ status is remapped onto it. See `decisions.md` #36 and its tracker table.
 | `Popover`/`DropdownMenu`/`Select` content shadow | ✅ DONE 2026-08-30 — **completed as a standalone ticket (Pilot 7), not under any Phase.** All three → `shadow-elev-2`, executing `decisions.md` #34's existing assignment; radius unchanged at `rounded-md` (6px). Resolves the `Dialog` desync. **Phase 2 was not reopened and stays ✅ CLOSED** | `decisions.md` #40 |
 | Phase 2 blocker bar — closed at Card and Dialog/Sheet | ✅ CLOSED 2026-08-30 — five known-deferred items explicitly ruled out; no third reopening on "same-class-of-gap" grounds | `decisions.md` #38 |
 | `Card`/`Button`/`Badge` typography + Badge shape | ✅ DONE 2026-08-30 — **standalone ticket, not under any Phase.** `CardTitle` → `text-heading-card`; `Button` `default` loses `uppercase tracking-wide text-xs` (it was variant-scoped, **not** the shared base — ticket premise corrected); `Badge` → Soft Badge on the 5 status families, `uppercase` gone from all 8. **Phase 2 was not reopened and stays ✅ CLOSED** | `decisions.md` #42 |
-| `Badge` `default`/`secondary`/`outline` still outline-style | 🟡 OPEN — not convertible without inventing values: `brand` has no `-border`/`-text` Tailwind mapping (the `globals.css` vars exist), and `secondary`/`outline` have no status token set at all. Leaves a visible two-treatment split in the `/schedule` status column. **Needs an Architect decision** | `decisions.md` #42c |
-| `tailwind-merge` does not recognise our custom `fontSize` keys | 🟡 OPEN — `twMerge("text-heading-card","text-base")` emits **both** classes instead of deduping, so a call-site font-size override silently stacks against a governed token rather than replacing it. Worked around per-site during #42 (3 obsolete overrides removed); the systemic fix is a `tailwind-merge` custom config, not yet done | `decisions.md` #42a |
+| `Badge` `default`/`secondary`/`outline` still outline-style | 🟡 OPEN — not convertible without inventing values: `brand` has no `-border`/`-text` Tailwind mapping (the `globals.css` vars exist), and `secondary`/`outline` have no status token set at all. Leaves a visible two-treatment split in the `/schedule` status column. **Needs an Architect decision. Narrowed 2026-08-30 by #43** — `brand.border`/`brand.text` are now mapped, so `default` is mechanically convertible; `secondary`/`outline` still are not. The conversion is Phase 4 work | `decisions.md` #42c, #43b |
+| `tailwind-merge` does not recognise our custom `fontSize` keys | ✅ CLOSED 2026-08-30 by #43 — `cn()` now uses `extendTailwindMerge` with all 7 custom type keys registered in the `font-size` group. Fixed **both** directions, including the worse one #42 missed: a plain text-color was silently deleting the size token. **Not inert** — repaired a live `calendar.tsx` defect. Guarded by `src/lib/utils.test.ts`, which cross-checks the registration list against the config | `decisions.md` #43a |
+| `brand.border` / `brand.text` Tailwind mapping | ✅ DONE 2026-08-30 — mapping only, **deliberately applied to no component**. Maps to the pre-existing `--accent-border` / `--accent-text` (**there are no `--brand-*` CSS vars** — the ticket's names were wrong). Unblocks `badge.tsx` `default` for Phase 4 | `decisions.md` #43b |
+| `calendar.tsx` weekday headers / week numbers rendering un-muted | ✅ FIXED 2026-08-30 as a side effect of #43 — `text-muted-foreground` was being silently deleted by the old merger; headers had been rendering at `rgb(16,24,40)` instead of `rgb(71,84,103)`. Nobody had reported it | `decisions.md` #43a-i |
+| Master Plan doc vs `tailwind.config.js` token-value conflict | ✅ RESOLVED 2026-08-30 — **`tailwind.config.js` is the source of truth** (Architect decision). `text-heading-card` = 16px/24px/600/tracking `normal`; `text-body` = 14px/20px/400. The external Master Plan is historical/aspirational where it conflicts | `decisions.md` #43c |
 
 ---
 
