@@ -1085,8 +1085,9 @@ already have 53 live usages.
 |---|---|---|
 | `control` | `6px` | Button, Input, Select, Badge, Checkbox |
 | `panel` | `10px` | Card, Table container, Toolbar |
-| `modal` | `14px` | Dialog, Sheet, Popover |
+| `modal` | `14px` | Dialog, Sheet |
 | `pill` | `9999px` | Avatar, Pill Chip, Status Dot |
+| *(none — Tailwind `rounded-md`, 6px)* | `6px` | **Floating Layer:** Popover, DropdownMenu, Select content |
 
 **Note:** Existing `rounded-sm`/`rounded-md`/`rounded-lg`/`rounded-full`
 usages are untouched by this ticket; migration to the new semantic
@@ -1095,6 +1096,18 @@ scale happens per-component in a later phase.
 **Known overlap:** `pill` (`9999px`) is identical in value to the
 pre-existing `rounded-full` utility (4 live usages). Same open question
 as above — resolve at migration time.
+
+> **↪ Amended 2026-08-30 by decision #40.** Two changes, both radius-only:
+> **(1)** `Popover` was removed from the `modal` row, which originally read
+> "modal | 14px | Dialog, Sheet, Popover". It was grouped with
+> Dialog/Sheet when this decision was written; #40 regroups it with
+> DropdownMenu and Select as a transient **Floating Layer**, which keeps
+> Tailwind's `rounded-md` (6px). **(2)** A Floating Layer row was added,
+> closing the radius gap this decision previously left for `DropdownMenu`
+> and `Select` (they had no radius target at all). The value is simply
+> "unchanged, 6px" and required no design debate. `Dialog` and `Sheet` keep
+> `modal` (14px) — see #39. **This decision remains radius-only; elevation
+> targets live in #34.** See decision #40 for the full reasoning.
 
 ## 36. [Direction C — Component Primitives] Primary/Accent Role Definition
 
@@ -1342,6 +1355,95 @@ future "mobile polish" pass after Phase 7**. It is **not** a Phase 2 item,
 as an open Phase 2 question; per decision #38 it is a deliberate deferral, not
 a qualifying gap.
 
+## 40. [Direction C — Component Primitives] Floating Layer shadow migration (Popover/DropdownMenu/Select, Pilot 7, 2026-08-30)
+
+**Decision:** `Popover`, `DropdownMenu` (both content surfaces) and `Select`
+content migrate from `shadow-none` to **`shadow-elev-2`**. Radius is
+**unchanged** — all three stay on Tailwind's `rounded-md` (6px).
+
+| File | Line | Before | After |
+|---|---|---|---|
+| `popover.tsx` | 20 | `shadow-none` | `shadow-elev-2` |
+| `dropdown-menu.tsx` | 48 (`DropdownMenuContent`) | `shadow-none` | `shadow-elev-2` |
+| `dropdown-menu.tsx` | 66 (`DropdownMenuSubContent`) | `shadow-none` | `shadow-elev-2` |
+| `select.tsx` | 94 (`SelectContent`) | `shadow-none` | `shadow-elev-2` |
+
+**(a) This executes #34's existing assignment — no new elevation authorization
+was needed.** Decision #34's elevation table has assigned `elev-2` to
+"Dropdown, Popover, Select" since it was written; those three were named
+explicitly. This ticket is the per-component adoption #34 anticipated
+("per-component adoption happens in a later phase, pilot-first"), not a new
+elevation decision. `elev-2` =
+`0 4px 8px -2px rgba(16,24,40,.08), 0 2px 4px -2px rgba(16,24,40,.06)`.
+
+**(b) Radius unchanged; this is a shadow-only ticket.** No `rounded-*` class was
+touched in any of the three files. Verified before and after: the radius
+inventory across all three files is byte-identical, and all three surfaces
+still render `border-radius: 6px` in-browser at both 1280px and 375px.
+
+**(c) Popover's radius grouping is formally changed — superseding one line of
+#35.** Decision #35's radius table originally read:
+
+```
+| Token   | Value  | Intended for           |
+| `modal` | `14px` | Dialog, Sheet, Popover |
+```
+
+`Popover` was grouped with `Dialog`/`Sheet` there. That grouping does not match
+how the component behaves: `Popover` is a **transient floating menu** that shares
+a character-identical recipe with `DropdownMenu` and `Select` content
+(`rounded-md border border-border bg-popover text-popover-foreground`), whereas
+`Dialog` is a blocking centre modal and `Sheet` an edge-anchored drawer — both
+now on `modal` (14px) + `elev-3` per #39. **This decision moves `Popover` into
+the Floating Layer radius group at `rounded-md` (6px), alongside `DropdownMenu`
+and `Select`, superseding that specific line of #35.** #35 has been amended
+accordingly, with a pointer back here. Nothing else in #35 changes, and #35
+remains radius-only.
+
+**The Floating Layer group, defined:**
+
+| Group | Members | Radius | Shadow |
+|---|---|---|---|
+| **Floating Layer** (transient menus) | `Popover`, `DropdownMenu`, `Select` content | `rounded-md` (6px, unchanged) | `elev-2` |
+| Modal | `Dialog`, `Sheet` | `modal` (14px) | `elev-3` |
+
+**`Dialog` is explicitly NOT part of the Floating Layer group.** It is a
+different elevation class — a blocking modal, not a transient menu — and keeps
+`rounded-modal` + `elev-3`. Do not apply Floating Layer tokens to it.
+
+**(d) This closes the item tracked at Phase 2's closure, and is NOT a Phase 2
+reopening.** `progress.md` and decision #38 recorded
+`Popover`/`DropdownMenu`/`Select` as a tracked future ticket — deliberately
+excluded from Pilot 6 by scope option (a), an informed decision rather than an
+undiscovered miss, which is precisely why it did **not** qualify as a Phase 2
+blocker under #38's bar. **Phase 2 remains ✅ CLOSED.** This is independent,
+unbound work carried out as a standalone ticket under no phase. It does not
+reopen, reclassify, or otherwise disturb Phase 2's closure.
+
+**Ticket-premise corrections recorded during Task 0.** The commissioning ticket
+stated that #35 needed a shadow target added for these three components and that
+`DropdownMenu`/`Select` "have no shadow target at all today". Both were wrong:
+#34 had already assigned them `elev-2`, and #35 is radius-only and contains zero
+mentions of shadow or elevation. Work stopped and reported before any file was
+touched; the ticket was then corrected, and #35's amendment above is confined to
+radius. Recorded so the corrected understanding is not lost.
+
+**Consequence — the desync is resolved.** Before this ticket, `Dialog` (14px +
+`elev-3`) was visibly desynchronised from three surfaces that had matched its
+recipe character-for-character. The two groups are now deliberately and
+legibly distinct: transient menus sit lower (6px, `elev-2`), the blocking modal
+sits higher (14px, `elev-3`). That is the intended end state, not drift.
+
+**Verified:** 593/593 tests pass (61 files, matching the #37/#39 baseline), lint
+clean, build clean. Browser-verified at 1280px and 375px on one instance of each
+component: shadow `none` → `elev-2`, radius `6px` → `6px` (unchanged) in all six
+measurements. No test asserts these classes, so no test file changed.
+
+**`shadow-none` census:** 4 live usages remain after this ticket — `Topbar`,
+`calendar`, `tabs`, `toast` — down from 11 when #34 was written. #34's deferred
+`elev-0`-vs-`shadow-none` question is still unanswered and is now the only
+elevation item left open.
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -1373,5 +1475,5 @@ a qualifying gap.
 | "Table container" named by #35 but no such component exists | 🟡 OPEN | `table.tsx` root is `relative w-full overflow-auto` — no border/radius/bg. Creating one is a design change, not a token migration; deferred — see decision #37 |
 | 10 hand-rolled `rounded-md border border-border` panel-like sites | 🟡 OPEN | Do not follow `Card` automatically; 5 further 32px avatar squares share the string but are `control`/`pill`, not `panel`. Needs a per-site sweep — see decision #37 |
 | `Dialog`/`Sheet` radius + shadow | ✅ Done 2026-08-30 | **Pilot 6**: Dialog → `rounded-modal` (14px, all breakpoints) + `elev-3`; Sheet → `elev-3`, radius intentionally left square. Consciously overrides Pilot 4 §9's no-elevation finding. Mobile radius differentiation deferred to a post-Phase-7 mobile polish pass — see decision #39 |
-| `Popover`/`DropdownMenu`/`Select` content still `rounded-md` + `shadow-none` | 🟡 OPEN — tracked future ticket, not urgent, no deadline | Visibly desynced from `Dialog` after Pilot 6. **Does not qualify as a Phase 2 blocker under #38**: it was an explicit, informed scope decision (option a, taken knowing the desync would result), not an undiscovered miss. If ever picked up as scope option (b), **#35 must be amended first** — it gives `DropdownMenu` and `Select` no radius target at all. See decisions #38/#39 |
+| `Popover`/`DropdownMenu`/`Select` content shadow | ✅ Done 2026-08-30 | **Pilot 7**, standalone ticket under no phase: all three → `shadow-elev-2`, executing #34's existing assignment. Radius unchanged at `rounded-md` (6px). `Popover` regrouped out of #35's `modal` row into the new Floating Layer group; #35's Dropdown/Select radius gap closed at the same time. Phase 2 stays ✅ CLOSED — see decision #40 |
 | Phase 2 blocker bar — closed at Card and Dialog/Sheet | ✅ Closed 2026-08-30 | Five known-deferred items explicitly ruled out; Phase 2 will not reopen a third time on "same-class-of-gap" reasoning for any of them — see decision #38 |

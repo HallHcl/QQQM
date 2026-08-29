@@ -428,7 +428,7 @@ status is remapped onto it. See `decisions.md` #36 and its tracker table.
 | "Table container" named by `decisions.md` #35 but no such component exists | 🟡 OPEN — deferred out of the Card pilot; creating one is a design change | `decisions.md` #37 |
 | 10 hand-rolled `rounded-md border border-border` panel-like sites | 🟡 OPEN — deferred; needs a per-site sweep (5 avatar squares are `control`/`pill`, not `panel`) | `decisions.md` #37 |
 | `Dialog`/`Sheet` radius + shadow | ✅ DONE 2026-08-30 — `Dialog` → `rounded-modal` (all breakpoints) + `elev-3`; `Sheet` → `elev-3`, radius intentionally square. Closed the blocker that reopened Phase 2 | `decisions.md` #39 |
-| `Popover`/`DropdownMenu`/`Select` content still `rounded-md` + `shadow-none` | 🟡 OPEN — tracked future ticket, not urgent, no deadline. Desynced from `Dialog` after Pilot 6, but an explicit informed scope decision, so **not** a Phase 2 blocker under #38. Scope option (b) requires amending #35 first (no radius target for Dropdown/Select) | `decisions.md` #38/#39 |
+| `Popover`/`DropdownMenu`/`Select` content shadow | ✅ DONE 2026-08-30 — **completed as a standalone ticket (Pilot 7), not under any Phase.** All three → `shadow-elev-2`, executing `decisions.md` #34's existing assignment; radius unchanged at `rounded-md` (6px). Resolves the `Dialog` desync. **Phase 2 was not reopened and stays ✅ CLOSED** | `decisions.md` #40 |
 | Phase 2 blocker bar — closed at Card and Dialog/Sheet | ✅ CLOSED 2026-08-30 — five known-deferred items explicitly ruled out; no third reopening on "same-class-of-gap" grounds | `decisions.md` #38 |
 
 ---
