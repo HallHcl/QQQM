@@ -1,6 +1,6 @@
 # QQM — Progress Tracker
 
-Last updated: after Light Theme Migration closeout — 2026-08-21.
+Last updated: after Direction C Phase 2 (Component Primitives) closeout — 2026-08-29.
 
 See `decisions.md` for the reasoning behind blocked/skipped items, and
 `development-guide.md` for the rules every ticket follows.
@@ -10,8 +10,10 @@ See `decisions.md` for the reasoning behind blocked/skipped items, and
 ## Current status
 
 ```
-Current:  Light Theme Migration COMPLETE
-Next:     TBD
+Current:  Direction C — Component Primitives (Phase 2) COMPLETE,
+          merged to main as 290c173 (PR #1, CI green)
+Next:     Phase 4 — semantic status remap. NOT started; one blocking
+          open question first (see "Next up — Phase 4" below).
 ```
 
 ---
@@ -278,6 +280,62 @@ rather than duplicating it here.
 
 ---
 
+## Direction C — Component Primitives (Phase 2) — ✅ CLOSED (2026-08-29)
+
+Migration of the shared UI primitives onto the Direction C tokens: jade
+`--primary` as the system action color, violet `--accent` scoped to selection and
+navigation state only (**decision #36**).
+
+**Merged to `main` as merge commit `290c173`** via **PR #1**, from
+`phase-2/input-underline-pilot` — 8 commits, 15 files, +964/-43.
+**CI: ✅ passed, 2 checks** — `Frontend (lint / build / test)` 80s and
+`Backend (build / test)` 49s (run `33263619488`, event `pull_request`, every step
+green). The PR existed *only* to obtain that verification: `ci.yml` fires solely
+on push to `main` and PRs targeting `main`, so the branch's 8 commits had never
+been CI-tested before this.
+
+| Pilot | Scope | Commits | Evidence |
+|---|---|---|---|
+| 1 | `Input` / `Textarea` / `SelectTrigger` — box border → underline treatment; zero layout shift (box-shadow, not border-bottom); disabled state at 40% opacity | `d091476`, doc `c55fac6` | `phase2-input-underline-pilot.md` |
+| 2 | ⚠️ **No pilot was ever numbered 2** — see note below. The work occupying this slot: 3 new `Badge` variants + mapping of the remaining Phase 1.1 status tokens | `56b91f8` | *(no pilot doc)* |
+| 3 | `Button` → jade primary, `focus-visible` ring unified to jade. Surfaced and recorded **decision #36** (primary/accent role definition) | `fdf8484`, `c0ecf2e`, `21f2d73` | `decisions.md` #36 |
+| 4 | `Dialog` / `Sheet` overlay → `--overlay` token, focus ring unified to jade. `Popover` and `DropdownMenu` were audited and **closed as no-change** | `0345c3d` | `phase2-overlay-pilot.md` |
+| — | **Pre-merge dead-token cleanup**: deleted `--input`, `--ring` and the four `--status-*` teal tokens (all zero-consumer); `dropdown-menu.tsx` bare `border` → `border-border` | `daf5208` | `phase2-token-cleanup.md` |
+
+**⚠️ Pilot-numbering gap (recorded as-found, not reconciled).** The repo documents
+Pilots 1, 3 and 4; the string "Pilot 2" appears nowhere in `docs/` or any commit
+message. `card.tsx` was **never modified** by any commit in this phase. If Pilot 2
+was intended to cover Card/Badge, only the Badge half landed (`56b91f8`, +3
+variants) and it was committed as Phase 1.1 status-token work rather than as a
+Phase 2 pilot.
+
+**⚠️ PR #1 was not opened as a draft.** It was intended to be (its title still
+reads "DRAFT … not ready to merge") but was created ready-for-review and merged
+into `main` 10 seconds after CI reported green, without the further review its
+body requested. CI coverage was nonetheless obtained, which was the objective.
+
+**⚠️ Preceding Direction C work is not recorded in this file.** The Direction C
+*Foundation* phase (`decisions.md` #34 elevation model, #35 radius scale;
+commits `e9c1953`, `71f634c`, `6f59971`) and the `DetailPageShell` / Overview
+metric-tile work (`64957ac`, `76b9479`, `f1530e8`, `9030b63`, `ccb8fd8`,
+`64a935f`) landed on `main` between 2026-08-22 and 2026-08-27 and have no section
+here. Flagged, not back-filled — see "Needs attention" in the close-out report.
+
+---
+
+## Next up — Phase 4 (semantic status remap)
+
+**Not started.** Phase 4 is the next phase to plan.
+
+**🔴 Blocking open question, must be resolved before Phase 4 begins:** the `info`
+status token (`#6C4BF4`) is identical to `--accent` violet. Under decision #36
+violet is now formally scoped to selection/navigation only, so this shared value
+is a **conflict, not a coincidence** — it was previously logged as an unconfirmed
+dual-use question. `info` very likely needs its own distinct color **before** any
+status is remapped onto it. See `decisions.md` #36 and its tracker table.
+
+---
+
 ## Blocked / Deferred (not part of the linear module sequence)
 
 | Item | Status | See |
@@ -285,6 +343,8 @@ rather than duplicating it here.
 | Users CRUD (backend + frontend) | 🚫 BLOCKED / FUTURE | `decisions.md` #7 |
 | `PersonDetailDialog` account-visibility (Part 25c) | ⏭️ Skipped | `decisions.md` #7 |
 | Third role tier | ⏭️ Not scheduled | `decisions.md` #8 |
+| `Sidebar.tsx:21` `focus-visible:outline-brand` still resolves to violet — a violation of decision #36's jade-focus-ring rule | 🟡 OPEN — explicitly deferred; not blocking, no ticket opened yet (was out of Pilot 3 scope) | `decisions.md` #36 |
+| `info` status token (`#6C4BF4`) is identical to `--accent` violet | 🟡 OPEN — must be resolved before Phase 4 remaps any status | `decisions.md` #36 |
 
 ---
 
@@ -303,6 +363,7 @@ rather than duplicating it here.
 | UI/UX Polish — Phase 2 (module-by-module) | ✅ 2026-08-15 (Parts 29a-29g + 29-CLOSEOUT) |
 | UI/UX Polish — Design System & Interaction Refresh | ✅ 2026-08-20 |
 | Light Theme Migration | ✅ 2026-08-21 |
+| Direction C — Component Primitives (Phase 2), Pilots 1/3/4 + token cleanup | ✅ 2026-08-29 — merged `290c173` via PR #1, CI green (2 checks) |
 
 ---
 
