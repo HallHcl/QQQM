@@ -40,6 +40,14 @@ export default {
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       boxShadow: {
+        // Input/Textarea/SelectTrigger underline treatment (Phase 2 pilot).
+        // Implemented as an inset box-shadow rather than a border-bottom so
+        // the 1px -> 2px focus change costs zero layout: box-shadow is not a
+        // layout property, so the control's border box is byte-identical idle
+        // vs focused. A border-bottom-width swap would reflow the content box.
+        'underline': 'inset 0 -1px 0 0 rgb(var(--input-underline))',
+        'underline-focus': 'inset 0 -2px 0 0 rgb(var(--focus-ring))',
+        'underline-disabled': 'inset 0 -1px 0 0 rgb(var(--input-underline) / 0.4)',
         'elev-0': 'none',
         'elev-1': '0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)',
         'elev-2': '0 4px 8px -2px rgba(16,24,40,.08), 0 2px 4px -2px rgba(16,24,40,.06)',
@@ -60,12 +68,12 @@ export default {
       // opacity-modified class using that color instead of erroring.
       colors: {
         border: "rgb(var(--border) / <alpha-value>)",
-        input: "rgb(var(--input) / <alpha-value>)",
-        ring: "rgb(var(--ring) / <alpha-value>)",
         background: "rgb(var(--background) / <alpha-value>)",
         foreground: "rgb(var(--foreground) / <alpha-value>)",
         primary: {
           DEFAULT: "rgb(var(--primary) / <alpha-value>)",
+          hover: "rgb(var(--primary-hover) / <alpha-value>)",
+          active: "rgb(var(--primary-active) / <alpha-value>)",
           foreground: "rgb(var(--primary-foreground) / <alpha-value>)",
         },
         secondary: {
@@ -80,6 +88,11 @@ export default {
           DEFAULT: "rgb(var(--muted) / <alpha-value>)",
           foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
         },
+        // Disabled form-control text (Phase 2 pilot). --text-disabled already
+        // existed in globals.css but had no Tailwind mapping.
+        disabled: {
+          foreground: "rgb(var(--text-disabled) / <alpha-value>)",
+        },
         accent: {
           DEFAULT: "rgb(var(--shadcn-accent) / <alpha-value>)",
           foreground: "rgb(var(--shadcn-accent-foreground) / <alpha-value>)",
@@ -92,37 +105,72 @@ export default {
           DEFAULT: "rgb(var(--card) / <alpha-value>)",
           foreground: "rgb(var(--card-foreground) / <alpha-value>)",
         },
-        // Brand palette (Direction B / Deep Enterprise — blue action accent)
+        // `brand` resolves to --accent violet (#6C4BF4). Per decision #36 this
+        // role is reserved for selection and navigation state only (e.g. the
+        // Sidebar active item) — it is NOT a general-purpose action color.
+        // Jade --primary is the system's primary action color, including focus
+        // rings. The alias name predates that split and is kept only because
+        // call sites still reference it; do not reach for it for new actions.
         brand: {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
           hover: "rgb(var(--accent-hover) / <alpha-value>)",
           active: "rgb(var(--accent-active) / <alpha-value>)",
           tint: "rgb(var(--accent-tint) / <alpha-value>)",
         },
-        // Status/success accent (teal) — new in Direction B, no dark-theme
-        // precedent; see docs/decisions.md #30.
-        status: {
-          DEFAULT: "rgb(var(--status) / <alpha-value>)",
-          hover: "rgb(var(--status-hover) / <alpha-value>)",
-          active: "rgb(var(--status-active) / <alpha-value>)",
-          tint: "rgb(var(--status-tint) / <alpha-value>)",
-        },
         surface: {
           DEFAULT: "rgb(var(--surface) / <alpha-value>)",
           hover: "rgb(var(--surface-hover) / <alpha-value>)",
+          sunken: "rgb(var(--surface-sunken) / <alpha-value>)",
         },
         danger: {
           DEFAULT: "rgb(var(--danger) / <alpha-value>)",
           hover: "rgb(var(--danger-hover) / <alpha-value>)",
           active: "rgb(var(--danger-active) / <alpha-value>)",
           tint: "rgb(var(--danger-tint) / <alpha-value>)",
+          border: "rgb(var(--danger-border) / <alpha-value>)",
+          text: "rgb(var(--danger-text) / <alpha-value>)",
         },
         warning: {
           DEFAULT: "rgb(var(--warning) / <alpha-value>)",
           hover: "rgb(var(--warning-hover) / <alpha-value>)",
           active: "rgb(var(--warning-active) / <alpha-value>)",
           tint: "rgb(var(--warning-tint) / <alpha-value>)",
+          border: "rgb(var(--warning-border) / <alpha-value>)",
+          text: "rgb(var(--warning-text) / <alpha-value>)",
         },
+        // Remaining Phase 1.1 semantic status families. These tokens were
+        // locked in globals.css but had no Tailwind mapping, so nothing could
+        // reach them - which is why "success" states currently render as
+        // --accent violet. Mapping only; no component is wired to them here.
+        success: {
+          DEFAULT: "rgb(var(--success) / <alpha-value>)",
+          tint: "rgb(var(--success-tint) / <alpha-value>)",
+          border: "rgb(var(--success-border) / <alpha-value>)",
+          text: "rgb(var(--success-text) / <alpha-value>)",
+        },
+        info: {
+          DEFAULT: "rgb(var(--info) / <alpha-value>)",
+          tint: "rgb(var(--info-tint) / <alpha-value>)",
+          border: "rgb(var(--info-border) / <alpha-value>)",
+          text: "rgb(var(--info-text) / <alpha-value>)",
+        },
+        neutral: {
+          DEFAULT: "rgb(var(--neutral) / <alpha-value>)",
+          tint: "rgb(var(--neutral-tint) / <alpha-value>)",
+          border: "rgb(var(--neutral-border) / <alpha-value>)",
+          text: "rgb(var(--neutral-text) / <alpha-value>)",
+        },
+      },
+      // Documented exception to the `rgb(var(--x) / <alpha-value>)` rule
+      // above. --overlay (globals.css:90-92) is a composite rgba() value with
+      // its alpha baked in, not a space-separated channel triplet, so it
+      // cannot go through that wrapper — it is referenced as a bare var().
+      // Consequence: `bg-overlay` works, but an opacity modifier on it
+      // (`bg-overlay/50`) silently no-ops. This is the only color-shaped entry
+      // in the theme with that shape; it lives here rather than in `colors` so
+      // it cannot be mistaken for a channel-triplet token.
+      backgroundColor: {
+        overlay: "var(--overlay)",
       },
       keyframes: {
         "accordion-down": {

@@ -1096,6 +1096,28 @@ scale happens per-component in a later phase.
 pre-existing `rounded-full` utility (4 live usages). Same open question
 as above — resolve at migration time.
 
+## 36. [Direction C — Component Primitives] Primary/Accent Role Definition
+
+**Decision:** Jade (`--primary`) is the system's primary action color —
+used for default buttons, focus rings, and any "do this" affordance.
+Violet (`--accent`) is reserved for selection and navigation state only
+(e.g. the Sidebar active item, which reaches it via the `brand` Tailwind
+alias) — never a general-purpose action color.
+
+**Trigger:** Phase 2 Pilot 3 (Button) found the default button variant
+had been rendering violet since Direction B and was never migrated to
+jade during Phase 1.1's color cutover — a drift, not a decision. Fixed
+by switching Button's default variant to jade and unifying its focus
+ring to jade, resolving a color divergence between Button and the
+Pilot 1 Input/Textarea/Select underline treatment.
+
+**Consequence for Phase 4:** The `info` status token (`#6C4BF4`) is
+identical to `--accent` — previously flagged as an open, unconfirmed
+dual-use question. Under this decision it's no longer just a coincidence
+to double-check: violet's role is now formally scoped to selection/nav,
+which has nothing to do with "info" status semantics. `info` should very
+likely get its own distinct color before Phase 4 remaps any status to it.
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -1121,3 +1143,5 @@ as above — resolve at migration time.
 | Resources detail-page modal-to-inline-edit migration | ⏭️ Deferred | No detail page exists yet for Resources — see `progress.md` |
 | Light Theme Migration | ✅ COMPLETE 2026-08-21 | Direction B tokens applied globally, piloted/verified on Servers; all 7 remaining modules audited (only fix needed: Activity badge/dot mismatch); close-out items resolved; final independent verification confirmed, zero discrepancies — see decisions #29/#30/#31/#32/#33, `progress.md` |
 | `status` (teal) token — zero live consumers app-wide | ✅ Closed 2026-08-21 — intentionally reserved, unwired | No genuine semantic fit found across the full sitewide rollout audit; stays reserved design capacity, not a defect — see decision #33 |
+| `info` status token (`#6C4BF4`) is identical to `--accent` violet | 🟡 OPEN | Violet is now scoped to selection/nav only, so the shared value is a conflict, not a coincidence — `info` likely needs its own color before Phase 4 remaps any status to it; see decision #36 |
+| `Sidebar.tsx:21` `focus-visible:outline-brand` | 🟡 OPEN | Leftover violet focus ring under decision #36's jade-focus rule, not yet migrated (out of Pilot 3 scope) |

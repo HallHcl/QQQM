@@ -53,11 +53,17 @@ Defined as CSS variables in `src/styles/globals.css` and aliased in
 | `secondary-foreground` | `--secondary-foreground` | Text on secondary |
 | `accent` / `brand` | `--shadcn-accent` / `--accent` | Brand accent (Razer-inspired green) |
 | `border` | `--border` | Border color |
-| `input` | `--input` | Input border color |
-| `ring` | `--ring` | Focus ring color |
 | `destructive` | `--destructive` | Danger / error actions |
 | `danger` | `--danger` | Inline danger text |
 | `warning` | `--warning` | Warning states |
+
+> **Removed 2026-08-28 (Phase 2 pre-merge cleanup).** The `input` / `--input`
+> and `ring` / `--ring` rows were deleted from this table because the tokens
+> themselves were deleted — both had zero consumers. The `--status-*` teal
+> family went with them. See [`phase2-token-cleanup.md`](phase2-token-cleanup.md),
+> which also carries the **shadcn generator caveat**: newly generated
+> components will reference `border-input` and `ring-ring`, which no longer
+> exist and fail silently.
 
 ---
 
