@@ -97,19 +97,32 @@ export function expectHoverGatedRowActions(wrapper: Element, label: string): voi
     `${GROUP_FOCUS_WITHIN}:${VISIBLE}`
   );
 
-  // Negative half — the actual regression guard. Any hiding utility that is
-  // NOT scoped to `hover: hover` hides the actions outright. This catches a
-  // bare hide, a breakpoint-scoped hide, `invisible`, `sr-only`, and a
-  // reintroduced unscoped `opacity-0`, rather than merely confirming the
-  // correct classes are also present.
-  const unscopedHiding = classTokens(wrapper).filter(
-    (t) => isHidingToken(t) && !t.startsWith(HOVER_MEDIA_PREFIX)
-  );
+  // First negative half: the pattern has no media-query-scoped classes at
+  // all, so the mere presence of one is the regression signal, whatever it
+  // wraps. This is what catches a reintroduced
+  // `[@media(hover:hover)]:opacity-0` — the pre-migration idle state, which
+  // a scope-exempting hiding check would wave through as "correctly scoped"
+  // precisely because it carries the prefix (decision #52).
+  const mediaScoped = classTokens(wrapper).filter((t) => t.startsWith(HOVER_MEDIA_PREFIX));
   expect(
-    unscopedHiding,
+    mediaScoped,
+    `${label}: row actions carry "${HOVER_MEDIA_PREFIX}"-scoped classes. The ` +
+      `dimmed-idle pattern is unscoped by design, so a hover-media class means ` +
+      `the actions are being hidden or restyled on pointer devices only: ` +
+      `[${mediaScoped.join(", ")}] on ${describeEl(wrapper)}`
+  ).toEqual([]);
+
+  // Second negative half. Any hiding utility hides the actions outright:
+  // a bare hide, a breakpoint-scoped hide, `invisible`, `sr-only`, or a
+  // reintroduced `opacity-0`. No scoping exemption — the assertion above has
+  // already rejected every media-scoped class, so there is nothing left to
+  // exempt.
+  const hiding = classTokens(wrapper).filter(isHidingToken);
+  expect(
+    hiding,
     `${label}: row actions carry hiding utilities, so they would be ` +
       `invisible until hovered — and unreachable on touch devices, which ` +
-      `have no hover: [${unscopedHiding.join(", ")}] on ${describeEl(wrapper)}`
+      `have no hover: [${hiding.join(", ")}] on ${describeEl(wrapper)}`
   ).toEqual([]);
 }
 
