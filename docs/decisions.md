@@ -1899,6 +1899,50 @@ build clean. Playwright confirmed the rendered badge's computed
 `--focus-ring`, `--primary` and `--success` are **all unchanged**. `info` no
 longer equals `accent`.
 
+## 45. [Phase 3 — Shell & Global Layout] AppLayout canvas background, Topbar frosted-glass sticky header, Sidebar jade focus ring (Ticket 1, 2026-08-30)
+
+**Decision:** Phase 3's first ticket closes the long-standing Sidebar violet focus ring known-deferred item (ruled out as a Phase-2-class blocker by decision #38, now resolved). Three changes:
+
+1. **AppLayout** — background, max-width, and padding refresh
+2. **Topbar** — frosted-glass sticky header treatment  
+3. **Sidebar** — focus ring unified to jade (decision #36 compliance)
+
+### 45a. AppLayout background and layout
+
+| Property | Before | After |
+|---|---|---|
+| Background | `bg-background` | `bg-canvas` (#F7F8FA) |
+| Max-width | `max-w-7xl` (1280px) | `max-w-[1440px]` |
+| Padding | `p-4 sm:p-6` | `p-4 sm:px-8 sm:py-7` |
+
+Canvas is a new token (`rgb(247 248 250 / <alpha-value>)`, added to `tailwind.config.js` colors). The expanded max-width accommodates wider content surfaces; the refined padding provides stronger horizontal rhythm at tablet/desktop while preserving mobile compactness.
+
+### 45b. Topbar frosted-glass treatment
+
+`<header>` migrates from `bg-background shadow-elev-0` to a **sticky frosted-glass layer**:
+- `sticky top-0 z-30` — fixed at viewport top, above content (z-index 30)
+- `backdrop-blur-md bg-white/80 border-b border-border/80` — blurred background with reduced opacity border
+
+This closes the Topbar as a persistent sticky navigation surface, differentiating it visually from the canvas background via the frosted treatment (semi-transparent white over blurred content, creating depth without a drop shadow).
+
+### 45c. Sidebar focus ring — closes decision #38's ruled-out item
+
+**NavLink focus ring migrates from violet outline to jade ring:**
+- **Before:** `focus-visible:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-brand` (violet, decision #36 violation)
+- **After:** `focus-visible:ring-primary focus-visible:ring-2` (jade)
+
+This closes the previously-deferred item recorded at decision #38's "ruled-out" list: *"`Sidebar.tsx:21` violet `focus-visible:outline-brand`"* was ruled out as a Phase 2 blocker and left for later work. **It is now closed as part of Phase 3** — decision #36 reserved violet strictly to selection/navigation state (the Sidebar active item, which reaches it via `border-brand` correctly). A focus ring is a keyboard-navigation affordance, not a selected-item indicator, and must use the system's primary action color (jade / `--primary`). The ring-based focus (vs outline) also provides cleaner, more consistent spacing with the item's border.
+
+**Cross-reference:** see decision #38 line flagging this item, and decision #36 for the jade-vs-violet scope.
+
+### 45d. No new CSS variables created
+
+`canvas` color does not reach into `globals.css` — it is purely a Tailwind utility mapping to the hardcoded value `rgb(247 248 250)`. No `--canvas` CSS variable exists. This keeps the token set scoped to what's actually live (CSS vars mapped in globals.css, plus pure-Tailwind-only utilities like this one).
+
+**Verified:** 599/599 tests pass (62 files, matching the #44 baseline), lint clean, build clean. Commit `4e39b23`.
+
+---
+
 ## Open / deferred items tracker (quick reference)
 
 | Item | Status | Notes |
@@ -1925,7 +1969,7 @@ longer equals `accent`.
 | Light Theme Migration | ✅ COMPLETE 2026-08-21 | Direction B tokens applied globally, piloted/verified on Servers; all 7 remaining modules audited (only fix needed: Activity badge/dot mismatch); close-out items resolved; final independent verification confirmed, zero discrepancies — see decisions #29/#30/#31/#32/#33, `progress.md` |
 | `status` (teal) token — zero live consumers app-wide | ✅ Closed 2026-08-21 — intentionally reserved, unwired | No genuine semantic fit found across the full sitewide rollout audit; stays reserved design capacity, not a defect — see decision #33 |
 | `info` status token (`#6C4BF4`) is identical to `--accent` violet | ✅ CLOSED 2026-08-30 by #44 | `info` migrated to its own blue family (Candidate B, OKLCH hue 255°): `#1968C0` / `#F0F7FF` / `#9AC1F3` / `#0C4F97`. AAA on every axis, colour-blind ΔE checked against all 5 existing hues. Four CSS variables changed; no component or config edit was needed. **Phase 4 blocker cleared** — see decisions #36 and #44 |
-| `Sidebar.tsx:21` `focus-visible:outline-brand` | 🟡 OPEN | Leftover violet focus ring under decision #36's jade-focus rule, not yet migrated (out of Pilot 3 scope) |
+| `Sidebar.tsx:21` `focus-visible:outline-brand` | ✅ CLOSED 2026-08-30 by #45 | Violet focus ring migrated to jade ring-primary ring-2; closes Phase 2 ruled-out blocker, now resolved in Phase 3 Ticket 1 — see decision #45c |
 | `Card` + `Toolbar` → `panel` radius, `Card` → `elev-1` | ✅ Done 2026-08-30 | Phase 2 Card pilot; applies #34/#35. `--card`/`--card-foreground` deliberately kept, not collapsed to `--surface` — see decision #37 |
 | "Table container" named by #35 but no such component exists | 🟡 OPEN | `table.tsx` root is `relative w-full overflow-auto` — no border/radius/bg. Creating one is a design change, not a token migration; deferred — see decision #37 |
 | 10 hand-rolled `rounded-md border border-border` panel-like sites | 🟡 OPEN | Do not follow `Card` automatically; 5 further 32px avatar squares share the string but are `control`/`pill`, not `panel`. Needs a per-site sweep — see decision #37 |
