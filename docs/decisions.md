@@ -2109,7 +2109,7 @@ Class applied: `font-mono text-xs text-muted-foreground tabular-nums`
 - `frontend/src/features/servers/ServerDetailPage.tsx` (detail page, not table)
 - `frontend/src/features/activity/ActivityPage.tsx` (timeline component, not table)
 - `hoverActions.ts`, `PaginationControls.tsx`, `PaginationControls.test.tsx` (out of scope per Ticket 2 grouping)
-- `ActivityTimeline.tsx` (permanently excluded per decision #46d)
+- `ActivityTimeline.tsx` (permanently excluded per decision #47)
 
 ### 49e. Verification
 

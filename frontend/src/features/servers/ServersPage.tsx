@@ -304,7 +304,7 @@ export default function ServersPage() {
                         </p>
                       )}
                       {showIp && (
-                        <p className="text-xs text-muted-foreground">IP: {server.ip_address}</p>
+                        <p className="font-mono text-xs text-muted-foreground">IP: {server.ip_address}</p>
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground tabular-nums">
