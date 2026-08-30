@@ -274,10 +274,14 @@ export default function ClientsPage() {
                           there is no hover to reveal them with. Hover or
                           keyboard focus anywhere in the row brings them to full
                           opacity. Kept as opacity (not display/visibility) so
-                          the buttons stay in the tab order throughout. */}
+                          the buttons stay in the tab order throughout.
+                          Skipped on deleted rows, which the row itself already
+                          dims to opacity-50: compounding the two put Restore
+                          at 1.95:1, under the 3:1 minimum (decision #53). */}
                       <div
                         className={cn(
-                          "inline-flex opacity-60 transition-opacity",
+                          "inline-flex transition-opacity",
+                          !isDeleted && "opacity-60",
                           "group-hover:opacity-100",
                           "group-focus-within:opacity-100"
                         )}

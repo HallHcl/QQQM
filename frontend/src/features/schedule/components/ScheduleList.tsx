@@ -97,10 +97,14 @@ export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }:
                     the tab order throughout. Scoped to this Actions cell
                     only: ScheduleStatusActions in the Status column is a
                     workflow control, not a row action, so it stays at full
-                    opacity always. */}
+                    opacity always. The idle dim is also skipped on deleted
+                    rows, which the row itself already dims to opacity-50:
+                    compounding the two put Restore at 1.95:1, under the 3:1
+                    minimum (decision #53). */}
                 <div
                   className={cn(
-                    "inline-flex opacity-60 transition-opacity",
+                    "inline-flex transition-opacity",
+                    !isDeleted && "opacity-60",
                     "group-hover:opacity-100",
                     "group-focus-within:opacity-100"
                   )}
