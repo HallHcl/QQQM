@@ -41,7 +41,7 @@ export function usePeople(filters: PeopleFilters = {}) {
             order: filters.order,
             search: filters.search,
             type: filters.type,
-            // Zero/one-field callers (ScheduleFormDialog's usePeople(), and
+            // Zero/one-field callers (ScheduleFormSheet's usePeople(), and
             // PeoplePage before the deleted-view toggle existed) don't pass
             // `deleted` — default to the non-deleted set for them, same as
             // every other migrated list hook.
@@ -54,7 +54,7 @@ export function usePeople(filters: PeopleFilters = {}) {
   });
 
   // `data` stays a flat Person[] — the same shape the old hook returned —
-  // since ScheduleFormDialog and PeoplePage both destructure
+  // since ScheduleFormSheet and PeoplePage both destructure
   // `{ data: people = [] }`. Pagination metadata is exposed as a sibling
   // field for the newly-wired paginated list view.
   return { ...query, data: query.data?.data, pagination: query.data?.pagination };

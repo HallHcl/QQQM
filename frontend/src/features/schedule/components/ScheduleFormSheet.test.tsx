@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ScheduleFormDialog from "./ScheduleFormDialog";
+import ScheduleFormSheet from "./ScheduleFormSheet";
 import type { Schedule } from "@/types";
 
 // This file's tests drive multiple sequential Radix Select interactions,
@@ -110,19 +110,19 @@ function mockGetByPath(
   });
 }
 
-function renderDialog(schedule: Schedule | undefined = undefined) {
+function renderSheet(schedule: Schedule | undefined = undefined) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   const onOpenChange = vi.fn();
   render(
     <QueryClientProvider client={queryClient}>
-      <ScheduleFormDialog open onOpenChange={onOpenChange} schedule={schedule} />
+      <ScheduleFormSheet open onOpenChange={onOpenChange} schedule={schedule} />
     </QueryClientProvider>
   );
   return { onOpenChange, invalidateSpy };
 }
 
-describe("ScheduleFormDialog", () => {
+describe("ScheduleFormSheet", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
@@ -134,7 +134,7 @@ describe("ScheduleFormDialog", () => {
   describe("edit mode", () => {
     it("PATCHes only notes/updated_at — status is never part of the payload", async () => {
       patchMock.mockResolvedValue(ok({ ...SAMPLE_SCHEDULE, notes: "checked filters" }));
-      const { onOpenChange, invalidateSpy } = renderDialog(SAMPLE_SCHEDULE);
+      const { onOpenChange, invalidateSpy } = renderSheet(SAMPLE_SCHEDULE);
 
       await screen.findByDisplayValue("Quarterly PM");
       fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: "checked filters" } });
@@ -155,7 +155,7 @@ describe("ScheduleFormDialog", () => {
     });
 
     it("renders title/type/date/assignee/project as read-only (disabled) inputs showing the current values, and Notes as the only enabled input", async () => {
-      renderDialog(SAMPLE_SCHEDULE);
+      renderSheet(SAMPLE_SCHEDULE);
 
       expect(await screen.findByDisplayValue("Quarterly PM")).toBeDisabled();
       expect(screen.getByDisplayValue("PM")).toBeDisabled();
@@ -167,7 +167,7 @@ describe("ScheduleFormDialog", () => {
     });
 
     it("shows no server field when the schedule has no server_id", async () => {
-      renderDialog(SAMPLE_SCHEDULE);
+      renderSheet(SAMPLE_SCHEDULE);
       await screen.findByDisplayValue("Quarterly PM");
       expect(screen.queryByText("Server")).not.toBeInTheDocument();
     });
@@ -175,14 +175,14 @@ describe("ScheduleFormDialog", () => {
     it("shows the linked server's name read-only when server_id is set", async () => {
       const linked = { ...SAMPLE_SCHEDULE, server_id: "srv-1" };
       mockGetByPath({ schedule: ok(scheduleDetail({ server_id: "srv-1" })) });
-      renderDialog(linked);
+      renderSheet(linked);
 
       expect(await screen.findByText("Server")).toBeInTheDocument();
       expect(await screen.findByDisplayValue("db-01")).toBeDisabled();
     });
 
     it("shows status as a read-only badge with no status dropdown anywhere in the dialog", async () => {
-      renderDialog(SAMPLE_SCHEDULE);
+      renderSheet(SAMPLE_SCHEDULE);
       await screen.findByDisplayValue("Quarterly PM");
 
       expect(screen.getByText("pending")).toBeInTheDocument();
@@ -192,7 +192,7 @@ describe("ScheduleFormDialog", () => {
     });
 
     it("renders 'Not started yet' / 'Not completed yet' when those fields are null", async () => {
-      renderDialog(SAMPLE_SCHEDULE);
+      renderSheet(SAMPLE_SCHEDULE);
       expect(await screen.findByDisplayValue("Not started yet")).toBeDisabled();
       expect(await screen.findByDisplayValue("Not completed yet")).toBeDisabled();
     });
@@ -203,7 +203,7 @@ describe("ScheduleFormDialog", () => {
         status: "in_progress" as const,
         started_at: "2026-08-01T10:30:00.000Z",
       };
-      renderDialog(inProgress);
+      renderSheet(inProgress);
       await screen.findByDisplayValue("Quarterly PM");
       expect(screen.queryByDisplayValue("Not started yet")).not.toBeInTheDocument();
       expect(await screen.findByDisplayValue("Not completed yet")).toBeDisabled();
@@ -215,14 +215,14 @@ describe("ScheduleFormDialog", () => {
         status: "cancelled" as const,
         started_at: "2026-08-01T10:30:00.000Z",
       };
-      renderDialog(cancelledAfterStart);
+      renderSheet(cancelledAfterStart);
       await screen.findByDisplayValue("Quarterly PM");
       expect(screen.getByText("Cancelled after starting")).toBeInTheDocument();
     });
 
     it("does not show 'Cancelled after starting' for cancelled without a started_at", async () => {
       const cancelledNeverStarted = { ...SAMPLE_SCHEDULE, status: "cancelled" as const };
-      renderDialog(cancelledNeverStarted);
+      renderSheet(cancelledNeverStarted);
       await screen.findByDisplayValue("Quarterly PM");
       expect(screen.queryByText("Cancelled after starting")).not.toBeInTheDocument();
     });
@@ -233,7 +233,7 @@ describe("ScheduleFormDialog", () => {
         status: "in_progress" as const,
         started_at: "2026-08-01T10:30:00.000Z",
       };
-      renderDialog(inProgress);
+      renderSheet(inProgress);
       await screen.findByDisplayValue("Quarterly PM");
       expect(screen.queryByText("Cancelled after starting")).not.toBeInTheDocument();
     });
@@ -242,7 +242,7 @@ describe("ScheduleFormDialog", () => {
       patchMock.mockResolvedValueOnce(
         apiError(409, "CONFLICT", "Schedule was modified by someone else; refresh and try again")
       );
-      renderDialog(SAMPLE_SCHEDULE);
+      renderSheet(SAMPLE_SCHEDULE);
 
       await screen.findByDisplayValue("Quarterly PM");
       fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: "my in-progress note" } });
@@ -270,7 +270,7 @@ describe("ScheduleFormDialog", () => {
 
     it("reload-latest clears the conflict and re-seeds notes/status/started_at/updated_at from the server", async () => {
       patchMock.mockResolvedValueOnce(apiError(409, "CONFLICT", "stale"));
-      renderDialog(SAMPLE_SCHEDULE);
+      renderSheet(SAMPLE_SCHEDULE);
 
       await screen.findByDisplayValue("Quarterly PM");
       fireEvent.click(screen.getByRole("button", { name: /save/i }));
@@ -296,7 +296,7 @@ describe("ScheduleFormDialog", () => {
 
     it("routes a non-409 update failure to a toast, not ConflictState", async () => {
       patchMock.mockResolvedValueOnce(apiError(400, "VALIDATION_ERROR", "Something else went wrong"));
-      renderDialog(SAMPLE_SCHEDULE);
+      renderSheet(SAMPLE_SCHEDULE);
 
       await screen.findByDisplayValue("Quarterly PM");
       fireEvent.click(screen.getByRole("button", { name: /save/i }));
@@ -315,7 +315,7 @@ describe("ScheduleFormDialog", () => {
 
   describe("create mode (regression — unaffected by this ticket except for the new Server field)", () => {
     it("still offers title/type/date/assignee/project as editable inputs, with no status/started/completed fields at all", async () => {
-      renderDialog(undefined);
+      renderSheet(undefined);
 
       expect(screen.getByLabelText("Title")).not.toBeDisabled();
       expect(screen.getByLabelText("Date")).not.toBeDisabled();
@@ -323,12 +323,20 @@ describe("ScheduleFormDialog", () => {
       expect(screen.queryByText("Completed")).not.toBeInTheDocument();
     });
 
+    // Task 0 flagged the previous lookups here — .at(-1) for Server,
+    // .find(textContent === "None") for Project (which BOTH pickers render,
+    // so it only worked because Project happens to come first), and
+    // .find(textContent === "Select person") for the assignee — as fragile:
+    // two of them fail by silently selecting the wrong control rather than
+    // throwing. All three now resolve by accessible name off the visible
+    // <Label htmlFor>, which is stable under reordering and placeholder
+    // copy changes alike.
+    const assigneeCombobox = () => screen.getByRole("combobox", { name: "Assigned to" });
+    const projectCombobox = () => screen.getByRole("combobox", { name: "Project" });
+    const serverCombobox = () => screen.getByRole("combobox", { name: "Server" });
+
     function selectAssignee() {
-      const assigneeTrigger = screen
-        .getAllByRole("combobox")
-        .find((el) => el.textContent === "Select person");
-      if (!assigneeTrigger) throw new Error("Assignee combobox not found");
-      fireEvent.click(assigneeTrigger);
+      fireEvent.click(assigneeCombobox());
       return screen.findByRole("option", { name: "Alex Rivera" });
     }
 
@@ -339,16 +347,12 @@ describe("ScheduleFormDialog", () => {
 
     it("POSTs the create payload with no status field, and server_id undefined, when only a project is selected", async () => {
       postMock.mockResolvedValue(ok({ ...SAMPLE_SCHEDULE, id: "s2" }));
-      const { onOpenChange } = renderDialog(undefined);
+      const { onOpenChange } = renderSheet(undefined);
 
       fillRequiredFields();
       fireEvent.click(await selectAssignee());
 
-      const projectCombobox = screen
-        .getAllByRole("combobox")
-        .find((el) => el.textContent === "None");
-      if (!projectCombobox) throw new Error("Project combobox not found");
-      fireEvent.click(projectCombobox);
+      fireEvent.click(projectCombobox());
       fireEvent.click(await screen.findByRole("option", { name: "Migration" }));
 
       fireEvent.click(screen.getByRole("button", { name: /save/i }));
@@ -373,17 +377,12 @@ describe("ScheduleFormDialog", () => {
 
     it("submits with a server selected and no project (server-only linkage)", async () => {
       postMock.mockResolvedValue(ok({ ...SAMPLE_SCHEDULE, id: "s3" }));
-      const { onOpenChange } = renderDialog(undefined);
+      const { onOpenChange } = renderSheet(undefined);
 
       fillRequiredFields();
       fireEvent.click(await selectAssignee());
 
-      // Both Project and Server render "None" placeholders unscoped — the
-      // Server picker is the last combobox in DOM order (Assigned to,
-      // Project, Server).
-      const serverCombobox = screen.getAllByRole("combobox").at(-1);
-      if (!serverCombobox) throw new Error("Server combobox not found");
-      fireEvent.click(serverCombobox);
+      fireEvent.click(serverCombobox());
       fireEvent.click(await screen.findByRole("option", { name: "web-01" }));
 
       fireEvent.click(screen.getByRole("button", { name: /save/i }));
@@ -396,21 +395,15 @@ describe("ScheduleFormDialog", () => {
 
     it("submits with both a project and a server selected", async () => {
       postMock.mockResolvedValue(ok({ ...SAMPLE_SCHEDULE, id: "s4" }));
-      const { onOpenChange } = renderDialog(undefined);
+      const { onOpenChange } = renderSheet(undefined);
 
       fillRequiredFields();
       fireEvent.click(await selectAssignee());
 
-      const projectCombobox = screen
-        .getAllByRole("combobox")
-        .find((el) => el.textContent === "None");
-      if (!projectCombobox) throw new Error("Project combobox not found");
-      fireEvent.click(projectCombobox);
+      fireEvent.click(projectCombobox());
       fireEvent.click(await screen.findByRole("option", { name: "Migration" }));
 
-      const serverCombobox = screen.getAllByRole("combobox").at(-1);
-      if (!serverCombobox) throw new Error("Server combobox not found");
-      fireEvent.click(serverCombobox);
+      fireEvent.click(serverCombobox());
       fireEvent.click(await screen.findByRole("option", { name: "web-01" }));
 
       fireEvent.click(screen.getByRole("button", { name: /save/i }));
@@ -422,7 +415,7 @@ describe("ScheduleFormDialog", () => {
     });
 
     it("blocks submit with a clear validation message when neither project nor server is selected", async () => {
-      renderDialog(undefined);
+      renderSheet(undefined);
 
       fillRequiredFields();
       fireEvent.click(await selectAssignee());
@@ -432,47 +425,90 @@ describe("ScheduleFormDialog", () => {
       expect(postMock).not.toHaveBeenCalled();
     });
 
-    it("scopes the Server picker to the selected Project's servers, excluding servers under unrelated projects", async () => {
-      renderDialog(undefined);
+    it("announces the parent error as an alert and links it to the Server picker", async () => {
+      renderSheet(undefined);
 
-      const projectCombobox = screen
-        .getAllByRole("combobox")
-        .find((el) => el.textContent === "None");
-      if (!projectCombobox) throw new Error("Project combobox not found");
-      fireEvent.click(projectCombobox);
+      fillRequiredFields();
+      fireEvent.click(await selectAssignee());
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      // role="alert" rather than a bare aria-live region: the message appears
+      // only in response to a submit the user just made, which is exactly the
+      // assertive case, and it can sit below the fold in a scrolling sheet.
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("Select a Project, a Server, or both.");
+
+      // The message belongs to the Project/Server pair; it is wired to the
+      // Server picker, under which it renders.
+      const describedBy = serverCombobox().getAttribute("aria-describedby");
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy as string)).toBe(alert);
+    });
+
+    it("focuses the Server picker when the parent check fails", async () => {
+      renderSheet(undefined);
+
+      fillRequiredFields();
+      fireEvent.click(await selectAssignee());
+
+      // Radix restores focus to a Select's trigger on close via a
+      // setTimeout(0). Submitting in the same tick would let that restore
+      // fire *after* the submit's own focus call and steal it back — an
+      // artifact of firing both together, which two real user gestures
+      // cannot do. Wait for it to land so this asserts the component.
+      await waitFor(() => expect(assigneeCombobox()).toHaveFocus());
+
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await screen.findByText("Select a Project, a Server, or both.");
+      expect(serverCombobox()).toHaveFocus();
+    });
+
+    it("carries no aria-describedby on the Server picker before a failed submit", async () => {
+      renderSheet(undefined);
+      await screen.findByLabelText("Title");
+
+      expect(serverCombobox()).not.toHaveAttribute("aria-describedby");
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("accepts a date through the native date input inside the sheet", async () => {
+      renderSheet(undefined);
+
+      const date = screen.getByLabelText("Date");
+      expect(date).toHaveAttribute("type", "date");
+      fireEvent.change(date, { target: { value: "2026-12-24" } });
+      expect(date).toHaveValue("2026-12-24");
+    });
+
+    it("scopes the Server picker to the selected Project's servers, excluding servers under unrelated projects", async () => {
+      renderSheet(undefined);
+
+      fireEvent.click(projectCombobox());
       fireEvent.click(await screen.findByRole("option", { name: "Migration" }));
 
-      const serverCombobox = screen.getAllByRole("combobox").at(-1);
-      if (!serverCombobox) throw new Error("Server combobox not found");
-      fireEvent.click(serverCombobox);
+      fireEvent.click(serverCombobox());
 
       expect(await screen.findByRole("option", { name: "web-01" })).toBeInTheDocument();
       expect(screen.queryByRole("option", { name: "unrelated-server" })).not.toBeInTheDocument();
     });
 
     it("clears an already-selected Server when the Project changes", async () => {
-      renderDialog(undefined);
+      renderSheet(undefined);
 
       // Select the server first, while unscoped.
-      let serverCombobox = screen.getAllByRole("combobox").at(-1);
-      if (!serverCombobox) throw new Error("Server combobox not found");
-      fireEvent.click(serverCombobox);
+      fireEvent.click(serverCombobox());
       fireEvent.click(await screen.findByRole("option", { name: "unrelated-server" }));
       // A hidden native <select> mirror also contains this text, so scope
       // the check to the visible trigger's own textContent rather than a
       // global text query.
-      await waitFor(() => expect(serverCombobox?.textContent).toBe("unrelated-server"));
+      await waitFor(() => expect(serverCombobox().textContent).toBe("unrelated-server"));
 
       // Now select a project — the previously-selected server should clear.
-      const projectCombobox = screen
-        .getAllByRole("combobox")
-        .find((el) => el.textContent === "None");
-      if (!projectCombobox) throw new Error("Project combobox not found");
-      fireEvent.click(projectCombobox);
+      fireEvent.click(projectCombobox());
       fireEvent.click(await screen.findByRole("option", { name: "Migration" }));
 
-      serverCombobox = screen.getAllByRole("combobox").at(-1);
-      await waitFor(() => expect(serverCombobox?.textContent).not.toBe("unrelated-server"));
+      await waitFor(() => expect(serverCombobox().textContent).not.toBe("unrelated-server"));
     });
   });
 });

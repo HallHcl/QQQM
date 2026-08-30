@@ -30,7 +30,7 @@ import {
 import type { Schedule } from "@/types";
 import ScheduleCalendar from "./components/ScheduleCalendar";
 import ScheduleList from "./components/ScheduleList";
-import ScheduleFormDialog from "./components/ScheduleFormDialog";
+import ScheduleFormSheet from "./components/ScheduleFormSheet";
 
 const SORT_OPTIONS: { value: ScheduleSort; label: string }[] = [
   { value: "scheduled_date", label: "Scheduled date" },
@@ -272,7 +272,7 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      <ScheduleFormDialog open={formOpen} onOpenChange={setFormOpen} schedule={editingSchedule} />
+      <ScheduleFormSheet open={formOpen} onOpenChange={setFormOpen} schedule={editingSchedule} />
 
       <ConfirmDialog
         open={deleteConfirmOpen}

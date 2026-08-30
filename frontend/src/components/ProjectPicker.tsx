@@ -25,6 +25,9 @@ interface Props {
   disabled?: boolean;
   id?: string;
   "aria-label"?: string;
+  /** Passthrough so a consuming form can describe/flag the trigger. */
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
 export function ProjectPicker({
@@ -38,6 +41,8 @@ export function ProjectPicker({
   disabled,
   id,
   "aria-label": ariaLabel,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: Props) {
   const { data: projects = [] } = useProjects(clientId);
 
@@ -47,7 +52,13 @@ export function ProjectPicker({
       onValueChange={(v) => onChange(includeAllOption && v === "all" ? undefined : v)}
       disabled={disabled}
     >
-      <SelectTrigger id={id} aria-label={ariaLabel} className={className}>
+      <SelectTrigger
+        id={id}
+        aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
+        className={className}
+      >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

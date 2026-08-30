@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { format } from "date-fns";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +35,14 @@ import type { Schedule, ScheduleStatus, ScheduleType } from "@/types";
 
 const SCHEDULE_TYPES: ScheduleType[] = ["PM", "MA", "other"];
 
+/**
+ * `aria-describedby` target for the Project/Server cross-field error. It is
+ * a module constant rather than a per-field helper (as in ServerFormSheet)
+ * because this form has exactly one error message, and it belongs to the
+ * *pair* of fields rather than to either one.
+ */
+const PARENT_ERROR_ID = "schedule-parent-error";
+
 const STATUS_VARIANT: Record<
   ScheduleStatus,
   "success" | "info" | "warning" | "neutral"
@@ -49,7 +59,7 @@ interface Props {
   schedule?: Schedule;
 }
 
-export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Props) {
+export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Props) {
   const isEdit = Boolean(schedule);
   const { data: people = [] } = usePeople();
   const createSchedule = useCreateSchedule();
@@ -148,6 +158,11 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
         if (!assignedTo) return;
         if (!projectId && !serverId) {
           setParentError("Select a Project, a Server, or both.");
+          // The error renders under the Server picker, so that is where
+          // focus goes. The message belongs to the Project/Server pair, not
+          // to either field alone — Server is chosen because it is the
+          // control the text sits beneath.
+          document.getElementById("server")?.focus();
           return;
         }
         setParentError(undefined);
@@ -233,184 +248,223 @@ export default function ScheduleFormDialog({ open, onOpenChange, schedule }: Pro
   const cancelledAfterStarting = status === "cancelled" && Boolean(startedAt);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit schedule" : "New schedule"}</DialogTitle>
-        </DialogHeader>
-
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" size="form" className="p-0">
+        {/*
+          The 409 branch swaps out the body AND the footer, exactly as the
+          dialog did — a Save button over a form that is not rendered would
+          be inert, and ConflictState carries its own actions. Only the
+          header survives, so the sheet keeps a title and an accessible name.
+          Both branches render their own SheetHeader rather than hoisting it
+          above the ternary, because the form branch needs it *inside* the
+          <form> flex column for the sticky layout to work.
+        */}
         {isConflict ? (
-          <ConflictState
-            message={
-              conflictInfo?.message ?? "This record was changed by someone else since you loaded it."
-            }
-            onReloadLatest={handleReloadLatest}
-            onKeepEditing={handleKeepEditingAndRetry}
-          />
+          <>
+            <SheetHeader className="shrink-0 border-b border-border px-6 py-4 pr-12">
+              <SheetTitle>{isEdit ? "Edit schedule" : "New schedule"}</SheetTitle>
+              <SheetDescription className="sr-only">
+                {isEdit
+                  ? "Update this schedule's notes. Every other field is fixed after creation."
+                  : "Schedule a new visit against a project, a server, or both."}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <ConflictState
+                message={
+                  conflictInfo?.message ??
+                  "This record was changed by someone else since you loaded it."
+                }
+                onReloadLatest={handleReloadLatest}
+                onKeepEditing={handleKeepEditingAndRetry}
+              />
+            </div>
+          </>
         ) : (
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="title">Title</Label>
-              {isEdit ? (
-                <Input id="title" value={schedule?.title ?? ""} disabled readOnly />
-              ) : (
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-              )}
-            </div>
+          <form onSubmit={handleSubmit} noValidate className="flex h-full flex-col">
+            <SheetHeader className="shrink-0 border-b border-border px-6 py-4 pr-12">
+              <SheetTitle>{isEdit ? "Edit schedule" : "New schedule"}</SheetTitle>
+              <SheetDescription className="sr-only">
+                {isEdit
+                  ? "Update this schedule's notes. Every other field is fixed after creation."
+                  : "Schedule a new visit against a project, a server, or both."}
+              </SheetDescription>
+            </SheetHeader>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
               <div className="space-y-1">
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="title">Title</Label>
                 {isEdit ? (
-                  <Input id="type" value={schedule?.type ?? ""} disabled readOnly />
+                  <Input id="title" value={schedule?.title ?? ""} disabled readOnly />
                 ) : (
-                  <Select value={type} onValueChange={(v) => setType(v as ScheduleType)}>
-                    <SelectTrigger id="type" aria-required="true">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SCHEDULE_TYPES.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {t}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
                 )}
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="date">Date</Label>
-                {isEdit ? (
-                  <Input
-                    id="date"
-                    value={schedule ? format(parseScheduledDate(schedule.scheduled_date), "PP") : ""}
-                    disabled
-                    readOnly
-                  />
-                ) : (
-                  <Input
-                    id="date"
-                    type="date"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                    required
-                  />
-                )}
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="assignedTo">Assigned to</Label>
-                {isEdit ? (
-                  <Input id="assignedTo" value={assigneeName} disabled readOnly />
-                ) : (
-                  <Select value={assignedTo} onValueChange={setAssignedTo}>
-                    <SelectTrigger id="assignedTo" aria-required="true">
-                      <SelectValue placeholder="Select person" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {people.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="project">Project</Label>
-                {isEdit ? (
-                  <Input id="project" value={projectName} disabled readOnly />
-                ) : (
-                  <ProjectPicker
-                    id="project"
-                    value={projectId}
-                    onChange={handleProjectChange}
-                    placeholder="None"
-                  />
-                )}
-              </div>
-            </div>
-
-            {isEdit && serverName && (
-              <div className="space-y-1">
-                <Label htmlFor="server">Server</Label>
-                <Input id="server" value={serverName} disabled readOnly />
-              </div>
-            )}
-
-            {!isEdit && (
-              <div className="space-y-1">
-                <Label htmlFor="server">Server</Label>
-                <ServerPicker
-                  id="server"
-                  value={serverId}
-                  onChange={setServerId}
-                  projectId={projectId}
-                  placeholder="None"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {projectId
-                    ? "Scoped to servers under the selected project."
-                    : "Optional — pick a project, a server, or both."}
-                </p>
-                {parentError && <p className="text-xs text-danger">{parentError}</p>}
-              </div>
-            )}
-
-            {isEdit && (
-              <div className="space-y-1">
-                <Label>Status</Label>
-                <div className="flex items-center gap-2">
-                  <Badge variant={STATUS_VARIANT[status]}>{status.replace("_", " ")}</Badge>
-                  {cancelledAfterStarting && (
-                    <span className="text-xs text-muted-foreground">Cancelled after starting</span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Status isn't changed from this dialog.
-                </p>
-              </div>
-            )}
-
-            {isEdit && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="startedAt">Started</Label>
-                  <Input
-                    id="startedAt"
-                    value={startedAt ? format(new Date(startedAt), "PPp") : "Not started yet"}
-                    disabled
-                    readOnly
-                  />
+                  <Label htmlFor="type">Type</Label>
+                  {isEdit ? (
+                    <Input id="type" value={schedule?.type ?? ""} disabled readOnly />
+                  ) : (
+                    <Select value={type} onValueChange={(v) => setType(v as ScheduleType)}>
+                      <SelectTrigger id="type" aria-required="true">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SCHEDULE_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="completedAt">Completed</Label>
-                  <Input
-                    id="completedAt"
-                    value={completedAt ? format(new Date(completedAt), "PPp") : "Not completed yet"}
-                    disabled
-                    readOnly
-                  />
+                  <Label htmlFor="date">Date</Label>
+                  {isEdit ? (
+                    <Input
+                      id="date"
+                      value={schedule ? format(parseScheduledDate(schedule.scheduled_date), "PP") : ""}
+                      disabled
+                      readOnly
+                    />
+                  ) : (
+                    <Input
+                      id="date"
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      required
+                    />
+                  )}
                 </div>
               </div>
-            )}
 
-            <div className="space-y-1">
-              <OptionalLabel htmlFor="notes">Notes</OptionalLabel>
-              <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="assignedTo">Assigned to</Label>
+                  {isEdit ? (
+                    <Input id="assignedTo" value={assigneeName} disabled readOnly />
+                  ) : (
+                    <Select value={assignedTo} onValueChange={setAssignedTo}>
+                      <SelectTrigger id="assignedTo" aria-required="true">
+                        <SelectValue placeholder="Select person" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {people.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="project">Project</Label>
+                  {isEdit ? (
+                    <Input id="project" value={projectName} disabled readOnly />
+                  ) : (
+                    <ProjectPicker
+                      id="project"
+                      value={projectId}
+                      onChange={handleProjectChange}
+                      placeholder="None"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {isEdit && serverName && (
+                <div className="space-y-1">
+                  <Label htmlFor="server">Server</Label>
+                  <Input id="server" value={serverName} disabled readOnly />
+                </div>
+              )}
+
+              {!isEdit && (
+                <div className="space-y-1">
+                  <Label htmlFor="server">Server</Label>
+                  <ServerPicker
+                    id="server"
+                    value={serverId}
+                    onChange={setServerId}
+                    projectId={projectId}
+                    placeholder="None"
+                    aria-describedby={parentError ? PARENT_ERROR_ID : undefined}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {projectId
+                      ? "Scoped to servers under the selected project."
+                      : "Optional — pick a project, a server, or both."}
+                  </p>
+                  {parentError && (
+                    <p id={PARENT_ERROR_ID} role="alert" className="text-xs text-danger">
+                      {parentError}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {isEdit && (
+                <div className="space-y-1">
+                  <Label>Status</Label>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={STATUS_VARIANT[status]}>{status.replace("_", " ")}</Badge>
+                    {cancelledAfterStarting && (
+                      <span className="text-xs text-muted-foreground">Cancelled after starting</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Status isn't changed from here.
+                  </p>
+                </div>
+              )}
+
+              {isEdit && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="startedAt">Started</Label>
+                    <Input
+                      id="startedAt"
+                      value={startedAt ? format(new Date(startedAt), "PPp") : "Not started yet"}
+                      disabled
+                      readOnly
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="completedAt">Completed</Label>
+                    <Input
+                      id="completedAt"
+                      value={completedAt ? format(new Date(completedAt), "PPp") : "Not completed yet"}
+                      disabled
+                      readOnly
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <OptionalLabel htmlFor="notes">Notes</OptionalLabel>
+                <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </div>
             </div>
 
-            <DialogFooter>
+            <SheetFooter>
+              <SheetClose asChild>
+                <Button type="button" variant="ghost">
+                  Cancel
+                </Button>
+              </SheetClose>
               <Button type="submit" disabled={isSubmitting || (!isEdit && !assignedTo)}>
                 {isSubmitting ? "Saving..." : "Save"}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

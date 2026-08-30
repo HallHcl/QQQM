@@ -120,7 +120,7 @@ describe("useProjects", () => {
     });
 
     // OverviewPage, InfrastructurePage, ResourceEditor, ResourceFilterBar,
-    // and ScheduleFormDialog all destructure `{ data: projects = [] }` —
+    // and ScheduleFormSheet all destructure `{ data: projects = [] }` —
     // `data` must stay a flat array or those out-of-scope call sites break.
     const { result } = renderHook(() => useProjects("c1"), { wrapper });
 

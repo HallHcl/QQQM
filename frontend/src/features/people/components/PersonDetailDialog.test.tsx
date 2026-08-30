@@ -5,7 +5,7 @@ import PersonDetailDialog from "./PersonDetailDialog";
 import type { Person } from "@/types";
 
 // Same scoped headroom bump as ServerFormSheet/ResourceEditor/
-// ScheduleFormDialog.test.tsx: this file's "adds a client" test drives a
+// ScheduleFormSheet.test.tsx: this file's "adds a client" test drives a
 // sequential Radix Select interaction plus a form submit + React Query
 // mutation, which fits within Vitest's 5s default in isolation but can be
 // pushed over it under full-suite CPU contention. Confirmed by 3/3 passing
