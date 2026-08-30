@@ -30,7 +30,7 @@ export default function MobileNav() {
       </SheetTrigger>
       <SheetContent side="left" className="w-60 p-0">
         <SheetHeader className="h-14 justify-center border-b border-border px-4">
-          <SheetTitle>QQM</SheetTitle>
+          <SheetTitle className="text-base font-bold">QQM</SheetTitle>
           <SheetDescription className="sr-only">
             Main navigation menu
           </SheetDescription>
