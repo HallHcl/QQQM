@@ -56,7 +56,10 @@ export function PaginationControls({
         <Button variant="outline" size="sm" onClick={onPrevPage} disabled={page <= 1}>
           Previous
         </Button>
-        <span>
+        {/* tabular-nums keeps the digits fixed-width, so crossing a digit
+            boundary ("Page 9 of 12" -> "Page 10 of 12") doesn't shift the
+            Previous/Next buttons sideways as you page through. */}
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">
           Page {page} of {totalPages}
         </span>
         <Button variant="outline" size="sm" onClick={onNextPage} disabled={page >= totalPages}>
