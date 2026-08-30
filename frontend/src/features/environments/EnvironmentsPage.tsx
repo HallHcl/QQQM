@@ -257,7 +257,7 @@ export default function EnvironmentsPage() {
                     <TableCell className="text-muted-foreground">
                       {environment.description ?? "—"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="font-mono text-xs text-muted-foreground tabular-nums">
                       {new Date(environment.updated_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell

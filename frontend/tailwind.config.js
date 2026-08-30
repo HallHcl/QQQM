@@ -71,6 +71,9 @@ export default {
         background: "rgb(var(--background) / <alpha-value>)",
         canvas: "rgb(247 248 250 / <alpha-value>)",
         foreground: "rgb(var(--foreground) / <alpha-value>)",
+        text: {
+          secondary: "rgb(var(--text-secondary) / <alpha-value>)",
+        },
         primary: {
           DEFAULT: "rgb(var(--primary) / <alpha-value>)",
           hover: "rgb(var(--primary-hover) / <alpha-value>)",

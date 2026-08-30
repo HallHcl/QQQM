@@ -270,7 +270,7 @@ export default function ProjectsPage() {
                     <TableCell className="text-muted-foreground">
                       {project.description ?? "—"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="font-mono text-xs text-muted-foreground tabular-nums">
                       {new Date(project.updated_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell

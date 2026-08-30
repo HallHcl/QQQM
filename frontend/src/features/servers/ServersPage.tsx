@@ -307,7 +307,7 @@ export default function ServersPage() {
                         <p className="text-xs text-muted-foreground">IP: {server.ip_address}</p>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="font-mono text-xs text-muted-foreground tabular-nums">
                       {new Date(server.updated_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell

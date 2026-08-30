@@ -2036,3 +2036,94 @@ This is explicitly **NOT** remapped in this ticket — the ACTION_VARIANT repres
 ✅ **Build:** clean (TypeScript, no errors)
 ✅ **Tests:** 599/599 passed (62 files) — no regressions
 ✅ **ActivityTimeline.tsx:** confirmed untouched (no modifications)
+
+---
+
+## 49. [Phase 5 — Data Tables Polish] Table Primitives & Numeric/Date/IP Alignment (Ticket 1 of 2, 2026-08-30)
+
+**Decision:** Execute Phase 5 Ticket 1: refresh table.tsx primitives with container styling, sticky headers, and typography updates; apply numeric/date/IP alignment classes to data columns across 4 target pages.
+
+### 49a. Tailwind config token addition
+
+Added minimal `text.secondary` color mapping per Phase 3 precedent (standalone, unblocking Task 5.1):
+
+```javascript
+text: {
+  secondary: "rgb(var(--text-secondary) / <alpha-value>)",
+}
+```
+
+Maps to existing CSS variable `--text-secondary` (#475467, globals.css:37).
+
+### 49b. Task 5.1 — table.tsx primitives (all components in frontend/src/components/ui/table.tsx)
+
+**Table** (wrapper div, line 9):
+- Added: `rounded-panel border border-border bg-surface shadow-elev-1`
+- Result: table container now has 10px radius, hairline border, white background, and subtle elevation shadow
+
+**TableHeader** (thead, line 25):
+- Added: `sticky top-0 z-10 bg-surface-sunken`
+- Result: header stays visible on scroll, positioned above content, with subtle gray background to distinguish from body
+
+**TableHead** (th cells, line 80):
+- Changed: `h-9` → `h-10` (36px → 40px for comfortable padding)
+- Changed: `px-3` → `px-4` (12px → 16px, matching updated TableCell padding)
+- Changed: `text-xs font-medium uppercase tracking-wide text-muted-foreground` → `text-xs font-semibold text-text-secondary` (upgraded to semibold, remapped to `text-text-secondary` #475467)
+- Removed: `uppercase tracking-wide` (spec requires none)
+
+**TableCell** (td cells, line 94):
+- Changed: `px-3 py-2` → `px-4 py-3` (padding increased for comfortable data display)
+- Added: `text-sm text-foreground` (was implicit via parent; now explicit base styling)
+
+### 49c. Task 5.2 — Numeric/Date/IP alignment across 4 confirmed table pages
+
+**Scope:** Applied ONLY to genuine data columns, not to embedded counts (per architect decision: RelatedCount subtext stays muted-foreground secondary).
+
+**Date columns — all pages (4 instances):**
+- ServersPage.tsx (line 310): "Updated" column
+- ScheduleList.tsx (line 82): "Date" column (scheduled_date, formatted)
+- ProjectsPage.tsx (line 273): "Updated" column
+- EnvironmentsPage.tsx (line 260): "Updated" column
+
+Class applied: `font-mono text-xs text-muted-foreground tabular-nums`
+- `font-mono`: monospace for consistent glyph width (dates display with uniform spacing)
+- `text-xs`: caption size, matches table secondary text
+- `text-muted-foreground`: secondary color hierarchy
+- `tabular-nums`: OpenType feature for fixed-width numerics (dates like "8/30/2026" align vertically)
+
+**Not applied:**
+- ServersPage connection column (access_host:port, line 293-296): remains `font-mono text-xs` (address, not numeric)
+- ServersPage IP when different (line 307): remains `text-xs text-muted-foreground` (no monospace needed; already secondary text)
+- ProjectsPage/EnvironmentsPage RelatedCount subtext (environment/server counts): remains `text-xs text-muted-foreground` (secondary embedded data, not primary column)
+
+### 49d. Files touched
+
+- `frontend/tailwind.config.js` (token addition)
+- `frontend/src/components/ui/table.tsx` (all 4 components)
+- `frontend/src/features/servers/ServersPage.tsx` (1 date cell)
+- `frontend/src/features/schedule/components/ScheduleList.tsx` (1 date cell)
+- `frontend/src/features/projects/ProjectsPage.tsx` (1 date cell)
+- `frontend/src/features/environments/EnvironmentsPage.tsx` (1 date cell)
+
+**Correctly excluded per constraints:**
+- `frontend/src/features/servers/ServerDetailPage.tsx` (detail page, not table)
+- `frontend/src/features/activity/ActivityPage.tsx` (timeline component, not table)
+- `hoverActions.ts`, `PaginationControls.tsx`, `PaginationControls.test.tsx` (out of scope per Ticket 2 grouping)
+- `ActivityTimeline.tsx` (permanently excluded per decision #46d)
+
+### 49e. Verification
+
+✅ **Build:** clean (TypeScript + Vite, no errors)
+✅ **Tests:** 599/599 passed (62 files, 258.97s test duration) — no regressions
+✅ **Type safety:** all 4 page files use new table classes correctly; no type errors
+✅ **Visual baseline:** table now has rounded corners, border, shadow, sticky headers, and numeric/date cell alignment as specified
+
+### 49f. Known decisions and trade-offs
+
+1. **Text hierarchy — `text-text-secondary` vs `text-muted-foreground`:** Both map to the same CSS variable (#475467), but `text-text-secondary` is the semantic choice for table headers (named for its purpose: secondary text color). Existing code still uses `text-muted-foreground` (kept for backward compatibility) — this decision uses the newer, more explicit mapping for new components.
+
+2. **Date formatting — monospace + tabular-nums:** Dates displayed via `new Date().toLocaleDateString()` and `format(date, "PP")` produce variable-width output (e.g., "8/30/2026" vs "12/25/2026"). Monospace font + `tabular-nums` OpenType feature ensures alignment without code-side formatting changes. This works because most numeric characters are already fixed-width in monospace fonts, and `tabular-nums` forces digits to uniform width.
+
+3. **Address vs numeric distinction:** ServersPage's "Connection" column displays "host:port" pairs and optional IP addresses. These are ADDRESSES (text), not pure numerics, so they do NOT get `text-right tabular-nums` treatment. Only true numeric columns (counts, ports as standalone data) would get right-alignment. Here, the column is descriptive text that happens to be in monospace.
+
+4. **RelatedCount exclusion:** ProjectsPage and EnvironmentsPage show environment/server counts as secondary subtext under the Name column. Per architect decision, these embedded counts stay as `text-xs text-muted-foreground` without additional numeric styling. Only standalone numeric data columns (like a hypothetical "Count" column) would receive `text-right font-mono tabular-nums`.

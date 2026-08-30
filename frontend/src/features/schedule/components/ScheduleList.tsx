@@ -79,7 +79,7 @@ export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }:
                 </div>
               </TableCell>
               <TableCell>{schedule.type}</TableCell>
-              <TableCell>{format(parseScheduledDate(schedule.scheduled_date), "PP")}</TableCell>
+              <TableCell className="font-mono text-xs text-muted-foreground tabular-nums">{format(parseScheduledDate(schedule.scheduled_date), "PP")}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Badge variant={STATUS_VARIANT[schedule.status]}>
