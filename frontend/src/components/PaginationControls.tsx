@@ -35,7 +35,10 @@ export function PaginationControls({
   perPageOptions = DEFAULT_PER_PAGE_OPTIONS,
 }: PaginationControlsProps) {
   return (
-    <div className="flex items-center justify-between text-sm text-muted-foreground">
+    <nav
+      aria-label="Pagination"
+      className="flex items-center justify-between text-sm text-muted-foreground"
+    >
       <div className="flex items-center gap-2">
         <span>Rows per page</span>
         <Select value={String(perPage)} onValueChange={(v) => onPerPageChange(Number(v))}>
@@ -66,6 +69,6 @@ export function PaginationControls({
           Next
         </Button>
       </div>
-    </div>
+    </nav>
   );
 }
