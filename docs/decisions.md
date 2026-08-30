@@ -2039,6 +2039,16 @@ This is explicitly **NOT** remapped in this ticket — the ACTION_VARIANT repres
 
 ---
 
+## 47–48. [Not allocated]
+
+**Status:** Never used — no entry was ever written under either number.
+
+The content sometimes attributed to them is already recorded elsewhere: ActivityTimeline.tsx's permanent exclusion from the Phase 4 status remap is **#46d**, and the tritanopia icon/label mitigation deferral is **#46c** (itself citing #44d). Both were filed under #46 when the remap shipped (commit `b455887`), and #46d was later amended in place (commit `4ced0ce`).
+
+Verified 2026-08-30: `git log --all -S "## 47."` and `-S "## 48."` over `docs/decisions.md` return nothing on any ref, and no code comment or doc cites either number. Cite #46c/#46d directly — do not create #47/#48 restating them.
+
+---
+
 ## 49. [Phase 5 — Data Tables Polish] Table Primitives & Numeric/Date/IP Alignment (Ticket 1 of 2, 2026-08-30)
 
 **Decision:** Execute Phase 5 Ticket 1: refresh table.tsx primitives with container styling, sticky headers, and typography updates; apply numeric/date/IP alignment classes to data columns across 4 target pages.
@@ -2109,7 +2119,7 @@ Class applied: `font-mono text-xs text-muted-foreground tabular-nums`
 - `frontend/src/features/servers/ServerDetailPage.tsx` (detail page, not table)
 - `frontend/src/features/activity/ActivityPage.tsx` (timeline component, not table)
 - `hoverActions.ts`, `PaginationControls.tsx`, `PaginationControls.test.tsx` (out of scope per Ticket 2 grouping)
-- `ActivityTimeline.tsx` (permanently excluded per decision #47)
+- `ActivityTimeline.tsx` (permanently excluded per decision #46d)
 
 ### 49e. Verification
 
