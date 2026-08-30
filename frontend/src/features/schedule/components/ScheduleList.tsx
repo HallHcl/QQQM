@@ -89,21 +89,20 @@ export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }:
                 </div>
               </TableCell>
               <TableCell className="space-x-2 text-right">
-                {/* Hover-reveal is scoped to mouse-capable devices via the
-                    `hover: hover` media feature, so touch/mobile viewports
-                    (which never match it) keep actions at their base
-                    opacity-100 — always visible, never hover-gated. Kept as
+                {/* Row actions idle at opacity-60 — dimmed but legible and
+                    fully operable everywhere, including touch, where there is
+                    no hover to reveal them with. Hover or keyboard focus
+                    anywhere in the row brings them to full opacity. Kept as
                     opacity (not display/visibility) so the buttons stay in
-                    the tab order and reveal on keyboard focus too. Scoped to
-                    this Actions cell only: ScheduleStatusActions in the
-                    Status column is a workflow control, not a row action, so
-                    it stays permanently visible. */}
+                    the tab order throughout. Scoped to this Actions cell
+                    only: ScheduleStatusActions in the Status column is a
+                    workflow control, not a row action, so it stays at full
+                    opacity always. */}
                 <div
                   className={cn(
-                    "inline-flex opacity-100 transition-opacity",
-                    "[@media(hover:hover)]:opacity-0",
-                    "[@media(hover:hover)]:group-hover:opacity-100",
-                    "[@media(hover:hover)]:group-focus-within:opacity-100"
+                    "inline-flex opacity-60 transition-opacity",
+                    "group-hover:opacity-100",
+                    "group-focus-within:opacity-100"
                   )}
                 >
                   {isDeleted ? (

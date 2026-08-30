@@ -5,17 +5,20 @@ import { expect } from "vitest";
  * every list module that has one (Clients, Projects, People, Servers,
  * Environments, Schedule).
  *
- * The pattern deliberately hides row actions ONLY on hover-capable devices:
- * a visible `opacity-100` base, an `[@media(hover:hover)]:`-scoped hide, and
- * `[@media(hover:hover)]:`-scoped reveals on group hover and focus-within.
+ * The pattern keeps row actions permanently visible and operable: an
+ * `opacity-60` idle base, brought to `opacity-100` on group hover and group
+ * focus-within. Nothing is media-gated.
  *
- * Touch devices never match `hover: hover`, so they keep the visible base
- * state. Rewriting this as an unconditional or breakpoint-based hide (the
- * tempting "simplification" to a bare hide plus a breakpoint-scoped
- * re-show) makes row actions unreachable on phones — there is no hover to
- * reveal them with. These helpers exist to fail loudly if that ever happens,
- * since the pattern is otherwise only covered by Playwright specs that need
- * a live backend.
+ * An earlier revision instead hid the actions behind an
+ * `[@media(hover:hover)]:`-scoped `opacity-0`, relying on touch devices
+ * never matching `hover: hover` to keep them reachable there. The dimmed
+ * idle state replaces that: the affordance is now discoverable on every
+ * device without a special case. Rewriting this as any kind of outright
+ * hide — unconditional, breakpoint-scoped, or back behind the hover media
+ * query — makes row actions invisible until hovered, and on a phone there is
+ * no hover to reveal them with. These helpers exist to fail loudly if that
+ * happens, since the pattern is otherwise only covered by Playwright specs
+ * that need a live backend.
  *
  * Note on the string building below: Tailwind's content scanner reads every
  * file matched by its `content` glob, comments and string literals included,
@@ -31,18 +34,21 @@ export const HOVER_MEDIA_PREFIX = "[@media(hover:hover)]:";
 const GROUP_HOVER = "group-hover";
 const GROUP_FOCUS_WITHIN = "group-focus-within";
 const VISIBLE = "opacity-100";
-const TRANSPARENT = "opacity-0";
 
-/** Scopes a utility (optionally itself variant-prefixed) to hover-capable devices. */
-const hoverScoped = (utility: string) => `${HOVER_MEDIA_PREFIX}${utility}`;
+/** The dimmed idle state. Legible and fully operable — NOT a hiding utility. */
+const IDLE_OPACITY = "opacity-60";
 
 /**
  * Utilities that visually remove an element. Applied unconditionally — or
  * behind a breakpoint, which on a phone means "always" — any one of these
- * defeats the touch-visible fallback. Assembled rather than written inline
- * for the content-scanner reason above.
+ * defeats the always-visible guarantee.
+ *
+ * `opacity-0` stays listed even though no call site uses it any more: it is
+ * precisely the state this pattern migrated away from, and keeping it here
+ * is what catches a regression back to a fully transparent idle. IDLE_OPACITY
+ * is deliberately NOT a member — dimming is the intended design.
  */
-const HIDING_UTILITIES = [TRANSPARENT, "hidden", "invisible", "sr-only"];
+const HIDING_UTILITIES = ["opacity-0", "hidden", "invisible", "sr-only"];
 
 function classTokens(el: Element): string[] {
   return (el.getAttribute("class") ?? "").split(/\s+/).filter(Boolean);
@@ -67,8 +73,12 @@ function describeEl(el: Element): string {
 }
 
 /**
- * Asserts an actions wrapper is visible by default and hover-gated only on
- * hover-capable devices.
+ * Asserts an actions wrapper is permanently visible, dimmed at idle, and
+ * brought to full opacity on group hover and group focus-within.
+ *
+ * The name is retained from the pre-migration pattern so the six consuming
+ * test files need no edits; "hover-gated" now means emphasis on hover, not
+ * concealment until hover.
  *
  * @param wrapper the element carrying the opacity classes (the div wrapping
  *   the row's RowActions / Restore button)
@@ -77,25 +87,29 @@ function describeEl(el: Element): string {
 export function expectHoverGatedRowActions(wrapper: Element, label: string): void {
   // Positive half: the pattern is present and complete. Uses toHaveClass to
   // match how the rest of the suite asserts on classes (see Toolbar.test.tsx).
-  expect(wrapper, `${label}: actions wrapper missing the Phase A hover-gate classes`).toHaveClass(
-    VISIBLE,
-    hoverScoped(TRANSPARENT),
-    hoverScoped(`${GROUP_HOVER}:${VISIBLE}`),
-    hoverScoped(`${GROUP_FOCUS_WITHIN}:${VISIBLE}`)
+  // The idle class is unscoped by design — it applies on every device.
+  expect(
+    wrapper,
+    `${label}: actions wrapper missing the row-action visibility classes`
+  ).toHaveClass(
+    IDLE_OPACITY,
+    `${GROUP_HOVER}:${VISIBLE}`,
+    `${GROUP_FOCUS_WITHIN}:${VISIBLE}`
   );
 
   // Negative half — the actual regression guard. Any hiding utility that is
-  // NOT scoped to `hover: hover` hides the actions on touch. This catches a
-  // bare hide, a breakpoint-scoped hide, `invisible`, `sr-only`, and so on,
-  // rather than merely confirming the correct classes are also present.
+  // NOT scoped to `hover: hover` hides the actions outright. This catches a
+  // bare hide, a breakpoint-scoped hide, `invisible`, `sr-only`, and a
+  // reintroduced unscoped `opacity-0`, rather than merely confirming the
+  // correct classes are also present.
   const unscopedHiding = classTokens(wrapper).filter(
     (t) => isHidingToken(t) && !t.startsWith(HOVER_MEDIA_PREFIX)
   );
   expect(
     unscopedHiding,
-    `${label}: row actions carry hiding utilities that are not scoped to ` +
-      `"${HOVER_MEDIA_PREFIX}", so they would be unreachable on touch devices: ` +
-      `[${unscopedHiding.join(", ")}] on ${describeEl(wrapper)}`
+    `${label}: row actions carry hiding utilities, so they would be ` +
+      `invisible until hovered — and unreachable on touch devices, which ` +
+      `have no hover: [${unscopedHiding.join(", ")}] on ${describeEl(wrapper)}`
   ).toEqual([]);
 }
 
