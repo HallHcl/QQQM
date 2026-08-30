@@ -119,7 +119,7 @@ describe("useProjects", () => {
       response: new Response(null, { status: 200 }),
     });
 
-    // OverviewPage, InfrastructurePage, ResourceEditor, ResourceFilterBar,
+    // OverviewPage, InfrastructurePage, ResourceEditorSheet, ResourceFilterBar,
     // and ScheduleFormSheet all destructure `{ data: projects = [] }` —
     // `data` must stay a flat array or those out-of-scope call sites break.
     const { result } = renderHook(() => useProjects("c1"), { wrapper });

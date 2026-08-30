@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ResourceEditor from "./ResourceEditor";
+import ResourceEditorSheet from "./ResourceEditorSheet";
 import type { ResourceType } from "@/types";
 
 // The new-version mode tests each await prefill data before interacting
@@ -49,13 +49,31 @@ function renderEditor() {
   const onOpenChange = vi.fn();
   render(
     <QueryClientProvider client={queryClient}>
-      <ResourceEditor open onOpenChange={onOpenChange} mode="create" />
+      <ResourceEditorSheet open onOpenChange={onOpenChange} mode="create" />
     </QueryClientProvider>
   );
   return { onOpenChange };
 }
 
-describe("ResourceEditor — create mode", () => {
+/**
+ * Same as renderEditor, but the caller drives `open` — needed to prove the
+ * reset-on-dismiss behaviour, which is only observable by closing and
+ * re-opening the SAME component instance (a fresh mount would look reset
+ * whether or not the component actually resets anything).
+ */
+function renderEditorControlled() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const onOpenChange = vi.fn();
+  const ui = (open: boolean) => (
+    <QueryClientProvider client={queryClient}>
+      <ResourceEditorSheet open={open} onOpenChange={onOpenChange} mode="create" />
+    </QueryClientProvider>
+  );
+  const { rerender } = render(ui(true));
+  return { onOpenChange, rerender: (open: boolean) => rerender(ui(open)) };
+}
+
+describe("ResourceEditorSheet — create mode", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
@@ -68,7 +86,7 @@ describe("ResourceEditor — create mode", () => {
   it("renders all 7 resource types in the Type select (shared RESOURCE_TYPES constant, not a locally-duplicated list)", async () => {
     renderEditor();
 
-    fireEvent.click(screen.getAllByRole("combobox")[0]);
+    fireEvent.click(screen.getByRole("combobox", { name: "Type" }));
     for (const label of ["Runbook", "SOP", "Architecture", "Troubleshooting", "FAQ", "Link", "PDF"]) {
       expect(await screen.findByRole("option", { name: label })).toBeInTheDocument();
     }
@@ -88,7 +106,7 @@ describe("ResourceEditor — create mode", () => {
   it("blocks submit and shows a field error for a non-https external_url on type link", async () => {
     renderEditor();
 
-    fireEvent.click(screen.getAllByRole("combobox")[0]);
+    fireEvent.click(screen.getByRole("combobox", { name: "Type" }));
     fireEvent.click(await screen.findByRole("option", { name: "Link" }));
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Docs" } });
     fireEvent.change(screen.getByLabelText("External URL"), {
@@ -181,7 +199,7 @@ function renderNewVersion(
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <ResourceEditor
+      <ResourceEditorSheet
         mode="new-version"
         open
         onOpenChange={onOpenChange}
@@ -195,7 +213,7 @@ function renderNewVersion(
   return { onOpenChange };
 }
 
-describe("ResourceEditor — new-version mode", () => {
+describe("ResourceEditorSheet — new-version mode", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
@@ -344,5 +362,249 @@ describe("ResourceEditor — new-version mode", () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(postMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("ResourceEditorSheet — validation a11y", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+    postMock.mockReset();
+    toastMock.mockClear();
+    getMock.mockResolvedValue(
+      ok({ data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 1 } })
+    );
+  });
+
+  it("shows a styled title error rather than relying on the native required bubble", async () => {
+    renderEditor();
+
+    // The form is noValidate, so nothing stops this submit at the browser
+    // level — the message has to come from handleSubmit.
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    expect(await screen.findByText("Title is required.")).toBeInTheDocument();
+    expect(postMock).not.toHaveBeenCalled();
+  });
+
+  it("marks each invalid field with aria-invalid and leaves valid ones alone", async () => {
+    renderEditor();
+
+    // Empty title AND (type runbook) empty content.
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Title is required.");
+
+    expect(screen.getByLabelText("Title")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Content")).toHaveAttribute("aria-invalid", "true");
+    // runbook has no external_url rule, so this one stays valid.
+    expect(screen.getByLabelText("External URL")).toHaveAttribute("aria-invalid", "false");
+  });
+
+  it("associates each invalid field with its own error text via aria-describedby", async () => {
+    renderEditor();
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Title is required.");
+
+    const cases: Array<[HTMLElement, string]> = [
+      [screen.getByLabelText("Title"), "Title is required."],
+      [screen.getByLabelText("Content"), 'Content is required for type "Runbook".'],
+    ];
+    for (const [control, message] of cases) {
+      const describedBy = control.getAttribute("aria-describedby");
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy as string)).toHaveTextContent(message);
+    }
+    expect(screen.getByLabelText("External URL")).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("wires aria-invalid and describedby on external_url for type link", async () => {
+    renderEditor();
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Type" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Link" }));
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Docs" } });
+    fireEvent.change(screen.getByLabelText("External URL"), { target: { value: "http://x.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await screen.findByText("External URL must be a valid https:// URL.");
+    const url = screen.getByLabelText("External URL");
+    expect(url).toHaveAttribute("aria-invalid", "true");
+    expect(document.getElementById(url.getAttribute("aria-describedby") as string)).toHaveTextContent(
+      "External URL must be a valid https:// URL."
+    );
+  });
+
+  it("focuses the first invalid field in render order (title before content)", async () => {
+    renderEditor();
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Title is required.");
+
+    expect(screen.getByLabelText("Title")).toHaveFocus();
+  });
+
+  it("focuses content when the title is filled but content is not", async () => {
+    renderEditor();
+
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Deploy guide" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await screen.findByText('Content is required for type "Runbook".');
+    expect(screen.getByLabelText("Content")).toHaveFocus();
+  });
+
+  it("carries no aria-invalid=true or describedby before a failed submit", async () => {
+    renderEditor();
+    await screen.findByLabelText("Title");
+
+    for (const label of ["Title", "Content", "External URL"]) {
+      expect(screen.getByLabelText(label)).toHaveAttribute("aria-invalid", "false");
+      expect(screen.getByLabelText(label)).not.toHaveAttribute("aria-describedby");
+    }
+  });
+});
+
+describe("ResourceEditorSheet — create-mode dismissal and reset", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+    postMock.mockReset();
+    toastMock.mockClear();
+    getMock.mockResolvedValue(
+      ok({ data: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 1 } })
+    );
+  });
+
+  it("offers a Cancel button in create mode, which closes without submitting", async () => {
+    const { onOpenChange } = renderEditor();
+    await screen.findByLabelText("Title");
+
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(postMock).not.toHaveBeenCalled();
+  });
+
+  // Previously only new-version mode's Cancel reset anything, so create mode
+  // kept a half-filled form across close/reopen. All four dismissal paths
+  // now route through handleOpenChange — asserted here by re-mounting with
+  // the same state-owning component after each one.
+  it.each([
+    ["the Cancel button", () => fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }))],
+    ["the close (X) control", () => fireEvent.click(screen.getByRole("button", { name: "Close" }))],
+    ["Escape", () => fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" })],
+  ])("resets create-mode state when dismissed via %s", async (_label, dismiss) => {
+    const { onOpenChange, rerender } = renderEditorControlled();
+    await screen.findByLabelText("Title");
+
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Half-typed" } });
+    fireEvent.change(screen.getByLabelText("Content"), { target: { value: "Half-typed body" } });
+
+    dismiss();
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+
+    // Re-open the same instance: state must be blank again.
+    rerender(true);
+    await waitFor(() => expect(screen.getByLabelText("Title")).toHaveValue(""));
+    expect(screen.getByLabelText("Content")).toHaveValue("");
+  });
+
+  it("resets create-mode state when dismissed by clicking the overlay", async () => {
+    const { onOpenChange, rerender } = renderEditorControlled();
+    await screen.findByLabelText("Title");
+
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Half-typed" } });
+
+    // Radix dismisses on pointerdown+up outside the content; the overlay is
+    // the sibling of [role=dialog] inside the portal.
+    const overlay = document.querySelector("[data-radix-popper-content-wrapper], .fixed.inset-0");
+    fireEvent.pointerDown(overlay as Element, { button: 0, ctrlKey: false });
+    fireEvent.pointerUp(overlay as Element, { button: 0 });
+    fireEvent.click(overlay as Element);
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    rerender(true);
+    await waitFor(() => expect(screen.getByLabelText("Title")).toHaveValue(""));
+  });
+});
+
+describe("ResourceEditorSheet — new-version chrome", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+    postMock.mockReset();
+    toastMock.mockClear();
+    mockVersionGet();
+  });
+
+  it("disables Save while the prefill version is still loading", async () => {
+    let resolvePrefill: (v: unknown) => void = () => {};
+    getMock.mockImplementation(
+      () => new Promise((resolve) => { resolvePrefill = resolve; })
+    );
+    renderNewVersion();
+
+    // Prefill in flight: submitting now would post the empty initial content.
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+
+    resolvePrefill(ok(CURRENT_VERSION));
+    await waitFor(() => expect(screen.getByLabelText("Content")).toHaveValue("Current content"));
+    expect(screen.getByRole("button", { name: /save/i })).toBeEnabled();
+  });
+
+  it("gives the duplicate-content confirmation an alert role, and swaps out the form", async () => {
+    renderNewVersion();
+    await waitFor(() => expect(screen.getByLabelText("Content")).toHaveValue("Current content"));
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("This content is identical to the current version.");
+    // Body and footer are both gone; the header survives.
+    expect(screen.queryByLabelText("Content")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^save$/i })).not.toBeInTheDocument();
+    expect(screen.getByText("Add new version")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create anyway" })).toBeInTheDocument();
+  });
+});
+
+describe("ResourceEditorSheet — two simultaneous mounts", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+    postMock.mockReset();
+    toastMock.mockClear();
+    mockVersionGet();
+  });
+
+  // ResourcesPage mounts a create instance and a new-version instance at the
+  // same time, each with its own `open` flag. Nothing in this component is
+  // module-level mutable state, so the two must not see each other — this
+  // pins that, since a shared-state regression would be silent.
+  it("keeps create and new-version instances independent", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const createOnOpenChange = vi.fn();
+    const versionOnOpenChange = vi.fn();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ResourceEditorSheet open={false} onOpenChange={createOnOpenChange} mode="create" />
+        <ResourceEditorSheet
+          mode="new-version"
+          open
+          onOpenChange={versionOnOpenChange}
+          resourceId="r1"
+          resourceType="runbook"
+          currentVersionId="v2"
+        />
+      </QueryClientProvider>
+    );
+
+    // Only the open one renders anything.
+    await waitFor(() => expect(screen.getByLabelText("Content")).toHaveValue("Current content"));
+    expect(screen.queryByLabelText("Title")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+
+    // Editing the open instance leaves the closed one untouched.
+    fireEvent.change(screen.getByLabelText("Content"), { target: { value: "Edited" } });
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    await waitFor(() => expect(versionOnOpenChange).toHaveBeenCalledWith(false));
+    expect(createOnOpenChange).not.toHaveBeenCalled();
   });
 });

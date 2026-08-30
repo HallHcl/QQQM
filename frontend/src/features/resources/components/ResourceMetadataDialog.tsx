@@ -38,7 +38,7 @@ interface Props {
  * field (immutable after creation — structurally absent from the backend's
  * update schema, not just disabled) and no content/external_url fields
  * (content changes are a separate action — POST /:id/versions via
- * ResourceEditor's "Add version" flow, untouched by this dialog).
+ * ResourceEditorSheet's "Add version" flow, untouched by this dialog).
  */
 export default function ResourceMetadataDialog({ open, onOpenChange, resource }: Props) {
   const updateResource = useUpdateResource();

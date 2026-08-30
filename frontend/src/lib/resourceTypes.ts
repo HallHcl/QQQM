@@ -4,7 +4,7 @@ import type { ResourceType } from "@/hooks/useResources";
 // backend/src/db/migrations/001_init.sql, the Zod validator, and the
 // generated OpenAPI schema — NOT the 5-value list from earlier project
 // docs, which omitted architecture and pdf). Single source of truth,
-// previously hardcoded independently and identically in ResourceEditor.tsx
+// previously hardcoded independently and identically in ResourceEditorSheet.tsx
 // and ResourceFilterBar.tsx.
 export const RESOURCE_TYPES: ResourceType[] = [
   "runbook",

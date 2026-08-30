@@ -8,7 +8,7 @@ const KEY = "projects";
 export type ProjectSort = "name" | "created_at" | "updated_at";
 
 // clientId stays a separate positional arg (not folded into params) because
-// OverviewPage, InfrastructurePage, ResourceEditor, ResourceFilterBar, and
+// OverviewPage, InfrastructurePage, ResourceEditorSheet, ResourceFilterBar, and
 // ScheduleFormSheet all call this today as either useProjects(clientId) or
 // useProjects() — that call shape must keep compiling and behaving the same
 // (no pagination params sent) since those five files are out of scope here.

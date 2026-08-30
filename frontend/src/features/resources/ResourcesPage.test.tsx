@@ -78,7 +78,7 @@ function mockGetByPath(handlers: { resources?: unknown; versions?: unknown; reso
         handlers.resourceDetail ?? apiError(404, "NOT_FOUND", "Resource not found")
       );
     }
-    // The (always-mounted, dialog-closed-or-not) new-version ResourceEditor
+    // The (always-mounted, sheet-closed-or-not) new-version ResourceEditorSheet
     // instance pre-fetches the current version's content as soon as a
     // resource is selected (Part 24d's pre-fill) — give it something benign
     // rather than letting it 404/error in the background during tests that

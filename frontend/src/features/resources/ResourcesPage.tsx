@@ -21,7 +21,7 @@ import {
 } from "@/hooks/useResources";
 import ResourceFilterBar from "./components/ResourceFilterBar";
 import ResourceList from "./components/ResourceList";
-import ResourceEditor from "./components/ResourceEditor";
+import ResourceEditorSheet from "./components/ResourceEditorSheet";
 import ResourceMetadataDialog from "./components/ResourceMetadataDialog";
 import VersionHistoryPanel from "./components/VersionHistoryPanel";
 
@@ -264,9 +264,9 @@ export default function ResourcesPage() {
         </div>
       </div>
 
-      <ResourceEditor mode="create" open={createOpen} onOpenChange={setCreateOpen} />
+      <ResourceEditorSheet mode="create" open={createOpen} onOpenChange={setCreateOpen} />
       {selected && (
-        <ResourceEditor
+        <ResourceEditorSheet
           mode="new-version"
           open={newVersionOpen}
           onOpenChange={setNewVersionOpen}
