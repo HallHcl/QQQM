@@ -2019,15 +2019,17 @@ As recorded in decision #44d, under tritanopia the info badge (blue `#1968C0`) c
 
 ### 46d. Out of scope by explicit architect decision: ActivityTimeline.tsx
 
-`frontend/src/features/activity/components/ActivityTimeline.tsx:10-13` carries its own variant map:
+`frontend/src/features/activity/components/ActivityTimeline.tsx:9-14` carries its own variant map (ACTION_VARIANT):
 ```
-create: "default"  → brand (blue)
-restore: "default" → brand (blue) [lifecycle event, grouped with create]
-update: "secondary" → neutral (gray)
-delete: "destructive" → danger (red)
+create: "default"     [badge variant; dot uses bg-brand]
+restore: "default"    [badge variant; dot uses bg-brand — lifecycle event grouped with create per #33]
+update: "secondary"   [badge variant; dot uses bg-muted-foreground]
+delete: "destructive" [badge variant; dot uses bg-danger]
 ```
 
 This is explicitly **NOT** remapped in this ticket — the ACTION_VARIANT represents activity type (create/update/delete/restore), not status state, and the semantics are distinct from Schedule/Clients status. Whether ActivityTimeline should be brought into Phase 4 scope or intentionally kept separate is an **open, unresolved decision** — it was confirmed to exist and left untouched per the ticket's explicit instruction.
+
+**Note:** The badge variants (all four: "default", "secondary", "destructive") differ from the status variants used in Schedule/Clients ("success", "info", "warning", "neutral"). Activity badges are read-only annotations on immutable history; status badges are interactive state. This semantic and UX distinction is the reason for the separate decision on ActivityTimeline's scope.
 
 ### 46e. Verification
 
