@@ -34,7 +34,7 @@ import { apiErrorMessage } from "@/api/errors";
 import { getInitials } from "@/lib/initials";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import ServerFormDialog from "./components/ServerFormDialog";
+import ServerFormSheet from "./components/ServerFormSheet";
 import { useEnvironments } from "@/hooks/useEnvironments";
 import {
   useDeleteServer,
@@ -107,7 +107,7 @@ export default function ServersPage() {
   }
 
   // Editing now lives on ServerDetailPage's inline edit mode, not this
-  // dialog — see ServerFormDialog's create-only migration.
+  // sheet — see ServerFormSheet's create-only migration.
   function openEditForm(server: Server) {
     navigate(`/servers/${server.id}?edit=true`);
   }
@@ -367,7 +367,7 @@ export default function ServersPage() {
         </>
       )}
 
-      <ServerFormDialog open={formOpen} onOpenChange={setFormOpen} />
+      <ServerFormSheet open={formOpen} onOpenChange={setFormOpen} />
 
       <ConfirmDialog
         open={Boolean(deletingServer)}

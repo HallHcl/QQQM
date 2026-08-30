@@ -48,6 +48,13 @@ export default {
         'underline': 'inset 0 -1px 0 0 rgb(var(--input-underline))',
         'underline-focus': 'inset 0 -2px 0 0 rgb(var(--focus-ring))',
         'underline-disabled': 'inset 0 -1px 0 0 rgb(var(--input-underline) / 0.4)',
+        // Invalid form control. 2px like `underline-focus`, not 1px like the
+        // idle state, so an error reads at the same weight as focus — and,
+        // being a box-shadow like the rest of the family, it costs zero
+        // layout. A `border-danger` would have been the obvious reach, but
+        // these controls have no border at all: adding one on error would
+        // reflow the field by 1px on every validation pass.
+        'underline-danger': 'inset 0 -2px 0 0 rgb(var(--danger))',
         'elev-0': 'none',
         'elev-1': '0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)',
         'elev-2': '0 4px 8px -2px rgba(16,24,40,.08), 0 2px 4px -2px rgba(16,24,40,.06)',

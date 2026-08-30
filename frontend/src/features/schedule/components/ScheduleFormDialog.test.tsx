@@ -9,7 +9,7 @@ import type { Schedule } from "@/types";
 // detail), and waitFor chains across 20 tests. The import phase alone takes
 // ~4.4s due to the hook dependency chain, leaving very little margin per
 // test against Vitest's 5s default under full-suite CPU contention — the
-// same pattern that caused ServerFormDialog.test.tsx to timeout and was
+// same pattern that caused ServerFormSheet.test.tsx to timeout and was
 // fixed there with this identical scoped override. File-local, does NOT
 // change the global default.
 vi.setConfig({ testTimeout: 15000 });

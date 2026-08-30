@@ -107,7 +107,7 @@ interface Props {
 /**
  * Inline edit form rendered in place of ServerDetailPage's read-only Card 1
  * content. Edit-only (the environment field is always the immutable
- * read-only display — there's no picker here, unlike ServerFormDialog's
+ * read-only display — there's no picker here, unlike ServerFormSheet's
  * create mode). Mounted fresh each time the user enters edit mode, so all
  * local field state seeds once from `server` with no re-seed effect needed;
  * Cancel simply unmounts this without firing a mutation, discarding any

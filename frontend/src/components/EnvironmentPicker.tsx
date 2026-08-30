@@ -17,6 +17,9 @@ interface Props {
   disabled?: boolean;
   id?: string;
   "aria-label"?: string;
+  /** Passthrough so a consuming form can mark the trigger invalid. */
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
 /** Mirrors ProjectPicker's shape for the Server-create environment field. */
@@ -29,12 +32,20 @@ export function EnvironmentPicker({
   disabled,
   id,
   "aria-label": ariaLabel,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: Props) {
   const { data: environments = [] } = useEnvironments(projectId);
 
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger id={id} aria-label={ariaLabel} className={className}>
+      <SelectTrigger
+        id={id}
+        aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
+        className={className}
+      >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

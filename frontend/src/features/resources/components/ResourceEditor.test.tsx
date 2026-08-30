@@ -8,7 +8,7 @@ import type { ResourceType } from "@/types";
 // (waitFor + findBy*), and both create and new-version suites use
 // react-query with mocked fetches across 18 tests. Under full-suite CPU
 // contention these were reported as timing out — same pattern as
-// ServerFormDialog.test.tsx. Scoped override, does NOT change the global
+// ServerFormSheet.test.tsx. Scoped override, does NOT change the global
 // default.
 vi.setConfig({ testTimeout: 15000 });
 

@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ServerFormDialog from "./ServerFormDialog";
+import ServerFormSheet from "./ServerFormSheet";
 
 // This file's tests each drive several sequential Radix `Select` interactions
 // (open -> portal render/position -> option find -> click, repeated for the
-// Environment/Service type/Access method pickers) on top of react-hook-form
-// validation and React Query. That's the most cumulative async UI work of
+// Environment/Service type/Access method pickers) on top of this component's
+// hand-rolled validation (there is no react-hook-form here, despite what an
+// earlier revision of this comment claimed) and React Query. That's the most
+// cumulative async UI work of
 // any file in the suite, and it reliably fits within Vitest's 5s default
 // `testTimeout` in isolation and under normal single-suite-run load, but
 // under heavy CI CPU contention (reproduced locally by running two full
@@ -83,19 +85,19 @@ function apiError(status: number, code: string, message: string, details?: unkno
   };
 }
 
-function renderDialog() {
+function renderSheet() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   const onOpenChange = vi.fn();
   render(
     <QueryClientProvider client={queryClient}>
-      <ServerFormDialog open onOpenChange={onOpenChange} />
+      <ServerFormSheet open onOpenChange={onOpenChange} />
     </QueryClientProvider>
   );
   return { onOpenChange, invalidateSpy };
 }
 
-describe("ServerFormDialog — create", () => {
+describe("ServerFormSheet — create", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
@@ -108,7 +110,7 @@ describe("ServerFormDialog — create", () => {
   });
 
   it("blocks submit with client-side errors when required fields are empty", async () => {
-    const { onOpenChange } = renderDialog();
+    const { onOpenChange } = renderSheet();
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
@@ -123,7 +125,7 @@ describe("ServerFormDialog — create", () => {
   });
 
   it("rejects an out-of-range access_port and an access_path that doesn't start with /", async () => {
-    renderDialog();
+    renderSheet();
     await screen.findByLabelText("Display name");
 
     fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Web 01" } });
@@ -151,7 +153,7 @@ describe("ServerFormDialog — create", () => {
 
   it("submits the full Access Documentation field set, with access_path always sent regardless of access_method", async () => {
     postMock.mockResolvedValue(created(SAMPLE_SERVER));
-    const { onOpenChange, invalidateSpy } = renderDialog();
+    const { onOpenChange, invalidateSpy } = renderSheet();
 
     await screen.findByLabelText("Display name");
     fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Web 01" } });
@@ -208,7 +210,7 @@ describe("ServerFormDialog — create", () => {
         fieldErrors: { hostname: ["String must contain at least 1 character(s)"] },
       })
     );
-    renderDialog();
+    renderSheet();
 
     await screen.findByLabelText("Display name");
     fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Web 01" } });
@@ -239,4 +241,195 @@ describe("ServerFormDialog — create", () => {
 // Edit-mode behavior (pre-fill, locked environment field, PATCH payload
 // shape, conflict/error handling) moved to ServerEditCard, now covered by
 // ServerDetailPage.test.tsx's "edit mode" describe block instead of here —
-// this dialog no longer has an edit mode.
+// this sheet has no edit mode.
+
+describe("ServerFormSheet — accessibility", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+    postMock.mockReset();
+    patchMock.mockReset();
+    toastMock.mockClear();
+    getMock.mockResolvedValue(
+      ok({ data: [SAMPLE_ENVIRONMENT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
+    );
+  });
+
+  it("marks invalid fields with aria-invalid and leaves valid ones alone", async () => {
+    renderSheet();
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Display name is required.");
+
+    // Required, left empty -> invalid.
+    expect(screen.getByLabelText("Display name")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Hostname")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Access host")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("combobox", { name: /Service type/i })).toHaveAttribute(
+      "aria-invalid",
+      "true"
+    );
+    expect(screen.getByRole("combobox", { name: /Access method/i })).toHaveAttribute(
+      "aria-invalid",
+      "true"
+    );
+
+    // Optional, also empty -> NOT invalid. Guards against blanket-marking.
+    expect(screen.getByLabelText(/IP address/i)).toHaveAttribute("aria-invalid", "false");
+    expect(screen.getByLabelText(/Notes/i)).toHaveAttribute("aria-invalid", "false");
+    expect(screen.getByLabelText("Tech stack")).toHaveAttribute("aria-invalid", "false");
+  });
+
+  it("associates each invalid field with its own error text via aria-describedby", async () => {
+    renderSheet();
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Display name is required.");
+
+    // Each field points at an element whose text is that field's message —
+    // not merely "some id exists", which would still pass if the wiring were
+    // crossed between two fields.
+    const cases: Array<[HTMLElement, string]> = [
+      [screen.getByLabelText("Display name"), "Display name is required."],
+      [screen.getByLabelText("Hostname"), "Hostname is required."],
+      [screen.getByLabelText("Access host"), "Access host is required."],
+      [screen.getByRole("combobox", { name: /Environment/i }), "Environment is required."],
+      [screen.getByRole("combobox", { name: /Service type/i }), "Service type is required."],
+      [screen.getByRole("combobox", { name: /Access method/i }), "Access method is required."],
+    ];
+
+    for (const [control, message] of cases) {
+      const describedBy = control.getAttribute("aria-describedby");
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy as string)).toHaveTextContent(message);
+    }
+  });
+
+  it("drops aria-describedby on fields that have no error", async () => {
+    renderSheet();
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Display name is required.");
+
+    expect(screen.getByLabelText(/IP address/i)).not.toHaveAttribute("aria-describedby");
+    expect(screen.getByLabelText(/Notes/i)).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("focuses the first invalid field on a failed submit", async () => {
+    renderSheet();
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await screen.findByText("Display name is required.");
+
+    expect(screen.getByLabelText("Display name")).toHaveFocus();
+  });
+
+  it("focuses the first invalid field in RENDER order, not error-object order", async () => {
+    renderSheet();
+    await screen.findByLabelText("Display name");
+
+    // Display name is valid here, so the first invalid control is the
+    // Environment picker. This also pins the render-order-vs-EDITABLE_FIELDS
+    // distinction that FIELD_DOM_ORDER exists to encode.
+    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Web 01" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await screen.findByText("Environment is required.");
+    expect(screen.getByRole("combobox", { name: /Environment/i })).toHaveFocus();
+  });
+
+  it("focuses the field a server-side 400 blames", async () => {
+    postMock.mockResolvedValue(
+      apiError(400, "VALIDATION_ERROR", "Validation failed", {
+        formErrors: [],
+        fieldErrors: { hostname: ["String must contain at least 1 character(s)"] },
+      })
+    );
+    renderSheet();
+
+    await screen.findByLabelText("Display name");
+    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Web 01" } });
+    fireEvent.change(screen.getByLabelText("Hostname"), { target: { value: "x" } });
+    fireEvent.change(screen.getByLabelText("Access host"), { target: { value: "web-01.internal" } });
+
+    const [environmentTrigger, serviceTypeTrigger, accessMethodTrigger] = screen.getAllByRole("combobox");
+    fireEvent.click(environmentTrigger);
+    fireEvent.click(await screen.findByRole("option", { name: "Production" }));
+    fireEvent.click(serviceTypeTrigger);
+    fireEvent.click(await screen.findByRole("option", { name: "Application" }));
+    fireEvent.click(accessMethodTrigger);
+    fireEvent.click(await screen.findByRole("option", { name: "SSH" }));
+
+    // Radix restores focus to the trigger when a Select closes, on a
+    // setTimeout(0). Submitting before that lands would let the restore fire
+    // *after* the submit's own focus call and steal it back — an artifact of
+    // firing both in one tick, which two real user gestures cannot do. Wait
+    // for the restore to settle so this asserts the component's behaviour
+    // rather than the race.
+    await waitFor(() => expect(accessMethodTrigger).toHaveFocus());
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await screen.findByText("String must contain at least 1 character(s)");
+    await waitFor(() => expect(screen.getByLabelText("Hostname")).toHaveFocus());
+    expect(screen.getByLabelText("Hostname")).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("announces a non-field error through a role=alert banner", async () => {
+    postMock.mockResolvedValue(apiError(500, "INTERNAL_ERROR", "Database unavailable"));
+    renderSheet();
+
+    await screen.findByLabelText("Display name");
+    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Web 01" } });
+    fireEvent.change(screen.getByLabelText("Hostname"), { target: { value: "web-01" } });
+    fireEvent.change(screen.getByLabelText("Access host"), { target: { value: "web-01.internal" } });
+
+    const [environmentTrigger, serviceTypeTrigger, accessMethodTrigger] = screen.getAllByRole("combobox");
+    fireEvent.click(environmentTrigger);
+    fireEvent.click(await screen.findByRole("option", { name: "Production" }));
+    fireEvent.click(serviceTypeTrigger);
+    fireEvent.click(await screen.findByRole("option", { name: "Application" }));
+    fireEvent.click(accessMethodTrigger);
+    fireEvent.click(await screen.findByRole("option", { name: "SSH" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Database unavailable");
+  });
+});
+
+describe("ServerFormSheet — sheet chrome", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+    postMock.mockReset();
+    toastMock.mockClear();
+    getMock.mockResolvedValue(
+      ok({ data: [SAMPLE_ENVIRONMENT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })
+    );
+  });
+
+  it("renders the three Select triggers in the documented order", async () => {
+    renderSheet();
+    await screen.findByLabelText("Display name");
+
+    // Task 0 flagged the positional getAllByRole("combobox") destructuring
+    // that the tests above rely on as fragile. The migration did not reorder
+    // the pickers, so those tests keep working unchanged — this pins the
+    // order so a future reshuffle fails here, loudly, instead of silently
+    // driving the wrong control somewhere else in the file.
+    const [environment, serviceType, accessMethod] = screen.getAllByRole("combobox");
+    expect(environment).toHaveAttribute("id", "environment");
+    expect(serviceType).toHaveAttribute("id", "service_type");
+    expect(accessMethod).toHaveAttribute("id", "access_method");
+  });
+
+  it("closes without submitting when Cancel is clicked", async () => {
+    const { onOpenChange } = renderSheet();
+    await screen.findByLabelText("Display name");
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(postMock).not.toHaveBeenCalled();
+  });
+});
