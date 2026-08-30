@@ -2127,3 +2127,195 @@ Class applied: `font-mono text-xs text-muted-foreground tabular-nums`
 3. **Address vs numeric distinction:** ServersPage's "Connection" column displays "host:port" pairs and optional IP addresses. These are ADDRESSES (text), not pure numerics, so they do NOT get `text-right tabular-nums` treatment. Only true numeric columns (counts, ports as standalone data) would get right-alignment. Here, the column is descriptive text that happens to be in monospace.
 
 4. **RelatedCount exclusion:** ProjectsPage and EnvironmentsPage show environment/server counts as secondary subtext under the Name column. Per architect decision, these embedded counts stay as `text-xs text-muted-foreground` without additional numeric styling. Only standalone numeric data columns (like a hypothetical "Count" column) would receive `text-right font-mono tabular-nums`.
+
+---
+
+## 50. [Phase 5 — Data Tables Polish] `ip_address` keeps `text-xs`, not the spec'd `text-sm` (Ticket 1 closeout, 2026-08-30)
+
+**Decision:** On `ServersPage.tsx`, the `ip_address` line receives the monospace half of the Task 5.2 IP/network-column treatment (`font-mono`) but keeps `text-xs` rather than the spec'd `text-sm`. Ruled by the architect after the deviation was flagged rather than applied silently.
+
+### 50a. Why the spec was not followed literally
+
+The Task 5.2 spec assigns IP/network **columns** `font-mono text-sm`. `ip_address` is not a column here — it is the third conditional subtext line *inside* the Connection cell (`ServersPage.tsx:307`), rendered only when `server.ip_address !== server.access_host`:
+
+```
+Connection cell
+├── <Badge> + access_host:access_port   ← font-mono text-xs
+├── access_path (conditional)           ← text-xs text-muted-foreground
+└── IP: ip_address (conditional)        ← this line
+```
+
+Promoting it to `text-sm` would make the conditional IP line **larger than both siblings it sits between**, inverting the cell's own hierarchy. The spec's size applies to a standalone column; applied to a subtext line it produces the opposite of the intended effect.
+
+### 50b. What was applied
+
+```diff
+- <p className="text-xs text-muted-foreground">IP: {server.ip_address}</p>
++ <p className="font-mono text-xs text-muted-foreground">IP: {server.ip_address}</p>
+```
+
+The monospace treatment — the substantive half of the spec, giving IP octets uniform glyph width — is applied. Only the size is held.
+
+### 50c. Precedent
+
+Where a Phase 5 typography spec names a **column** and the target is **subtext inside another cell**, the cell's internal hierarchy wins on size; the font-family/variant half of the spec still applies. Same reasoning that kept `RelatedCount`'s embedded counts out of numeric alignment at #49f.4.
+
+### 50d. Verification
+
+✅ **Build:** clean (TypeScript, no errors)
+✅ **Tests:** 599/599 passed (62 files) — no regressions
+✅ **Commit:** `56df4b3` (CI run #27, conclusion `success`)
+
+---
+
+## 51. [Phase 5 — Data Tables Polish] `HIDING_UTILITIES` membership: `opacity-60` excluded, `"opacity-0"` retained as a literal (Ticket 2 / Task 5.3, 2026-08-30)
+
+**Decision:** When `TRANSPARENT` (`"opacity-0"`) was renamed to `IDLE_OPACITY` (`"opacity-60"`) in `frontend/src/test/hoverActions.ts`, the new value must **not** inherit the old one's slot in `HIDING_UTILITIES`, and the literal string `"opacity-0"` must **remain** in that list.
+
+### 51a. Why `opacity-60` is not a hiding utility
+
+`HIDING_UTILITIES` drives a guard that fails when a row-actions wrapper carries a utility that visually removes it. `opacity-60` is the new *idle* state — dimmed but legible and fully operable, including on touch. Listing it would make the guard fail on all six correctly-migrated call sites, and the natural "fix" for that red suite is to weaken or delete the guard — losing the touch-accessibility protection the module exists to provide.
+
+### 51b. Why `"opacity-0"` stays, with no call site using it
+
+`"opacity-0"` is precisely the state this migration moved away from. Retaining it as a bare literal is what catches a regression back to a fully transparent idle. It is dead with respect to current call sites and deliberately so:
+
+```diff
+- const TRANSPARENT = "opacity-0";
+- const HIDING_UTILITIES = [TRANSPARENT, "hidden", "invisible", "sr-only"];
++ const IDLE_OPACITY = "opacity-60";
++ const HIDING_UTILITIES = ["opacity-0", "hidden", "invisible", "sr-only"];
+```
+
+### 51c. Blast radius — none downstream
+
+`TRANSPARENT` was module-private and never exported, so the rename touched no importer. The six consuming test files (`ClientsPage`, `ProjectsPage`, `EnvironmentsPage`, `ServersPage`, `PeoplePage`, `SchedulePage` — all `*.test.tsx`) import only `actionsWrapperFor`, `expectHoverGatedRowActions`, and `expectNeverHiddenWithinRow`, and required **zero edits**.
+
+### 51d. Verification
+
+✅ **Build:** clean (TypeScript, no errors)
+✅ **Tests:** 599/599 passed (62 files) — no regressions
+✅ **`SchedulePage` `expectNeverHiddenWithinRow`:** run in isolation and passing, not inferred from the other five pages
+✅ **Commit:** `7c50991` (CI run #28, conclusion `success`)
+
+---
+
+## 52. [Phase 5 — Data Tables Polish] Two-layer regression guard in `hoverActions.ts` — reject every `HOVER_MEDIA_PREFIX` class (Ticket 2 / Task 5.3 follow-up A, 2026-08-30)
+
+**Decision:** `expectHoverGatedRowActions` asserts that the row-actions wrapper carries **no class beginning with `HOVER_MEDIA_PREFIX` at all**, in addition to the existing hiding-utility check.
+
+### 52a. The gap this closes
+
+Decision #51's guard had a hole on the one scenario it exists to catch. If a call site reintroduced `[@media(hover:hover)]:opacity-0` *alongside* the new `opacity-60`, both halves passed:
+
+- the positive assertion only checks the three required classes are **present**, not that nothing else is;
+- the hiding-utility filter **exempted** anything carrying `HOVER_MEDIA_PREFIX` — so the regression was waved through *precisely because* it was scoped.
+
+Since the migrated pattern has zero media-query-scoped classes by design, the presence of one is itself the signal, whatever utility it wraps.
+
+### 52b. What was added
+
+```diff
++ const mediaScoped = classTokens(wrapper).filter((t) => t.startsWith(HOVER_MEDIA_PREFIX));
++ expect(mediaScoped, `${label}: row actions carry "${HOVER_MEDIA_PREFIX}"-scoped classes...`).toEqual([]);
+
+- const unscopedHiding = classTokens(wrapper).filter(
+-   (t) => isHidingToken(t) && !t.startsWith(HOVER_MEDIA_PREFIX)
+- );
++ const hiding = classTokens(wrapper).filter(isHidingToken);
+```
+
+The scoping exemption was dropped from the hiding filter as part of the same change: with every media-scoped class rejected above, the exemption was unreachable, and leaving it would have the second check appear to tolerate exactly what the first forbids.
+
+### 52c. Empirically verified, not asserted by inspection
+
+`[@media(hover:hover)]:opacity-0` was temporarily reintroduced into `ClientsPage.tsx` and the guard exercised in both directions:
+
+- **New guard:** failed as intended, naming the offending class and the full wrapper markup.
+- **Pre-#52 guard** (stashed back to its committed state, same regression in place): **passed** — confirming the gap was real, not theoretical.
+
+Temporary change reverted; `git diff` on `ClientsPage.tsx` confirmed empty before commit.
+
+### 52d. ⚠️ Known limitation: wrapper-only, does not walk ancestors
+
+The guard inspects the wrapper element **only**. A `[@media(hover:hover)]:opacity-0` moved up onto the `<TableCell>` or `<tr>` would hide row actions just as effectively and pass every check, because `actionsWrapperFor` resolves only the immediate wrapping `<div>`. `expectNeverHiddenWithinRow` already walks ancestors to `<TR>`, but is applied only to Schedule's status controls, never to row-action wrappers.
+
+**Tracked as backlog, not fixed here** — the fix is contained (walk ancestors the same way) but was outside this ticket's scope.
+
+### 52e. Verification
+
+✅ **Build:** clean (TypeScript, no errors)
+✅ **Tests:** 599/599 passed (62 files) — no regressions
+✅ **Regression proof:** old guard passed the injected regression, new guard failed it (both runs recorded above)
+✅ **Commit:** `196486e` (CI run #30, conclusion `success`)
+
+---
+
+## 53. [Phase 5 — Data Tables Polish] Deleted-row contrast regression — gate the idle dim with `!isDeleted` (Ticket 2 / Task 5.3 follow-up B, 2026-08-30)
+
+**Decision:** The `opacity-60` idle state introduced by Task 5.3 is applied only when the row is not soft-deleted. Deleted rows fall back to the row's own `opacity-50`.
+
+### 53a. The regression
+
+Deleted rows carry `opacity-50` on the `<tr>`, which creates a stacking context and **multiplies** with the wrapper's new `opacity-60` → effective **0.30**. Deleted rows render a text "Restore" button in place of the kebab, so the affected control is a live, non-disabled interactive element with no WCAG exemption.
+
+Measured against WCAG 2.1 SC 1.4.11 (3:1 non-text minimum), opacity composited in sRGB:
+
+| Pair | Alpha | Effective | Ratio | 3:1 |
+|---|---|---|---|---|
+| Kebab, active row, idle — all 6 pages | 0.60 | `#70747E` | **4.66:1** | PASS |
+| Restore, deleted row, idle (0.6 × 0.5) | 0.30 | `#B7BABF` | **1.95:1** | **FAIL** |
+| Restore, deleted row, hover (1.0 × 0.5) | 0.50 | `#858992` | 3.36:1 | PASS |
+
+On touch devices this was a regression from **3.40:1 → 1.95:1**: the pre-5.3 pattern left the base at `opacity-100` there, since touch never matched `hover: hover`.
+
+The migration's headline value is sound and unchanged — `opacity-60` on active rows measures 4.66:1, clearing both the 3:1 non-text bar and the stricter 4.5:1 text bar, and sitting well clear of the α ≥ 0.4584 cliff for 3:1.
+
+### 53b. The fix
+
+```diff
+  className={cn(
+-   "inline-flex opacity-60 transition-opacity",
++   "inline-flex transition-opacity",
++   !isDeleted && "opacity-60",
+    "group-hover:opacity-100",
+    "group-focus-within:opacity-100"
+  )}
+```
+
+Applied to all six call sites, each using the `isDeleted` flag **already in scope** at that line (the same flag the row's own `opacity-50` reads) — no new prop introduced:
+
+| File | Flag | Declared |
+|---|---|---|
+| `ClientsPage.tsx` | `isDeleted` | `:211` |
+| `ProjectsPage.tsx` | `isDeleted` | `:225` |
+| `EnvironmentsPage.tsx` | `isDeleted` | `:215` |
+| `ServersPage.tsx` | `isDeleted` | `:228` |
+| `PeopleTable.tsx` | `isDeleted` | `:43` |
+| `ScheduleList.tsx` | `isDeleted` | `:65` |
+
+### 53c. Rationale and test safety
+
+Conceptually the idle dim de-emphasizes *secondary actions on an active row*; on a deleted row, Restore is the row's single primary affordance and should not be de-emphasized twice. Active rows keep `opacity-60` and their 4.66:1 — the migration's dimmed intent is unchanged for every case it was designed for.
+
+Test-safe by construction: `expectHoverGatedRowActions` resolves its wrapper via `getByRole("button", { name: "Actions" })` — the kebab, which deleted rows never render. All six assertions run against active rows, so neither the helper nor any test file needed editing.
+
+### 53d. Residual, and a wider issue not addressed here
+
+The fix returns deleted-row Restore to **3.40:1** — clears 3:1, still under the 4.5:1 bar applicable to a text label. This is *pre-existing* (it was the touch-device value before 5.3), which is why #53 is scoped as regression-reversal rather than a full remedy.
+
+Separately, the blanket `opacity-50` deleted-row treatment fails more broadly and app-wide, **not caused by 5.3**:
+
+| Deleted-row content at α 0.50 over `#FFFFFF` | Ratio | 4.5:1 |
+|---|---|---|
+| Body text `#101828` | 3.40:1 | FAIL |
+| Muted text `#667085` (subtexts, dates, counts) | **2.00:1** | FAIL |
+
+This also affects `ResourceList.tsx`, outside the six files. Remedying it means rethinking how "deleted" is signalled (strikethrough, badge, or background tint rather than blanket opacity) — a design decision, not a value tweak. **Tracked as backlog.**
+
+### 53e. Verification
+
+✅ **Build:** clean (TypeScript, no errors)
+✅ **Tests:** 599/599 passed (62 files) — no regressions
+✅ **All 6 `expectHoverGatedRowActions` assertions:** run explicitly across all six pages and passing, with `hoverActions.ts` unmodified
+✅ **Commit:** `c74f024` (CI run #29, conclusion `success`)
