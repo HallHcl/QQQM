@@ -254,7 +254,7 @@ export default function ClientsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={client.status === "active" ? "default" : "secondary"}>
+                      <Badge variant={client.status === "active" ? "success" : "neutral"}>
                         {client.status}
                       </Badge>
                     </TableCell>

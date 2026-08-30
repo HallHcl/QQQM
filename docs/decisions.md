@@ -1985,3 +1985,52 @@ This closes the previously-deferred item recorded at decision #38's "ruled-out" 
 | Master Plan doc vs `tailwind.config.js` token-value conflict | ✅ Resolved 2026-08-30 — **config is the source of truth** | Actual values: `text-heading-card` = 16px/24px/600/tracking `normal`; `text-body` = 14px/20px/400. The external Master Plan is historical/aspirational where it conflicts — see decision #43c |
 | `success` ≡ `primary` ≡ `focus-ring` (all `#0E7C5A`) | 🟡 OPEN — **accepted, not a blocker** | Second complete four-token collision, found during the 2026-08-30 audit and previously unrecorded. Explicitly left open by architect decision when `info` was fixed at #44. Consequence: under Phase 4's remap, `done`→`success` still renders in the primary action colour — see decision #44b |
 | Status colour is the only status signal (tritanopia) | 🟡 OPEN — Phase 4 design question | Under tritanopia blue collapses toward teal (ΔE 0.036 vs jade) — above the shipped floor and unavoidable for any blue. If status must be distinguishable without colour, Phase 4 should pair each status with an icon or text label. Not decided at #44 — see decision #44d |
+
+---
+
+## 46. [Phase 4 — Semantic Status Remap] Colors only — `done`→`success` (jade), `in_progress`→`info` (blue), `pending`→`warning` (amber), `cancelled`→`neutral` (gray) (2026-08-30)
+
+**Decision:** Complete the Phase 4 semantic status remap across all status-bearing components. Remap status values to their semantic status badge variants:
+- Schedule module: `done`→`success` (jade), `in_progress`→`info` (blue), `pending`→`warning` (amber), `cancelled`→`neutral` (gray)
+- Clients/Overview modules: `active`→`success` (jade), `inactive`→`neutral` (gray)
+
+ActivityTimeline.tsx is intentionally **out of scope** — its `ACTION_VARIANT` map (create/restore→brand blue, update→secondary gray, delete→danger red) reflects activity semantics, not status semantics, and remains unchanged pending a separate decision.
+
+### 46a. Implementation
+
+**ScheduleList.tsx** and **ScheduleFormDialog.tsx** (both in frontend/src/features/schedule/components/):
+- Unified `STATUS_VARIANT` map changed from `{ pending: "warning", in_progress: "secondary", done: "default", cancelled: "destructive" }` to `{ done: "success", in_progress: "info", pending: "warning", cancelled: "neutral" }`
+- Type definition updated to reflect the new variant union `"success" | "info" | "warning" | "neutral"`
+- Applies identically to both files (they share the same map per decision context)
+
+**ClientsPage.tsx** (frontend/src/features/clients/):
+- Client status badge remapped from `client.status === "active" ? "default" : "secondary"` to `client.status === "active" ? "success" : "neutral"`
+
+**OverviewPage.tsx** (frontend/src/features/overview/):
+- Client status badge remapped from `client.status === "active" ? "default" : "secondary"` to `client.status === "active" ? "success" : "neutral"`
+
+### 46b. ⚠️ Known, accepted collision: `success` ≡ `primary` ≡ `focus-ring`
+
+As noted in decision #44b, `--success` is identical to `--primary` (both `#0E7C5A` jade). Under this remap, the `done` status badge renders in the primary action color, same as the primary button and focus ring. **This is intentional and accepted per prior architect decision** — do not flag as a regression or "fix" it. The collision is recorded, known, and not a blocker.
+
+### 46c. Open: tritanopia caveat — icon/label mitigation deferred to Phase 4 design
+
+As recorded in decision #44d, under tritanopia the info badge (blue `#1968C0`) collapses toward jade `#0E7C5A` at ΔE 0.036, unavoidable for any blue. The architect decision is explicit: **do not add icons or text labels in this ticket**. Icon/label mitigation for tritanopia color-blindness is Phase 4 design work, not Phase 4 implementation; it is deferred to a separate ticket.
+
+### 46d. Out of scope by explicit architect decision: ActivityTimeline.tsx
+
+`frontend/src/features/activity/components/ActivityTimeline.tsx:10-13` carries its own variant map:
+```
+create: "default"  → brand (blue)
+restore: "default" → brand (blue) [lifecycle event, grouped with create]
+update: "secondary" → neutral (gray)
+delete: "destructive" → danger (red)
+```
+
+This is explicitly **NOT** remapped in this ticket — the ACTION_VARIANT represents activity type (create/update/delete/restore), not status state, and the semantics are distinct from Schedule/Clients status. Whether ActivityTimeline should be brought into Phase 4 scope or intentionally kept separate is an **open, unresolved decision** — it was confirmed to exist and left untouched per the ticket's explicit instruction.
+
+### 46e. Verification
+
+✅ **Build:** clean (TypeScript, no errors)
+✅ **Tests:** 599/599 passed (62 files) — no regressions
+✅ **ActivityTimeline.tsx:** confirmed untouched (no modifications)

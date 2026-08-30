@@ -100,7 +100,7 @@ export default function OverviewPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-2">
                 <CardTitle className="truncate">{client.name}</CardTitle>
-                <Badge variant={client.status === "active" ? "default" : "secondary"}>
+                <Badge variant={client.status === "active" ? "success" : "neutral"}>
                   {client.status}
                 </Badge>
               </div>

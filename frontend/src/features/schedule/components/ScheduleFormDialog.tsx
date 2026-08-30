@@ -35,12 +35,12 @@ const SCHEDULE_TYPES: ScheduleType[] = ["PM", "MA", "other"];
 
 const STATUS_VARIANT: Record<
   ScheduleStatus,
-  "default" | "secondary" | "outline" | "destructive" | "warning"
+  "success" | "info" | "warning" | "neutral"
 > = {
+  done: "success",
+  in_progress: "info",
   pending: "warning",
-  in_progress: "secondary",
-  done: "default",
-  cancelled: "destructive",
+  cancelled: "neutral",
 };
 
 interface Props {

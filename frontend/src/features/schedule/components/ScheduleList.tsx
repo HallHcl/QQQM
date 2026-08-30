@@ -26,12 +26,12 @@ const TERMINAL_STATUSES: Schedule["status"][] = ["done", "cancelled"];
 
 const STATUS_VARIANT: Record<
   Schedule["status"],
-  "default" | "secondary" | "outline" | "destructive" | "warning"
+  "success" | "info" | "warning" | "neutral"
 > = {
+  done: "success",
+  in_progress: "info",
   pending: "warning",
-  in_progress: "secondary",
-  done: "default",
-  cancelled: "destructive",
+  cancelled: "neutral",
 };
 
 interface Props {
