@@ -18,7 +18,7 @@ export default function Sidebar() {
             to={to}
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-3 border-l-2 border-transparent px-3 py-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-brand",
+                "flex items-center gap-3 border-l-2 border-transparent px-3 py-2 text-sm font-medium transition-colors duration-150 focus-visible:ring-primary focus-visible:ring-2",
                 isActive
                   ? "border-brand bg-[rgb(var(--surface-active))] text-foreground"
                   : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"

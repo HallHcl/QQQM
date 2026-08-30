@@ -28,7 +28,7 @@ export default function Topbar() {
   }
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4 shadow-elev-0">
+    <header className="flex h-14 items-center justify-between sticky top-0 z-30 backdrop-blur-md bg-white/80 border-b border-border/80 px-4">
       <MobileNav />
       <div className="ml-auto flex items-center gap-2">
         <NotificationBell />

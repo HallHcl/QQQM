@@ -69,6 +69,7 @@ export default {
       colors: {
         border: "rgb(var(--border) / <alpha-value>)",
         background: "rgb(var(--background) / <alpha-value>)",
+        canvas: "rgb(247 248 250 / <alpha-value>)",
         foreground: "rgb(var(--foreground) / <alpha-value>)",
         primary: {
           DEFAULT: "rgb(var(--primary) / <alpha-value>)",

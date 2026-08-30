@@ -8,11 +8,11 @@ export default function AppLayout() {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
-          {/* Content constrained to 1280px, centered within the already-padded
+        <main className="flex-1 overflow-y-auto bg-canvas p-4 sm:px-8 sm:py-7">
+          {/* Content constrained to 1440px, centered within the already-padded
               main element. Padding stays at the viewport edge so there is no
               gap-less strip at wide viewports. */}
-          <div className="mx-auto max-w-7xl w-full">
+          <div className="mx-auto max-w-[1440px] w-full">
             <Outlet />
           </div>
         </main>
