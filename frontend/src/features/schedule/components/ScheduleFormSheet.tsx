@@ -28,6 +28,7 @@ import { ServerPicker } from "@/components/ServerPicker";
 import { ConflictState } from "@/components/state/ConflictState";
 import { ApiError, apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { usePeople } from "@/hooks/usePeople";
 import { useConflictResolution } from "@/hooks/useConflictResolution";
 import { parseScheduledDate, useCreateSchedule, useSchedule, useUpdateSchedule } from "@/hooks/useSchedules";
@@ -36,12 +37,67 @@ import type { Schedule, ScheduleStatus, ScheduleType } from "@/types";
 const SCHEDULE_TYPES: ScheduleType[] = ["PM", "MA", "other"];
 
 /**
- * `aria-describedby` target for the Project/Server cross-field error. It is
- * a module constant rather than a per-field helper (as in ServerFormSheet)
- * because this form has exactly one error message, and it belongs to the
- * *pair* of fields rather than to either one.
+ * Upper bound on `notes`, mirroring the backend's SCHEDULE_NOTES_MAX_LENGTH
+ * (schedules.validator.ts) with the identical message, so the user sees the
+ * same text whether the client or the server rejects it. Exported so the
+ * tests assert against the real limit rather than a copy of the number.
  */
-const PARENT_ERROR_ID = "schedule-parent-error";
+export const SCHEDULE_NOTES_MAX_LENGTH = 2000;
+
+/**
+ * One key per validated field, plus `parent` for the Project/Server
+ * cross-field rule, which belongs to the *pair* rather than to either
+ * control. Same flat shape as ServerFormSheet's FieldErrors and
+ * ResourceEditorSheet's FormFieldErrors.
+ */
+interface FieldErrors {
+  title?: string;
+  type?: string;
+  scheduled_date?: string;
+  assigned_to?: string;
+  project_id?: string;
+  server_id?: string;
+  parent?: string;
+  notes?: string;
+}
+
+/**
+ * Fields in render order, for "focus the first invalid one". Create mode
+ * only: edit mode has exactly one validated field (notes) and focuses it
+ * directly, so it needs no order at all. `parent` maps to the Server picker
+ * — the message renders beneath that control, so that is where focus goes.
+ * project_id/server_id have no rule of their own today but keep their slots
+ * so the order stays correct if one is ever added.
+ */
+const FIELD_DOM_ORDER_CREATE: ReadonlyArray<{ key: keyof FieldErrors; elementId: string }> = [
+  { key: "title", elementId: "title" },
+  { key: "type", elementId: "type" },
+  { key: "scheduled_date", elementId: "date" },
+  { key: "assigned_to", elementId: "assignedTo" },
+  { key: "project_id", elementId: "project" },
+  { key: "server_id", elementId: "server" },
+  { key: "parent", elementId: "server" },
+  { key: "notes", elementId: "notes" },
+];
+
+/** `aria-describedby` target for a field's error text. */
+function errorId(elementId: string) {
+  return `${elementId}-error`;
+}
+
+/** Danger underline on an invalid control — same token as the other two sheets. */
+const INVALID_CONTROL = "shadow-underline-danger focus-visible:shadow-underline-danger";
+
+/**
+ * The only rule that applies in BOTH modes — notes is the sole editable
+ * field in edit mode, and an optional one in create mode.
+ */
+function validateNotes(value: string): string | undefined {
+  if (value.trim().length > SCHEDULE_NOTES_MAX_LENGTH) {
+    return `Notes must be ${SCHEDULE_NOTES_MAX_LENGTH} characters or less.`;
+  }
+  return undefined;
+}
 
 const STATUS_VARIANT: Record<
   ScheduleStatus,
@@ -83,10 +139,14 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
   const [assignedTo, setAssignedTo] = useState<string | undefined>(undefined);
   const [projectId, setProjectId] = useState<string | undefined>(undefined);
   const [serverId, setServerId] = useState<string | undefined>(undefined);
-  // "At least one of Project/Server" mirrors the backend's CHECK constraint
-  // (chk_schedules_has_parent: project_id IS NOT NULL OR server_id IS NOT
-  // NULL) — client-side so the user gets a clear message instead of a 400.
-  const [parentError, setParentError] = useState<string | undefined>(undefined);
+  // Every client-side validation message lives here, including the
+  // "at least one of Project/Server" cross-field rule (`parent`), which
+  // mirrors the backend's CHECK constraint (chk_schedules_has_parent:
+  // project_id IS NOT NULL OR server_id IS NOT NULL) — client-side so the
+  // user gets a clear message instead of a 400. It used to be a standalone
+  // banner; folding it in here keeps this sheet's error presentation
+  // identical to ServerFormSheet's and ResourceEditorSheet's.
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   // Read-only-in-this-dialog fields that CAN change server-side (via another
   // user's status transition) — tracked in state so a 409's "reload latest"/
@@ -120,9 +180,20 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
       setNotes("");
       setUpdatedAt(undefined);
     }
-    setParentError(undefined);
+    setFieldErrors({});
     clearConflict();
   }, [schedule, open, clearConflict]);
+
+  /**
+   * Moves focus to the first invalid control in render order. The elements
+   * already exist when this runs, so it does not wait for the re-render
+   * that paints the error state. Create mode only — see FIELD_DOM_ORDER_CREATE.
+   */
+  function focusFirstInvalid(errors: FieldErrors) {
+    const first = FIELD_DOM_ORDER_CREATE.find(({ key }) => errors[key]);
+    if (!first) return;
+    document.getElementById(first.elementId)?.focus();
+  }
 
   // Servers under a project are computed client-side (environment_id
   // intersection — see ServerPicker), so re-validating "is the currently
@@ -143,6 +214,44 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
+    // Validation runs only on this branch. The 409 path renders
+    // ConflictState instead of the <form>, so this handler is unreachable
+    // there and the two systems never interact.
+    if (schedule) {
+      // Edit mode validates notes and nothing else: it is the only editable
+      // field. The rest are disabled/readOnly inputs that already carry
+      // their own <Label htmlFor>, and wiring them into fieldErrors would
+      // claim a user could fix something they cannot change.
+      const notesError = validateNotes(notes);
+      if (notesError) {
+        setFieldErrors({ notes: notesError });
+        document.getElementById("notes")?.focus();
+        return;
+      }
+      setFieldErrors({});
+    } else {
+      const nextErrors: FieldErrors = {};
+      if (!title.trim()) nextErrors.title = "Title is required.";
+      // Defensive: `type` is a Select seeded to "PM" with no empty option,
+      // so this cannot fire today. It is here so the rule is stated in one
+      // place if a placeholder is ever added.
+      if (!type) nextErrors.type = "Type is required.";
+      if (!scheduledDate) nextErrors.scheduled_date = "Date is required.";
+      if (!assignedTo) nextErrors.assigned_to = "Assignee is required.";
+      if (!projectId && !serverId) {
+        nextErrors.parent = "Select a Project, a Server, or both.";
+      }
+      const notesError = validateNotes(notes);
+      if (notesError) nextErrors.notes = notesError;
+
+      if (Object.keys(nextErrors).length > 0) {
+        setFieldErrors(nextErrors);
+        focusFirstInvalid(nextErrors);
+        return;
+      }
+      setFieldErrors({});
+    }
+
     try {
       if (schedule) {
         // notes is the only field this dialog can change; status transitions
@@ -155,17 +264,9 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
           data: { notes: notes || undefined, updated_at: updatedAt ?? schedule.updated_at },
         });
       } else {
+        // Narrowing only — the required-field pass above already rejected
+        // an empty assignee with a visible error.
         if (!assignedTo) return;
-        if (!projectId && !serverId) {
-          setParentError("Select a Project, a Server, or both.");
-          // The error renders under the Server picker, so that is where
-          // focus goes. The message belongs to the Project/Server pair, not
-          // to either field alone — Server is chosen because it is the
-          // control the text sits beneath.
-          document.getElementById("server")?.focus();
-          return;
-        }
-        setParentError(undefined);
         await createSchedule.mutateAsync({
           title,
           type,
@@ -297,7 +398,20 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
                 {isEdit ? (
                   <Input id="title" value={schedule?.title ?? ""} disabled readOnly />
                 ) : (
-                  <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    aria-invalid={!!fieldErrors.title}
+                    aria-describedby={fieldErrors.title ? errorId("title") : undefined}
+                    className={cn(fieldErrors.title && INVALID_CONTROL)}
+                  />
+                )}
+                {!isEdit && fieldErrors.title && (
+                  <p id={errorId("title")} className="text-xs text-danger">
+                    {fieldErrors.title}
+                  </p>
                 )}
               </div>
 
@@ -308,7 +422,13 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
                     <Input id="type" value={schedule?.type ?? ""} disabled readOnly />
                   ) : (
                     <Select value={type} onValueChange={(v) => setType(v as ScheduleType)}>
-                      <SelectTrigger id="type" aria-required="true">
+                      <SelectTrigger
+                        id="type"
+                        aria-required="true"
+                        aria-invalid={!!fieldErrors.type}
+                        aria-describedby={fieldErrors.type ? errorId("type") : undefined}
+                        className={cn(fieldErrors.type && INVALID_CONTROL)}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -319,6 +439,11 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
                         ))}
                       </SelectContent>
                     </Select>
+                  )}
+                  {!isEdit && fieldErrors.type && (
+                    <p id={errorId("type")} className="text-xs text-danger">
+                      {fieldErrors.type}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-1">
@@ -337,7 +462,15 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
                       value={scheduledDate}
                       onChange={(e) => setScheduledDate(e.target.value)}
                       required
+                      aria-invalid={!!fieldErrors.scheduled_date}
+                      aria-describedby={fieldErrors.scheduled_date ? errorId("date") : undefined}
+                      className={cn(fieldErrors.scheduled_date && INVALID_CONTROL)}
                     />
+                  )}
+                  {!isEdit && fieldErrors.scheduled_date && (
+                    <p id={errorId("date")} className="text-xs text-danger">
+                      {fieldErrors.scheduled_date}
+                    </p>
                   )}
                 </div>
               </div>
@@ -349,7 +482,13 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
                     <Input id="assignedTo" value={assigneeName} disabled readOnly />
                   ) : (
                     <Select value={assignedTo} onValueChange={setAssignedTo}>
-                      <SelectTrigger id="assignedTo" aria-required="true">
+                      <SelectTrigger
+                        id="assignedTo"
+                        aria-required="true"
+                        aria-invalid={!!fieldErrors.assigned_to}
+                        aria-describedby={fieldErrors.assigned_to ? errorId("assignedTo") : undefined}
+                        className={cn(fieldErrors.assigned_to && INVALID_CONTROL)}
+                      >
                         <SelectValue placeholder="Select person" />
                       </SelectTrigger>
                       <SelectContent>
@@ -360,6 +499,11 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
                         ))}
                       </SelectContent>
                     </Select>
+                  )}
+                  {!isEdit && fieldErrors.assigned_to && (
+                    <p id={errorId("assignedTo")} className="text-xs text-danger">
+                      {fieldErrors.assigned_to}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-1">
@@ -372,6 +516,9 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
                       value={projectId}
                       onChange={handleProjectChange}
                       placeholder="None"
+                      aria-invalid={!!fieldErrors.parent}
+                      aria-describedby={fieldErrors.parent ? errorId("server") : undefined}
+                      className={cn(fieldErrors.parent && INVALID_CONTROL)}
                     />
                   )}
                 </div>
@@ -393,16 +540,26 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
                     onChange={setServerId}
                     projectId={projectId}
                     placeholder="None"
-                    aria-describedby={parentError ? PARENT_ERROR_ID : undefined}
+                    aria-invalid={!!fieldErrors.parent}
+                    aria-describedby={fieldErrors.parent ? errorId("server") : undefined}
+                    className={cn(fieldErrors.parent && INVALID_CONTROL)}
                   />
                   <p className="text-xs text-muted-foreground">
                     {projectId
                       ? "Scoped to servers under the selected project."
                       : "Optional — pick a project, a server, or both."}
                   </p>
-                  {parentError && (
-                    <p id={PARENT_ERROR_ID} role="alert" className="text-xs text-danger">
-                      {parentError}
+                  {/*
+                    The cross-field message lives here, under the Server
+                    picker, and both pickers point at it: it belongs to the
+                    Project/Server pair, not to either control alone.
+                    role="alert" is kept (and is the only per-field error
+                    here that carries it) because this one appears in
+                    response to a submit and can sit below the fold.
+                  */}
+                  {fieldErrors.parent && (
+                    <p id={errorId("server")} role="alert" className="text-xs text-danger">
+                      {fieldErrors.parent}
                     </p>
                   )}
                 </div>
@@ -448,7 +605,19 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
 
               <div className="space-y-1">
                 <OptionalLabel htmlFor="notes">Notes</OptionalLabel>
-                <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  aria-invalid={!!fieldErrors.notes}
+                  aria-describedby={fieldErrors.notes ? errorId("notes") : undefined}
+                  className={cn(fieldErrors.notes && INVALID_CONTROL)}
+                />
+                {fieldErrors.notes && (
+                  <p id={errorId("notes")} className="text-xs text-danger">
+                    {fieldErrors.notes}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -458,7 +627,12 @@ export default function ScheduleFormSheet({ open, onOpenChange, schedule }: Prop
                   Cancel
                 </Button>
               </SheetClose>
-              <Button type="submit" disabled={isSubmitting || (!isEdit && !assignedTo)}>
+              {/*
+                No longer disabled on a missing assignee: that silently
+                blocked submit with no explanation. Submitting now surfaces
+                "Assignee is required." on the field itself.
+              */}
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save"}
               </Button>
             </SheetFooter>

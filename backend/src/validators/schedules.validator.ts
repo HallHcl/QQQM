@@ -1,7 +1,26 @@
 import { z } from "zod";
 
 const SCHEDULE_TYPES = ["PM", "MA", "other"] as const;
+
 const SCHEDULE_STATUSES = ["pending", "in_progress", "done", "cancelled"] as const;
+
+/**
+ * Upper bound on `notes`. The column is unbounded TEXT (001_init.sql) and
+ * this schema had no limit at all, so an accidental paste could store an
+ * arbitrarily large body. 2000 is roomy for a maintenance-visit note and
+ * sits in the same order of magnitude as the other text limits here
+ * (projects 200, environments 100). Mirrored client-side by
+ * SCHEDULE_NOTES_MAX_LENGTH in ScheduleFormSheet.tsx, with the identical
+ * message, so the user sees the same text whichever side rejects it.
+ */
+export const SCHEDULE_NOTES_MAX_LENGTH = 2000;
+
+const notesSchema = z
+  .string()
+  .max(SCHEDULE_NOTES_MAX_LENGTH, {
+    message: `Notes must be ${SCHEDULE_NOTES_MAX_LENGTH} characters or less.`,
+  })
+  .optional();
 
 export const createScheduleSchema = z
   .object({
@@ -13,7 +32,7 @@ export const createScheduleSchema = z
       message: "scheduled_date must be a valid date",
     }),
     assigned_to: z.string().uuid(),
-    notes: z.string().optional(),
+    notes: notesSchema,
   })
   // The DB CHECK constraint (chk_schedules_has_parent, migration 006) is the
   // source of truth for this rule; this refine exists purely so the error
@@ -29,7 +48,7 @@ export const createScheduleSchema = z
 // their presence explicitly before this schema even runs.
 export const updateScheduleSchema = z.object({
   status: z.enum(SCHEDULE_STATUSES).optional(),
-  notes: z.string().optional(),
+  notes: notesSchema,
   updated_at: z.string().min(1),
 });
 

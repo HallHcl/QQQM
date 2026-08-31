@@ -2,6 +2,7 @@ import request from "supertest";
 import bcrypt from "bcrypt";
 import { app } from "../app";
 import { pool } from "../db/pool";
+import { SCHEDULE_NOTES_MAX_LENGTH } from "../validators/schedules.validator";
 
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "admin123";
@@ -334,6 +335,54 @@ describe("parent requirement (project_id / server_id)", () => {
       validScheduleBody({ project_id: projectId, server_id: serverId })
     );
     expect(both.status).toBe(201);
+  });
+});
+
+describe("notes length limit", () => {
+  // Imported rather than hardcoded so the tests move with the schema if the
+  // limit is ever retuned. Mirrored client-side by SCHEDULE_NOTES_MAX_LENGTH
+  // in ScheduleFormSheet.tsx, with the same message.
+  const atLimit = "n".repeat(SCHEDULE_NOTES_MAX_LENGTH);
+  const overLimit = "n".repeat(SCHEDULE_NOTES_MAX_LENGTH + 1);
+  const message = `Notes must be ${SCHEDULE_NOTES_MAX_LENGTH} characters or less.`;
+
+  it("accepts notes exactly at the limit on create (the boundary is inclusive)", async () => {
+    const res = await createScheduleAs(adminToken, validScheduleBody({ notes: atLimit }));
+
+    expect(res.status).toBe(201);
+    expect(res.body.notes).toBe(atLimit);
+  });
+
+  it("rejects notes one character over the limit on create (400 VALIDATION_ERROR)", async () => {
+    const res = await createScheduleAs(adminToken, validScheduleBody({ notes: overLimit }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(JSON.stringify(res.body.error)).toContain(message);
+  });
+
+  it("rejects notes one character over the limit on update, and accepts it at the limit", async () => {
+    const createRes = await createScheduleAs(adminToken, validScheduleBody());
+    const schedule = createRes.body;
+
+    const tooLong = await request(app)
+      .patch(`/api/schedules/${schedule.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ notes: overLimit, updated_at: schedule.updated_at });
+
+    expect(tooLong.status).toBe(400);
+    expect(tooLong.body.error.code).toBe("VALIDATION_ERROR");
+    expect(JSON.stringify(tooLong.body.error)).toContain(message);
+
+    // The rejected write must not have consumed the optimistic-lock stamp:
+    // the same updated_at still works for a valid follow-up edit.
+    const ok = await request(app)
+      .patch(`/api/schedules/${schedule.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ notes: atLimit, updated_at: schedule.updated_at });
+
+    expect(ok.status).toBe(200);
+    expect(ok.body.notes).toBe(atLimit);
   });
 });
 

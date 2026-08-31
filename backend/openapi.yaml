@@ -4203,6 +4203,7 @@ paths:
                   format: uuid
                 notes:
                   type: string
+                  maxLength: 2000
               required:
                 - title
                 - type
@@ -4299,6 +4300,7 @@ paths:
                     - cancelled
                 notes:
                   type: string
+                  maxLength: 2000
                 updated_at:
                   type: string
                   minLength: 1

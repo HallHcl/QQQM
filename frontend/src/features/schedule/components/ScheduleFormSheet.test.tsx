@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ScheduleFormSheet from "./ScheduleFormSheet";
+import ScheduleFormSheet, { SCHEDULE_NOTES_MAX_LENGTH } from "./ScheduleFormSheet";
 import type { Schedule } from "@/types";
 
 // This file's tests drive multiple sequential Radix Select interactions,
@@ -509,6 +509,311 @@ describe("ScheduleFormSheet", () => {
       fireEvent.click(await screen.findByRole("option", { name: "Migration" }));
 
       await waitFor(() => expect(serverCombobox().textContent).not.toBe("unrelated-server"));
+    });
+  });
+
+  // Per-field validation, added alongside the cross-field Project/Server
+  // rule that already existed (and which now lives in the same fieldErrors
+  // object rather than in its own banner — see the create-mode block above
+  // for its aria/focus coverage).
+  describe("validation", () => {
+    const assigneeCombobox = () => screen.getByRole("combobox", { name: "Assigned to" });
+    const projectCombobox = () => screen.getByRole("combobox", { name: "Project" });
+    const serverCombobox = () => screen.getByRole("combobox", { name: "Server" });
+    const save = () => screen.getByRole("button", { name: /save/i });
+
+    /**
+     * Radix restores focus to a Select's trigger on close via a
+     * setTimeout(0). Submitting in the same tick would let that restore fire
+     * *after* the submit's own focus call and steal it back — an artifact of
+     * firing both together, which two real user gestures cannot do.
+     */
+    async function pick(combobox: HTMLElement, optionName: string) {
+      fireEvent.click(combobox);
+      fireEvent.click(await screen.findByRole("option", { name: optionName }));
+      await waitFor(() => expect(combobox).toHaveFocus());
+    }
+
+    /** One character over the limit — the smallest value that must fail. */
+    const TOO_LONG_NOTES = "n".repeat(SCHEDULE_NOTES_MAX_LENGTH + 1);
+    const NOTES_ERROR = `Notes must be ${SCHEDULE_NOTES_MAX_LENGTH} characters or less.`;
+
+    describe("create mode", () => {
+      // `type` has a required rule in the component but deliberately no test
+      // here: the Type select is seeded to "PM" and offers no empty option,
+      // so there is no interaction that can empty it. The rule exists so the
+      // requirement is stated in one place if a placeholder is ever added.
+
+      it("blocks submit and shows 'Title is required.' on an empty title", async () => {
+        renderSheet(undefined);
+        await screen.findByLabelText("Title");
+
+        fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-01" } });
+        await pick(assigneeCombobox(), "Alex Rivera");
+        await pick(projectCombobox(), "Migration");
+
+        fireEvent.click(save());
+
+        expect(await screen.findByText("Title is required.")).toBeInTheDocument();
+        expect(postMock).not.toHaveBeenCalled();
+      });
+
+      it("blocks submit and shows 'Date is required.' on an empty date", async () => {
+        renderSheet(undefined);
+        await screen.findByLabelText("Title");
+
+        fireEvent.change(screen.getByLabelText("Title"), { target: { value: "New PM visit" } });
+        await pick(assigneeCombobox(), "Alex Rivera");
+        await pick(projectCombobox(), "Migration");
+
+        fireEvent.click(save());
+
+        expect(await screen.findByText("Date is required.")).toBeInTheDocument();
+        expect(postMock).not.toHaveBeenCalled();
+      });
+
+      it("blocks submit and shows 'Assignee is required.' when no assignee is chosen", async () => {
+        renderSheet(undefined);
+        await screen.findByLabelText("Title");
+
+        fireEvent.change(screen.getByLabelText("Title"), { target: { value: "New PM visit" } });
+        fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-01" } });
+        await pick(projectCombobox(), "Migration");
+
+        // Save used to be disabled outright on a missing assignee, which
+        // blocked submit with no explanation at all. It is now enabled, and
+        // submitting is what surfaces the message.
+        expect(save()).not.toBeDisabled();
+        fireEvent.click(save());
+
+        expect(await screen.findByText("Assignee is required.")).toBeInTheDocument();
+        expect(postMock).not.toHaveBeenCalled();
+      });
+
+      it("blocks submit on over-length notes and leaves an at-the-limit value alone", async () => {
+        postMock.mockResolvedValue(ok({ ...SAMPLE_SCHEDULE, id: "s5" }));
+        const { onOpenChange } = renderSheet(undefined);
+        await screen.findByLabelText("Title");
+
+        fireEvent.change(screen.getByLabelText("Title"), { target: { value: "New PM visit" } });
+        fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-01" } });
+        await pick(assigneeCombobox(), "Alex Rivera");
+        await pick(projectCombobox(), "Migration");
+
+        const notes = screen.getByLabelText(/Notes/i);
+        fireEvent.change(notes, { target: { value: TOO_LONG_NOTES } });
+        fireEvent.click(save());
+
+        expect(await screen.findByText(NOTES_ERROR)).toBeInTheDocument();
+        expect(postMock).not.toHaveBeenCalled();
+
+        // Exactly at the limit is valid — the boundary is inclusive.
+        const atLimit = "n".repeat(SCHEDULE_NOTES_MAX_LENGTH);
+        fireEvent.change(notes, { target: { value: atLimit } });
+        fireEvent.click(save());
+
+        await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+        expect(postMock).toHaveBeenCalledTimes(1);
+        expect(postMock.mock.calls[0][1].body.notes).toBe(atLimit);
+      });
+
+      it("wires each field error to its own control via aria-invalid/aria-describedby", async () => {
+        renderSheet(undefined);
+        await screen.findByLabelText("Title");
+
+        fireEvent.click(save());
+
+        const title = await screen.findByLabelText("Title");
+        expect(title).toHaveAttribute("aria-invalid", "true");
+        expect(document.getElementById(title.getAttribute("aria-describedby") as string))
+          .toHaveTextContent("Title is required.");
+
+        const date = screen.getByLabelText("Date");
+        expect(date).toHaveAttribute("aria-invalid", "true");
+        expect(document.getElementById(date.getAttribute("aria-describedby") as string))
+          .toHaveTextContent("Date is required.");
+
+        expect(assigneeCombobox()).toHaveAttribute("aria-invalid", "true");
+        expect(
+          document.getElementById(assigneeCombobox().getAttribute("aria-describedby") as string)
+        ).toHaveTextContent("Assignee is required.");
+      });
+
+      it("marks BOTH pickers invalid and points both at the single message under the Server picker", async () => {
+        renderSheet(undefined);
+        await screen.findByLabelText("Title");
+
+        fireEvent.click(save());
+
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent("Select a Project, a Server, or both.");
+        // The message belongs to the pair, so it is the describedby target
+        // of both controls even though it renders under only one of them.
+        expect(alert).toHaveAttribute("id", "server-error");
+        expect(projectCombobox()).toHaveAttribute("aria-invalid", "true");
+        expect(projectCombobox()).toHaveAttribute("aria-describedby", "server-error");
+        expect(serverCombobox()).toHaveAttribute("aria-invalid", "true");
+        expect(serverCombobox()).toHaveAttribute("aria-describedby", "server-error");
+        // Exactly one message for the pair — not one under each picker.
+        expect(screen.getAllByText("Select a Project, a Server, or both.")).toHaveLength(1);
+      });
+
+      it("focuses the first invalid field in FIELD_DOM_ORDER_CREATE, not merely the first rule that failed", async () => {
+        renderSheet(undefined);
+        await screen.findByLabelText("Title");
+
+        // Everything is invalid: title, date, assignee and the parent pair.
+        fireEvent.click(save());
+        await screen.findByText("Title is required.");
+        expect(screen.getByLabelText("Title")).toHaveFocus();
+      });
+
+      it("focuses Assigned to once title and date are filled", async () => {
+        renderSheet(undefined);
+        await screen.findByLabelText("Title");
+
+        fireEvent.change(screen.getByLabelText("Title"), { target: { value: "New PM visit" } });
+        fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-01" } });
+
+        fireEvent.click(save());
+        await screen.findByText("Assignee is required.");
+        expect(assigneeCombobox()).toHaveFocus();
+      });
+
+      it("focuses Notes last — only once every field above it is valid", async () => {
+        renderSheet(undefined);
+        await screen.findByLabelText("Title");
+
+        fireEvent.change(screen.getByLabelText("Title"), { target: { value: "New PM visit" } });
+        fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-01" } });
+        await pick(assigneeCombobox(), "Alex Rivera");
+        await pick(projectCombobox(), "Migration");
+        fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: TOO_LONG_NOTES } });
+
+        fireEvent.click(save());
+        await screen.findByText(NOTES_ERROR);
+        expect(screen.getByLabelText(/Notes/i)).toHaveFocus();
+      });
+
+      it("shows no field errors and no invalid controls before the first submit", async () => {
+        renderSheet(undefined);
+        await screen.findByLabelText("Title");
+
+        expect(screen.getByLabelText("Title")).not.toHaveAttribute("aria-invalid", "true");
+        expect(screen.getByLabelText("Date")).not.toHaveAttribute("aria-invalid", "true");
+        expect(assigneeCombobox()).not.toHaveAttribute("aria-invalid", "true");
+        expect(projectCombobox()).not.toHaveAttribute("aria-invalid", "true");
+        expect(serverCombobox()).not.toHaveAttribute("aria-invalid", "true");
+        expect(screen.getByLabelText(/Notes/i)).not.toHaveAttribute("aria-invalid", "true");
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      });
+    });
+
+    describe("edit mode", () => {
+      it("blocks the PATCH, shows the notes error and focuses Notes on an over-length value", async () => {
+        renderSheet(SAMPLE_SCHEDULE);
+        await screen.findByDisplayValue("Quarterly PM");
+
+        const notes = screen.getByLabelText(/Notes/i);
+        fireEvent.change(notes, { target: { value: TOO_LONG_NOTES } });
+        fireEvent.click(save());
+
+        expect(await screen.findByText(NOTES_ERROR)).toBeInTheDocument();
+        expect(notes).toHaveAttribute("aria-invalid", "true");
+        expect(document.getElementById(notes.getAttribute("aria-describedby") as string))
+          .toHaveTextContent(NOTES_ERROR);
+        expect(notes).toHaveFocus();
+        expect(patchMock).not.toHaveBeenCalled();
+      });
+
+      it("validates notes ONLY — the read-only fields are never marked invalid", async () => {
+        renderSheet(SAMPLE_SCHEDULE);
+        await screen.findByDisplayValue("Quarterly PM");
+
+        fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: TOO_LONG_NOTES } });
+        fireEvent.click(save());
+        await screen.findByText(NOTES_ERROR);
+
+        // The immutable fields have no rule, no error text and no invalid
+        // state — a user cannot act on an error they cannot fix.
+        for (const label of ["Title", "Type", "Date", "Assigned to", "Project"]) {
+          expect(screen.getByLabelText(label)).not.toHaveAttribute("aria-invalid", "true");
+        }
+        expect(screen.queryByText("Title is required.")).not.toBeInTheDocument();
+        expect(screen.queryByText("Date is required.")).not.toBeInTheDocument();
+        expect(screen.queryByText("Assignee is required.")).not.toBeInTheDocument();
+        // No cross-field rule in edit mode either, even though this schedule
+        // is project-linked with no server.
+        expect(screen.queryByText("Select a Project, a Server, or both.")).not.toBeInTheDocument();
+      });
+
+      it("clears the notes error and PATCHes once the value is brought back under the limit", async () => {
+        patchMock.mockResolvedValue(ok({ ...SAMPLE_SCHEDULE, notes: "short again" }));
+        const { onOpenChange } = renderSheet(SAMPLE_SCHEDULE);
+        await screen.findByDisplayValue("Quarterly PM");
+
+        const notes = screen.getByLabelText(/Notes/i);
+        fireEvent.change(notes, { target: { value: TOO_LONG_NOTES } });
+        fireEvent.click(save());
+        await screen.findByText(NOTES_ERROR);
+
+        fireEvent.change(notes, { target: { value: "short again" } });
+        fireEvent.click(save());
+
+        await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+        expect(screen.queryByText(NOTES_ERROR)).not.toBeInTheDocument();
+        expect(patchMock).toHaveBeenCalledTimes(1);
+        expect(patchMock.mock.calls[0][1].body.notes).toBe("short again");
+      });
+    });
+
+    // Regression guard for the one explicit non-goal of the validation work:
+    // the 409 branch swaps out the whole form, so validation must be
+    // unreachable there and ConflictState's own actions must be untouched.
+    describe("ConflictState is untouched by validation", () => {
+      it("renders no form controls or field errors while the conflict is showing, and keeps its own two actions", async () => {
+        patchMock.mockResolvedValueOnce(apiError(409, "CONFLICT", "stale"));
+        renderSheet(SAMPLE_SCHEDULE);
+
+        await screen.findByDisplayValue("Quarterly PM");
+        fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: "in-progress note" } });
+        fireEvent.click(save());
+
+        expect(await screen.findByText("This record changed")).toBeInTheDocument();
+        // The form (and therefore every validated control) is gone, so the
+        // validation system has nothing to act on in this branch.
+        expect(screen.queryByLabelText(/Notes/i)).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: /save/i })).not.toBeInTheDocument();
+        expect(screen.queryByText(NOTES_ERROR)).not.toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /reload latest/i })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /keep my changes/i })).toBeInTheDocument();
+      });
+
+      it("does not run notes validation on the keep-my-changes retry", async () => {
+        // An over-length value can only reach the retry if it got past the
+        // first submit, which it cannot — so this asserts the retry path is
+        // the plain, unvalidated PATCH it has always been.
+        patchMock.mockResolvedValueOnce(apiError(409, "CONFLICT", "stale"));
+        renderSheet(SAMPLE_SCHEDULE);
+
+        await screen.findByDisplayValue("Quarterly PM");
+        fireEvent.change(screen.getByLabelText(/Notes/i), { target: { value: "kept note" } });
+        fireEvent.click(save());
+        await screen.findByText("This record changed");
+
+        const fresh = { ...SAMPLE_SCHEDULE, updated_at: "2026-02-02T00:00:00.000Z" };
+        mockGetByPath({ schedule: ok(scheduleDetail(fresh)) });
+        patchMock.mockResolvedValueOnce(ok({ ...fresh, notes: "kept note" }));
+
+        fireEvent.click(screen.getByRole("button", { name: /keep my changes/i }));
+
+        await waitFor(() => expect(patchMock).toHaveBeenCalledTimes(2));
+        expect(patchMock.mock.calls[1][1].body).toEqual({
+          notes: "kept note",
+          updated_at: fresh.updated_at,
+        });
+        expect(toastMock).toHaveBeenCalledWith({ title: "Schedule updated" });
+      });
     });
   });
 });
