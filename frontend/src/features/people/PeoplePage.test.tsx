@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { actionsWrapperFor, expectHoverGatedRowActions } from "@/test/hoverActions";
+import { actionsWrapperFor, expectDimmedIdleRowActions } from "@/test/hoverActions";
 import PeoplePage from "./PeoplePage";
 
 const getMock = vi.fn();
@@ -370,14 +370,14 @@ describe("PeoplePage", () => {
   });
 
   describe("row actions stay reachable on touch devices", () => {
-    it("hover-gates the row's Actions only on hover-capable devices, never unconditionally", async () => {
+    it("keeps the row's Actions permanently visible — dimmed at idle, brightened on hover/focus, never hidden", async () => {
       useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
       mockGetByPath({ people: ok(paginated([ACTIVE_PERSON])) });
 
       renderPage();
       await screen.findByText("Alex Rivera");
 
-      expectHoverGatedRowActions(
+      expectDimmedIdleRowActions(
         actionsWrapperFor(screen.getByRole("button", { name: "Actions" })),
         "People"
       );

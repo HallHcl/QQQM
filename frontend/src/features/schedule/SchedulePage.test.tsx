@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   actionsWrapperFor,
-  expectHoverGatedRowActions,
+  expectDimmedIdleRowActions,
   expectNeverHiddenWithinRow,
 } from "@/test/hoverActions";
 import SchedulePage from "./SchedulePage";
@@ -410,14 +410,14 @@ describe("SchedulePage", () => {
   });
 
   describe("row actions stay reachable on touch devices", () => {
-    it("hover-gates the row's Actions only on hover-capable devices, never unconditionally", async () => {
+    it("keeps the row's Actions permanently visible — dimmed at idle, brightened on hover/focus, never hidden", async () => {
       useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
       mockGetByPath({ schedules: ok(paginated([ACTIVE_SCHEDULE])) });
 
       renderPage();
       await screen.findByText("Quarterly PM");
 
-      expectHoverGatedRowActions(
+      expectDimmedIdleRowActions(
         actionsWrapperFor(screen.getByRole("button", { name: "Actions" })),
         "Schedule"
       );
@@ -432,10 +432,11 @@ describe("SchedulePage", () => {
       renderPage();
       await screen.findByText("Quarterly PM");
 
-      // Deliberately excluded from the hover-gate: unlike the kebab, these
-      // drive the schedule's state machine and must not depend on hover.
-      // Checked up the ancestor chain, since a gated wrapper would hide them
-      // just as effectively as a class on the button itself.
+      // Deliberately excluded from the dimmed-idle treatment: unlike the
+      // kebab, these drive the schedule's state machine and must not depend
+      // on hover. Checked up the ancestor chain, since a hover-gated or
+      // hidden wrapper would suppress them just as effectively as a class on
+      // the button itself.
       for (const label of ["Start", "Cancel"]) {
         expectNeverHiddenWithinRow(
           screen.getByRole("button", { name: label }),

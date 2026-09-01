@@ -73,18 +73,81 @@ function describeEl(el: Element): string {
 }
 
 /**
+ * The element plus every ancestor up to — but not including — its table row.
+ * The row itself is excluded deliberately: a deleted row carries its own
+ * `opacity-50` dim, which is the row's business and not a row-action
+ * regression.
+ *
+ * Stopping at TR (rather than at the table, or not at all) is what makes
+ * "within the row" the unit of the assertion. Outside a table the walk simply
+ * runs to the document root, which is the right fallback for a helper that is
+ * only ever pointed at row content.
+ */
+function withinRow(el: Element): Element[] {
+  const chain: Element[] = [];
+  let node: Element | null = el;
+  while (node && node.tagName !== "TR") {
+    chain.push(node);
+    node = node.parentElement;
+  }
+  return chain;
+}
+
+/**
+ * Every class token matching `predicate` on the element or any ancestor
+ * within the row, paired with the element carrying it.
+ *
+ * Both guards below walk the chain rather than inspecting a single element:
+ * hover-gating applied to an enclosing `<td>` hides the actions exactly as
+ * effectively as the same class on the wrapper, so checking only the wrapper
+ * would let that through. Production always classes the wrapper directly, so
+ * this closes a gap rather than fixing a live bug — but it is the same reason
+ * expectNeverHiddenWithinRow has always walked, and the two now share one
+ * implementation instead of disagreeing about the scope of the check.
+ */
+function offendersWithinRow(
+  el: Element,
+  predicate: (token: string) => boolean
+): Array<{ el: Element; token: string }> {
+  return withinRow(el).flatMap((node) =>
+    classTokens(node)
+      .filter(predicate)
+      .map((token) => ({ el: node, token }))
+  );
+}
+
+/** Renders collected offenders as "token on <el ...>" for a failure message. */
+function describeOffenders(offenders: Array<{ el: Element; token: string }>): string {
+  return offenders.map(({ el, token }) => `${token} on ${describeEl(el)}`).join(", ");
+}
+
+function isHoverMediaToken(token: string): boolean {
+  return token.startsWith(HOVER_MEDIA_PREFIX);
+}
+
+/**
  * Asserts an actions wrapper is permanently visible, dimmed at idle, and
  * brought to full opacity on group hover and group focus-within.
  *
- * The name is retained from the pre-migration pattern so the six consuming
- * test files need no edits; "hover-gated" now means emphasis on hover, not
- * concealment until hover.
+ * Previously called `expectHoverGatedRowActions`, a name carried over from
+ * the pre-migration pattern it no longer describes: nothing here is gated on
+ * hover any more, and two of the three assertions exist specifically to
+ * reject hover-gating. The name now states the design it actually checks —
+ * a dimmed idle state, not concealment until hover — so a reader is not told
+ * the opposite of what the body asserts.
+ *
+ * Kept as one helper rather than split. The positive half (the pattern is
+ * present) and the negative halves (nothing hides it) are one invariant
+ * stated from both sides, every call site wants all three, and splitting
+ * would turn six one-line assertions into twelve for no gain. The ancestor
+ * walk the guards share with expectNeverHiddenWithinRow is factored out
+ * above instead, which is where the actual duplication was.
  *
  * @param wrapper the element carrying the opacity classes (the div wrapping
  *   the row's RowActions / Restore button)
  * @param label module name, to make a failure say which page broke
  */
-export function expectHoverGatedRowActions(wrapper: Element, label: string): void {
+export function expectDimmedIdleRowActions(wrapper: Element, label: string): void {
   // Positive half: the pattern is present and complete. Uses toHaveClass to
   // match how the rest of the suite asserts on classes (see Toolbar.test.tsx).
   // The idle class is unscoped by design — it applies on every device.
@@ -103,13 +166,13 @@ export function expectHoverGatedRowActions(wrapper: Element, label: string): voi
   // `[@media(hover:hover)]:opacity-0` — the pre-migration idle state, which
   // a scope-exempting hiding check would wave through as "correctly scoped"
   // precisely because it carries the prefix (decision #52).
-  const mediaScoped = classTokens(wrapper).filter((t) => t.startsWith(HOVER_MEDIA_PREFIX));
+  const mediaScoped = offendersWithinRow(wrapper, isHoverMediaToken);
   expect(
     mediaScoped,
     `${label}: row actions carry "${HOVER_MEDIA_PREFIX}"-scoped classes. The ` +
       `dimmed-idle pattern is unscoped by design, so a hover-media class means ` +
       `the actions are being hidden or restyled on pointer devices only: ` +
-      `[${mediaScoped.join(", ")}] on ${describeEl(wrapper)}`
+      `[${describeOffenders(mediaScoped)}]`
   ).toEqual([]);
 
   // Second negative half. Any hiding utility hides the actions outright:
@@ -117,12 +180,12 @@ export function expectHoverGatedRowActions(wrapper: Element, label: string): voi
   // reintroduced `opacity-0`. No scoping exemption — the assertion above has
   // already rejected every media-scoped class, so there is nothing left to
   // exempt.
-  const hiding = classTokens(wrapper).filter(isHidingToken);
+  const hiding = offendersWithinRow(wrapper, isHidingToken);
   expect(
     hiding,
     `${label}: row actions carry hiding utilities, so they would be ` +
       `invisible until hovered — and unreachable on touch devices, which ` +
-      `have no hover: [${hiding.join(", ")}] on ${describeEl(wrapper)}`
+      `have no hover: [${describeOffenders(hiding)}]`
   ).toEqual([]);
 }
 
@@ -132,27 +195,26 @@ export function expectHoverGatedRowActions(wrapper: Element, label: string): voi
  *
  * Used for Schedule's ScheduleStatusActions (Start/Complete/Cancel), which is
  * a workflow control rather than a row action and is deliberately excluded
- * from the hover-gate. Walking ancestors matters because the opacity that
- * would hide it lives on a wrapper, not on the button itself.
+ * from the dimmed-idle treatment. Walking ancestors matters because the
+ * opacity that would hide it lives on a wrapper, not on the button itself.
+ *
+ * Unlike expectDimmedIdleRowActions this asserts nothing positive — the
+ * control is expected to carry no visibility styling at all.
  */
 export function expectNeverHiddenWithinRow(el: Element, label: string): void {
-  let node: Element | null = el;
-
-  while (node && node.tagName !== "TR") {
-    const offenders = classTokens(node).filter(
-      (t) => t.startsWith(HOVER_MEDIA_PREFIX) || isHidingToken(t)
-    );
-    expect(
-      offenders,
-      `${label}: expected this control to stay permanently visible, but ` +
-        `${describeEl(node)} applies [${offenders.join(", ")}]`
-    ).toEqual([]);
-    node = node.parentElement;
-  }
+  // One aggregated assertion rather than one per ancestor: a failure now
+  // names every offending element in the chain instead of stopping at the
+  // lowest one, which matters when a wrapper and its <td> are both at fault.
+  const offenders = offendersWithinRow(el, (t) => isHoverMediaToken(t) || isHidingToken(t));
+  expect(
+    offenders,
+    `${label}: expected this control to stay permanently visible, but ` +
+      `[${describeOffenders(offenders)}] applies within its row`
+  ).toEqual([]);
 }
 
 /**
- * Resolves the wrapper element carrying the hover-gate classes from the row's
+ * Resolves the wrapper element carrying the dimmed-idle classes from the row's
  * kebab trigger. RowActions renders the trigger button as the wrapper div's
  * direct child, so `closest("div")` lands on the wrapper.
  */
