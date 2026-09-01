@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { expectDeletedTreatment } from "@/test/deletedRow";
 import { actionsWrapperFor, expectDimmedIdleRowActions } from "@/test/hoverActions";
 import EnvironmentsPage from "./EnvironmentsPage";
 import {
@@ -252,14 +253,16 @@ describe("EnvironmentsPage", () => {
       expect(screen.getByRole("button", { name: /restore/i })).toBeInTheDocument();
     });
 
-    it("marks a deleted environment with a Deleted badge", async () => {
+    it("marks a deleted environment with a neutral Deleted badge and muted row text, never opacity", async () => {
       useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
       mockGetByPath({ environments: okResult([DELETED_ENVIRONMENT]), projects: okResult([SAMPLE_PROJECT]) });
 
       renderPage();
 
       expect(await screen.findByText("Staging")).toBeInTheDocument();
-      expect(screen.getByText("Deleted")).toBeInTheDocument();
+      const badge = screen.getByText("Deleted");
+      expect(badge).toBeInTheDocument();
+      expectDeletedTreatment(badge, "Environments");
     });
   });
 

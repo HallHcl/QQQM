@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DELETED_CARD_TEXT, expectDeletedTreatment } from "@/test/deletedRow";
 import ResourcesPage from "./ResourcesPage";
 
 const getMock = vi.fn();
@@ -157,12 +158,15 @@ describe("ResourcesPage", () => {
     expect(await screen.findByText("Something broke")).toBeInTheDocument();
   });
 
-  it("marks a deleted resource with a Deleted badge and dims its row", async () => {
+  it("marks a deleted resource with a neutral Deleted badge and muted card text, never opacity", async () => {
     mockGetByPath({ resources: ok(paginated([DELETED_RESOURCE])) });
     renderPage();
 
     expect(await screen.findByText("Old guide")).toBeInTheDocument();
-    expect(screen.getByText("Deleted")).toBeInTheDocument();
+    const badge = screen.getByText("Deleted");
+    expect(badge).toBeInTheDocument();
+    expectDeletedTreatment(badge, "Resources",
+      { container: "button", textClass: DELETED_CARD_TEXT });
   });
 
   describe("pagination", () => {

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { expectDeletedTreatment } from "@/test/deletedRow";
 import { actionsWrapperFor, expectDimmedIdleRowActions } from "@/test/hoverActions";
 import ClientsPage from "./ClientsPage";
 import {
@@ -295,14 +296,16 @@ describe("ClientsPage", () => {
       expect(screen.queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
     });
 
-    it("marks a deleted client with a Deleted badge", async () => {
+    it("marks a deleted client with a neutral Deleted badge and muted row text, never opacity", async () => {
       useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
       getMock.mockResolvedValue(okResult([DELETED_CLIENT]));
 
       renderPage();
 
       expect(await screen.findByText("Old Co")).toBeInTheDocument();
-      expect(screen.getByText("Deleted")).toBeInTheDocument();
+      const badge = screen.getByText("Deleted");
+      expect(badge).toBeInTheDocument();
+      expectDeletedTreatment(badge, "Clients");
     });
   });
 

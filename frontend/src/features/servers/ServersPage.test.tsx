@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { expectDeletedTreatment } from "@/test/deletedRow";
 import { actionsWrapperFor, expectDimmedIdleRowActions } from "@/test/hoverActions";
 import ServersPage from "./ServersPage";
 
@@ -280,14 +281,16 @@ describe("ServersPage", () => {
       expect(screen.getByRole("button", { name: /restore/i })).toBeInTheDocument();
     });
 
-    it("marks a deleted server with a Deleted badge", async () => {
+    it("marks a deleted server with a neutral Deleted badge and muted row text, never opacity", async () => {
       useAuthMock.mockReturnValue({ roles: ["admin"], isLoading: false });
       mockGetByPath({ servers: okResult([DELETED_SERVER]), environments: okResult([SAMPLE_ENVIRONMENT]) });
 
       renderPage();
 
       expect(await screen.findByText("Web 02")).toBeInTheDocument();
-      expect(screen.getByText("Deleted")).toBeInTheDocument();
+      const badge = screen.getByText("Deleted");
+      expect(badge).toBeInTheDocument();
+      expectDeletedTreatment(badge, "Servers");
     });
   });
 

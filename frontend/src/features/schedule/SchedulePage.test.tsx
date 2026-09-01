@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { expectDeletedTreatment } from "@/test/deletedRow";
 import {
   actionsWrapperFor,
   expectDimmedIdleRowActions,
@@ -113,12 +114,14 @@ describe("SchedulePage", () => {
     expect(await screen.findByText("Quarterly PM")).toBeInTheDocument();
   });
 
-  it("marks a deleted schedule with a Deleted badge and dims its row", async () => {
+  it("marks a deleted schedule with a neutral Deleted badge and muted row text, never opacity", async () => {
     mockGetByPath({ schedules: ok(paginated([DELETED_SCHEDULE])) });
     renderPage();
 
     expect(await screen.findByText("Old Server Check")).toBeInTheDocument();
-    expect(screen.getByText("Deleted")).toBeInTheDocument();
+    const badge = screen.getByText("Deleted");
+    expect(badge).toBeInTheDocument();
+    expectDeletedTreatment(badge, "Schedule");
   });
 
   describe("pagination", () => {

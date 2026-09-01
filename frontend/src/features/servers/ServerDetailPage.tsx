@@ -70,7 +70,7 @@ export default function ServerDetailPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <CardTitle>{server.display_name}</CardTitle>
-                  {server.deleted_at && <Badge variant="secondary">Deleted</Badge>}
+                  {server.deleted_at && <Badge variant="neutral">Deleted</Badge>}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{server.hostname}</p>
                 <div className="mt-1">

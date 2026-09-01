@@ -20,7 +20,7 @@ export default function ResourceList({ resources, selectedId, onSelect }: Props)
               onClick={() => onSelect(resource)}
               className={cn(
                 "flex w-full flex-col items-start gap-1 rounded-md border border-border p-3 text-left transition-colors duration-150",
-                isDeleted && "opacity-50",
+                isDeleted && "text-muted-foreground",
                 selectedId === resource.id
                   ? "border-brand bg-surface-hover"
                   : "hover:border-brand hover:bg-surface-hover"
@@ -32,7 +32,7 @@ export default function ResourceList({ resources, selectedId, onSelect }: Props)
                 {resource.category && (
                   <span className="text-xs text-muted-foreground">{resource.category}</span>
                 )}
-                {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                {isDeleted && <Badge variant="neutral">Deleted</Badge>}
               </div>
             </button>
           </li>

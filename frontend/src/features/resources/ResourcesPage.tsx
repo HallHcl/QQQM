@@ -194,7 +194,7 @@ export default function ResourcesPage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     {selected.title}
-                    {isDeletedSelected && <Badge variant="secondary">Deleted</Badge>}
+                    {isDeletedSelected && <Badge variant="neutral">Deleted</Badge>}
                   </CardTitle>
                   <div className="mt-1 flex items-center gap-2">
                     <Badge variant="outline">{selected.type}</Badge>

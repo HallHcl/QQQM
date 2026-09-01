@@ -217,7 +217,7 @@ export default function EnvironmentsPage() {
                 return (
                   <TableRow
                     key={environment.id}
-                    className={cn("group cursor-pointer", isDeleted && "opacity-50")}
+                    className={cn("group cursor-pointer", isDeleted && "[&_td]:text-muted-foreground")}
                     role="button"
                     tabIndex={0}
                     // Explicit aria-label so the row's accessible name doesn't
@@ -242,7 +242,7 @@ export default function EnvironmentsPage() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             {environment.name}
-                            {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                            {isDeleted && <Badge variant="neutral">Deleted</Badge>}
                           </div>
                           <RelatedCount
                             result={serverCounts.get(environment.id)}
@@ -265,15 +265,16 @@ export default function EnvironmentsPage() {
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.stopPropagation()}
                     >
-                      {/* Row actions idle at opacity-60 — dimmed but legible
-                          and fully operable everywhere, including touch, where
-                          there is no hover to reveal them with. Hover or
-                          keyboard focus anywhere in the row brings them to full
-                          opacity. Kept as opacity (not display/visibility) so
-                          the buttons stay in the tab order throughout.
-                          Skipped on deleted rows, which the row itself already
-                          dims to opacity-50: compounding the two put Restore
-                          at 1.95:1, under the 3:1 minimum (decision #53). */}
+                      {/* Row actions idle at opacity-60 — dimmed but legible and fully
+                          operable everywhere, including touch, where there is no hover
+                          to reveal them with. Hover or keyboard focus anywhere in the
+                          row brings them to full opacity. Kept as opacity (not
+                          display/visibility) so the buttons stay in the tab order
+                          throughout. Still skipped on deleted rows, though decision
+                          #53's original reason is gone: the row no longer carries its
+                          own opacity-50 to compound with (deleted rows are marked with
+                          muted text plus a badge now), but Restore is a deleted row's
+                          only action and is deliberately left at full contrast. */}
                       <div
                         className={cn(
                           "inline-flex transition-opacity",

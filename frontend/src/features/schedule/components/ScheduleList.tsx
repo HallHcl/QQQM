@@ -65,7 +65,7 @@ export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }:
           const isDeleted = Boolean(schedule.deleted_at);
           const isTerminal = TERMINAL_STATUSES.includes(schedule.status);
           return (
-            <TableRow key={schedule.id} className={cn("group", isDeleted && "opacity-50")}>
+            <TableRow key={schedule.id} className={cn("group", isDeleted && "[&_td]:text-muted-foreground")}>
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
                   <span
@@ -75,7 +75,7 @@ export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }:
                     {getInitials(schedule.title)}
                   </span>
                   {schedule.title}
-                  {isDeleted && <Badge variant="secondary">Deleted</Badge>}
+                  {isDeleted && <Badge variant="neutral">Deleted</Badge>}
                 </div>
               </TableCell>
               <TableCell>{schedule.type}</TableCell>
@@ -89,18 +89,15 @@ export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }:
                 </div>
               </TableCell>
               <TableCell className="space-x-2 text-right">
-                {/* Row actions idle at opacity-60 — dimmed but legible and
-                    fully operable everywhere, including touch, where there is
-                    no hover to reveal them with. Hover or keyboard focus
-                    anywhere in the row brings them to full opacity. Kept as
-                    opacity (not display/visibility) so the buttons stay in
-                    the tab order throughout. Scoped to this Actions cell
-                    only: ScheduleStatusActions in the Status column is a
-                    workflow control, not a row action, so it stays at full
-                    opacity always. The idle dim is also skipped on deleted
-                    rows, which the row itself already dims to opacity-50:
-                    compounding the two put Restore at 1.95:1, under the 3:1
-                    minimum (decision #53). */}
+                {/* Row actions idle at opacity-60 — dimmed but legible and fully
+                    operable everywhere, including touch, where there is no hover to
+                    reveal them with. Hover or keyboard focus anywhere in the row brings
+                    them to full opacity. Kept as opacity (not display/visibility) so
+                    the buttons stay in the tab order throughout. Still skipped on
+                    deleted rows, though decision #53's original reason is gone: the row
+                    no longer carries its own opacity-50 to compound with (deleted rows
+                    are marked with muted text plus a badge now), but Restore is a
+                    deleted row's only action and is deliberately left at full contrast. */}
                 <div
                   className={cn(
                     "inline-flex transition-opacity",
