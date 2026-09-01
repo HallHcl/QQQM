@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import OverviewPage from "./OverviewPage";
 
@@ -78,11 +78,14 @@ function renderPage() {
   );
 }
 
-/** The tile's value is the sibling <p> after its label, inside the same card. */
+/**
+ * The tile's value is the <p> immediately after its label. Addressed by
+ * sibling rather than by child index: the tiles gained a leading icon frame,
+ * which shifts every index inside the card.
+ */
 function tileValue(label: string) {
   const labelEl = screen.getByText(label);
-  const card = labelEl.parentElement as HTMLElement;
-  return (card.children[1] as HTMLElement).textContent;
+  return labelEl.nextElementSibling?.textContent;
 }
 
 describe("OverviewPage metric tiles", () => {
@@ -108,8 +111,16 @@ describe("OverviewPage metric tiles", () => {
 
     await waitFor(() => expect(tileValue("Pending Schedules")).toBe("2"));
 
-    const scheduleCall = getMock.mock.calls.find(([path]) => path === "/api/schedules");
-    expect(scheduleCall?.[1].params.query).toMatchObject({ per_page: 1, status: "pending" });
+    // `some`, not the first match: /api/schedules is hit twice — once with
+    // per_page 1 by the Pending Schedules tile, and once by the Urgent Action
+    // Items box for the full records it buckets.
+    const scheduleCalls = getMock.mock.calls.filter(([path]) => path === "/api/schedules");
+    expect(
+      scheduleCalls.some(
+        ([, opts]) =>
+          opts.params.query.per_page === 1 && opts.params.query.status === "pending"
+      )
+    ).toBe(true);
 
     // `some`, not the first matching call: /api/projects and /api/clients are
     // each hit twice — once unpaginated by a picker, once with per_page 1 by
@@ -167,5 +178,62 @@ describe("OverviewPage client picker", () => {
     const cardHeader = clientName.closest("div.p-6") as HTMLElement;
     expect(cardHeader).toContainElement(picker);
     expect(within(cardHeader).getByText("active")).toBeInTheDocument();
+  });
+});
+
+/** Renders the page inside a router that reports the current URL, so a tile
+ *  click can be asserted as a real navigation rather than a spy call. */
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname + location.search}</div>;
+}
+
+function renderPageWithRouting() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={["/overview"]}>
+        <LocationProbe />
+        <Routes>
+          <Route path="/overview" element={<OverviewPage />} />
+          <Route path="*" element={<div>navigated</div>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+describe("OverviewPage metric tile navigation", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+  });
+
+  it.each([
+    ["Total Clients", "/clients"],
+    ["Total Projects", "/projects"],
+    ["Environments", "/environments"],
+    ["Servers", "/servers"],
+    ["Resources", "/resources"],
+    ["Pending Schedules", "/schedule?status=pending"],
+  ])("navigates from the %s tile to %s", async (label, destination) => {
+    routeGet(ALL_OK);
+    renderPageWithRouting();
+
+    await waitFor(() => expect(tileValue(label)).not.toBe("…"));
+
+    // The whole tile is one button, named by its label and count.
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(label) }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent(destination);
+  });
+
+  it("keeps a failing tile clickable — an unknown count is still a destination", async () => {
+    routeGet({ ...ALL_OK, "/api/servers": "error" });
+    renderPageWithRouting();
+
+    await waitFor(() => expect(tileValue("Servers")).toBe("—"));
+    fireEvent.click(screen.getByRole("button", { name: /Servers/ }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent("/servers");
   });
 });

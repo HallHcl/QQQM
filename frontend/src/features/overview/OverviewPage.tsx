@@ -14,8 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  BookText,
+  Building2,
+  CalendarClock,
+  FolderKanban,
+  HardDrive,
+  Layers,
+} from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { MetricCard } from "@/components/MetricCard";
+import UrgentActionItems from "./UrgentActionItems";
 import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
 import { useEnvironments } from "@/hooks/useEnvironments";
@@ -60,13 +69,22 @@ export default function OverviewPage() {
   const resourceCount = useResources({ per_page: 1 });
   const pendingScheduleCount = useSchedules({ status: "pending", per_page: 1 });
 
+  // `to` carries any pre-applied filter as search params — the destination
+  // page reads them back through usePagination's getParam, so the filter
+  // survives a refresh or a shared link. Only Pending Schedules needs one;
+  // the other five are unfiltered list views.
   const metrics = [
-    { label: "Total Clients", query: clientCount },
-    { label: "Total Projects", query: projectCount },
-    { label: "Environments", query: environmentCount },
-    { label: "Servers", query: serverCount },
-    { label: "Resources", query: resourceCount },
-    { label: "Pending Schedules", query: pendingScheduleCount },
+    { label: "Total Clients", query: clientCount, icon: Building2, to: "/clients" },
+    { label: "Total Projects", query: projectCount, icon: FolderKanban, to: "/projects" },
+    { label: "Environments", query: environmentCount, icon: Layers, to: "/environments" },
+    { label: "Servers", query: serverCount, icon: HardDrive, to: "/servers" },
+    { label: "Resources", query: resourceCount, icon: BookText, to: "/resources" },
+    {
+      label: "Pending Schedules",
+      query: pendingScheduleCount,
+      icon: CalendarClock,
+      to: "/schedule?status=pending",
+    },
   ];
 
   const recentActivity = activity.slice(0, 10);
@@ -75,15 +93,19 @@ export default function OverviewPage() {
     <div className="space-y-6">
       <PageHeader title="Overview" />
 
+      <UrgentActionItems />
+
       {/* 2 cols at 375px keeps each tile wide enough for a label like "Pending
           Schedules" on two lines; 6 across at lg puts the whole system on one
           row at laptop width without the tiles going narrower than their
           longest label. */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        {metrics.map(({ label, query }) => (
+        {metrics.map(({ label, query, icon, to }) => (
           <MetricCard
             key={label}
             label={label}
+            icon={icon}
+            to={to}
             count={query.pagination?.total}
             isLoading={query.isLoading}
             isError={query.isError}
