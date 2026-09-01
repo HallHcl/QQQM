@@ -5,7 +5,6 @@ import EnvironmentFormDialog from "./EnvironmentFormDialog";
 
 const getMock = vi.fn();
 const postMock = vi.fn();
-const patchMock = vi.fn();
 const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
@@ -15,7 +14,6 @@ vi.mock("@/api/client", async () => {
     apiClient: {
       GET: (...args: unknown[]) => getMock(...args),
       POST: (...args: unknown[]) => postMock(...args),
-      PATCH: (...args: unknown[]) => patchMock(...args),
     },
   };
 });
@@ -78,7 +76,6 @@ describe("EnvironmentFormDialog — create", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
-    patchMock.mockReset();
     toastMock.mockClear();
     // The project picker (`useProjects()`) hits GET /api/projects.
     getMock.mockResolvedValue(

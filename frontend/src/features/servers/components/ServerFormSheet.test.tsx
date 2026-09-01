@@ -20,7 +20,6 @@ vi.setConfig({ testTimeout: 15000 });
 
 const getMock = vi.fn();
 const postMock = vi.fn();
-const patchMock = vi.fn();
 const toastMock = vi.fn();
 
 vi.mock("@/api/client", async () => {
@@ -30,7 +29,6 @@ vi.mock("@/api/client", async () => {
     apiClient: {
       GET: (...args: unknown[]) => getMock(...args),
       POST: (...args: unknown[]) => postMock(...args),
-      PATCH: (...args: unknown[]) => patchMock(...args),
     },
   };
 });
@@ -101,7 +99,6 @@ describe("ServerFormSheet — create", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
-    patchMock.mockReset();
     toastMock.mockClear();
     // The environment picker (`useEnvironments()`) hits GET /api/environments.
     getMock.mockResolvedValue(
@@ -247,7 +244,6 @@ describe("ServerFormSheet — accessibility", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
-    patchMock.mockReset();
     toastMock.mockClear();
     getMock.mockResolvedValue(
       ok({ data: [SAMPLE_ENVIRONMENT], pagination: { page: 1, per_page: 20, total: 1, total_pages: 1 } })

@@ -7,7 +7,6 @@ import ResourcesPage from "./ResourcesPage";
 
 const getMock = vi.fn();
 const postMock = vi.fn();
-const patchMock = vi.fn();
 const deleteMock = vi.fn();
 const useAuthMock = vi.fn();
 
@@ -18,7 +17,6 @@ vi.mock("@/api/client", async () => {
     apiClient: {
       GET: (...args: unknown[]) => getMock(...args),
       POST: (...args: unknown[]) => postMock(...args),
-      PATCH: (...args: unknown[]) => patchMock(...args),
       DELETE: (...args: unknown[]) => deleteMock(...args),
     },
   };
@@ -123,7 +121,6 @@ describe("ResourcesPage", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
-    patchMock.mockReset();
     deleteMock.mockReset();
     useAuthMock.mockReset();
     useAuthMock.mockReturnValue({ roles: ["member"], isLoading: false });

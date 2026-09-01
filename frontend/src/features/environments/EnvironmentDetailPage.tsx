@@ -61,10 +61,17 @@ export default function EnvironmentDetailPage() {
       main={(environment) => (
         <>
           <Card>
-            {!isEditing && (
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>{environment.name}</CardTitle>
+            {/* The header is rendered in both modes so the page's <h1> is
+                always present — it previously lived inside a `!isEditing`
+                guard, which left the page with no heading at all while
+                editing. Only the subtitle and the Edit button are still
+                mode-dependent; view mode is unchanged. */}
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle asChild>
+                  <h1>{environment.name}</h1>
+                </CardTitle>
+                {!isEditing && (
                   <div className="mt-1">
                     <Link
                       to={`/projects/${environment.project.id}`}
@@ -73,14 +80,16 @@ export default function EnvironmentDetailPage() {
                       {environment.project.name}
                     </Link>
                   </div>
-                </div>
+                )}
+              </div>
+              {!isEditing && (
                 <RequireRole roles={["admin"]}>
                   <Button variant="secondary" size="sm" onClick={enterEdit}>
                     Edit
                   </Button>
                 </RequireRole>
-              </CardHeader>
-            )}
+              )}
+            </CardHeader>
             <CardContent className="space-y-3">
               {isEditing ? (
                 <EnvironmentEditCard environment={environment} onSaved={exitEdit} onCancel={exitEdit} />

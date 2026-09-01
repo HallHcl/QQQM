@@ -65,31 +65,42 @@ export default function ServerDetailPage() {
       notFoundMessage="This server could not be found."
       main={(server) => (
         <Card>
-          {!isEditing && (
-            <CardHeader className="flex flex-row items-start justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CardTitle>{server.display_name}</CardTitle>
-                  {server.deleted_at && <Badge variant="neutral">Deleted</Badge>}
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{server.hostname}</p>
-                <div className="mt-1">
-                  <Link
-                    to={`/environments/${server.environment.id}`}
-                    className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-                  >
-                    {server.environment.name}
-                  </Link>
-                  <span className="text-sm text-muted-foreground"> · {server.environment.project.name}</span>
-                </div>
+          {/* The header is rendered in both modes so the page's <h1> is always
+              present — it previously lived inside a `!isEditing` guard, which
+              left the page with no heading at all while editing. Only the
+              hostname/environment subtext and the Edit button are still
+              mode-dependent; view mode is unchanged. */}
+          <CardHeader className="flex flex-row items-start justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <CardTitle asChild>
+                  <h1>{server.display_name}</h1>
+                </CardTitle>
+                {server.deleted_at && <Badge variant="neutral">Deleted</Badge>}
               </div>
+              {!isEditing && (
+                <>
+                  <p className="mt-1 text-sm text-muted-foreground">{server.hostname}</p>
+                  <div className="mt-1">
+                    <Link
+                      to={`/environments/${server.environment.id}`}
+                      className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+                    >
+                      {server.environment.name}
+                    </Link>
+                    <span className="text-sm text-muted-foreground"> · {server.environment.project.name}</span>
+                  </div>
+                </>
+              )}
+            </div>
+            {!isEditing && (
               <RequireRole roles={["admin", "member"]}>
                 <Button variant="secondary" size="sm" onClick={enterEdit}>
                   Edit
                 </Button>
               </RequireRole>
-            </CardHeader>
-          )}
+            )}
+          </CardHeader>
           <CardContent className="space-y-4">
             {isEditing ? (
               <ServerEditCard server={server} onSaved={exitEdit} onCancel={exitEdit} />
