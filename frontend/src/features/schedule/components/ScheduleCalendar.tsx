@@ -1,4 +1,6 @@
 import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { panelSurface } from "@/lib/panelSurface";
 import { parseScheduledDate, type ScheduleListItem } from "@/hooks/useSchedules";
 
 interface Props {
@@ -29,7 +31,7 @@ export default function ScheduleCalendar({ schedules, selected, onSelect }: Prop
         scheduled: `${DOT_BASE} after:bg-brand`,
         overdue: `${DOT_BASE} after:bg-danger`,
       }}
-      className="rounded-md border border-border bg-surface"
+      className={cn(panelSurface(), "bg-surface")}
     />
   );
 }

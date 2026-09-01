@@ -8,6 +8,8 @@ import CredentialRefList from "@/features/infrastructure/components/CredentialRe
 import ServerEditCard from "./components/ServerEditCard";
 import { useServer, type ServerDetail } from "@/hooks/useServers";
 import { useHasRole } from "@/hooks/useHasRole";
+import { cn } from "@/lib/utils";
+import { panelSurface } from "@/lib/panelSurface";
 import { usePagination } from "@/hooks/usePagination";
 
 const SERVICE_TYPE_LABELS: Record<string, string> = {
@@ -130,7 +132,7 @@ export default function ServerDetailPage() {
                   </div>
                 )}
 
-                <div className="rounded-md border border-border p-3">
+                <div className={cn(panelSurface(), "p-3")}>
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Access documentation
                   </p>
