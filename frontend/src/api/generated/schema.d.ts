@@ -626,6 +626,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Global search across the DELIVERY entities (clients, projects, environments, servers), grouped by type and ranked by relevance
+         * @description Hybrid matching: Postgres full-text (prefix tsquery + ts_rank) over the prose fields, OR substring (ILIKE) over identifier fields such as hostname, IP address and tech stack — the 'english' parser tokenises hostnames and INETs as single opaque units, so substring matching is what makes `prod` find `web-prod-01.example.com`. Soft-deleted rows are always excluded. An empty or whitespace-only `q` returns empty groups rather than an error.
+         */
+        get: operations["search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1032,6 +1052,25 @@ export interface components {
         EntityType: "client" | "project" | "environment" | "server" | "credential_reference" | "people" | "resource" | "resource_version" | "schedule" | "user";
         /** @enum {string} */
         ActivityAction: "create" | "update" | "delete" | "restore";
+        SearchResults: {
+            clients: components["schemas"]["SearchHit"][];
+            projects: components["schemas"]["SearchHit"][];
+            environments: components["schemas"]["SearchHit"][];
+            servers: components["schemas"]["SearchHit"][];
+            /** @description Total hits returned across all four groups, after per-type limiting. */
+            total: number;
+        };
+        SearchHit: {
+            /** Format: uuid */
+            id: string;
+            type: components["schemas"]["SearchEntityType"];
+            /** @description Primary identifying text: the entity's name, or display_name for servers. */
+            label: string;
+            /** @description One distinguishing field — client status, a project's client, an environment's project, a server's IP (falling back to hostname). */
+            secondary: string | null;
+        };
+        /** @enum {string} */
+        SearchEntityType: "client" | "project" | "environment" | "server";
     };
     responses: never;
     parameters: never;
@@ -4319,6 +4358,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityLogListResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    search: {
+        parameters: {
+            query?: {
+                /** @description Search term. Empty returns empty groups. */
+                q?: string;
+                /** @description Max hits per entity type. Default: 5. Clamped, not rejected, when out of range. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grouped, relevance-ranked search results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResults"];
                 };
             };
             /** @description Not authenticated */

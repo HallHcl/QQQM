@@ -20,6 +20,7 @@ import peopleRoutes from "./routes/people.routes";
 import resourcesRoutes from "./routes/resources.routes";
 import schedulesRoutes from "./routes/schedules.routes";
 import activityLogsRoutes from "./routes/activityLogs.routes";
+import searchRoutes from "./routes/search.routes";
 
 dotenv.config();
 
@@ -50,5 +51,6 @@ app.use("/api/people", auth, peopleRoutes);
 app.use("/api/resources", auth, resourcesRoutes);
 app.use("/api/schedules", auth, schedulesRoutes);
 app.use("/api/activity-logs", auth, activityLogsRoutes);
+app.use("/api/search", auth, searchRoutes);
 
 app.use(errorHandler);

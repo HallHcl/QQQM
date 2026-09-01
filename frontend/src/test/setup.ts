@@ -23,3 +23,15 @@ if (!Element.prototype.releasePointerCapture) {
 if (!Element.prototype.setPointerCapture) {
   Element.prototype.setPointerCapture = () => {};
 }
+
+// Same story for ResizeObserver, which jsdom also omits: cmdk observes its
+// list to keep the selected item scrolled into view, and throws on mount
+// without this. A no-op is enough — no test asserts on resize behaviour.
+if (!("ResizeObserver" in globalThis)) {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
+}

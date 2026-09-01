@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { LogOut, UserCog } from "lucide-react";
+import { LogOut, Search, UserCog } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSearchPalette } from "@/components/search/useSearchPalette";
 import { useAuth } from "@/features/auth/useAuth";
 import MobileNav from "./MobileNav";
 import NotificationBell from "./NotificationBell";
@@ -21,6 +22,7 @@ function initials(username: string) {
 export default function Topbar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { openPalette } = useSearchPalette();
 
   async function handleLogout() {
     await logout();
@@ -31,6 +33,17 @@ export default function Topbar() {
     <header className="flex h-14 items-center justify-between sticky top-0 z-30 backdrop-blur-md bg-white/80 border-b border-border/80 px-4">
       <MobileNav />
       <div className="ml-auto flex items-center gap-2">
+        {/* Visible entry point for the ⌘K palette — the shortcut alone is
+            undiscoverable for anyone who has not been told about it. */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={openPalette}
+          aria-label="Search"
+          aria-keyshortcuts="Meta+K Control+K"
+        >
+          <Search className="h-5 w-5" />
+        </Button>
         <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

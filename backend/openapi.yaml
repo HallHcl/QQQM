@@ -1081,6 +1081,63 @@ components:
         - update
         - delete
         - restore
+    SearchResults:
+      type: object
+      properties:
+        clients:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchHit"
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchHit"
+        environments:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchHit"
+        servers:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchHit"
+        total:
+          type: integer
+          description: Total hits returned across all four groups, after per-type limiting.
+      required:
+        - clients
+        - projects
+        - environments
+        - servers
+        - total
+    SearchHit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/schemas/SearchEntityType"
+        label:
+          type: string
+          description: "Primary identifying text: the entity's name, or display_name for
+            servers."
+        secondary:
+          type: string
+          nullable: true
+          description: One distinguishing field — client status, a project's client, an
+            environment's project, a server's IP (falling back to hostname).
+      required:
+        - id
+        - type
+        - label
+        - secondary
+    SearchEntityType:
+      type: string
+      enum:
+        - client
+        - project
+        - environment
+        - server
   parameters: {}
 paths:
   /api/auth/login:
@@ -4515,6 +4572,54 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActivityLogListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/search:
+    get:
+      tags:
+        - Search
+      operationId: search
+      summary: Global search across the DELIVERY entities (clients, projects,
+        environments, servers), grouped by type and ranked by relevance
+      description: "Hybrid matching: Postgres full-text (prefix tsquery + ts_rank)
+        over the prose fields, OR substring (ILIKE) over identifier fields such
+        as hostname, IP address and tech stack — the 'english' parser tokenises
+        hostnames and INETs as single opaque units, so substring matching is
+        what makes `prod` find `web-prod-01.example.com`. Soft-deleted rows are
+        always excluded. An empty or whitespace-only `q` returns empty groups
+        rather than an error."
+      security:
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            description: Search term. Empty returns empty groups.
+          required: false
+          description: Search term. Empty returns empty groups.
+          name: q
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            description: "Max hits per entity type. Default: 5. Clamped, not rejected, when
+              out of range."
+          required: false
+          description: "Max hits per entity type. Default: 5. Clamped, not rejected, when
+            out of range."
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: Grouped, relevance-ranked search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResults"
         "401":
           description: Not authenticated
           content:

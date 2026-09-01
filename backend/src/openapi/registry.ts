@@ -26,6 +26,7 @@ import {
   ScheduleDetailSchema,
   ScheduleListResponseSchema,
   ScheduleSchema,
+  SearchResultsSchema,
   ServerDetailSchema,
   ServerListResponseSchema,
   ServerSchema,
@@ -944,4 +945,29 @@ registry.registerPath({
     }),
   },
   responses: { 200: ok("Paginated activity log", ActivityLogListResponseSchema), ...errors(401) },
+});
+
+// ---------------------------------------------------------------------------
+// Global search (read-only)
+// ---------------------------------------------------------------------------
+
+registry.registerPath({
+  method: "get",
+  path: "/api/search",
+  tags: ["Search"],
+  operationId: "search",
+  summary:
+    "Global search across the DELIVERY entities (clients, projects, environments, servers), grouped by type and ranked by relevance",
+  description:
+    "Hybrid matching: Postgres full-text (prefix tsquery + ts_rank) over the prose fields, OR substring (ILIKE) over identifier fields such as hostname, IP address and tech stack — the 'english' parser tokenises hostnames and INETs as single opaque units, so substring matching is what makes `prod` find `web-prod-01.example.com`. Soft-deleted rows are always excluded. An empty or whitespace-only `q` returns empty groups rather than an error.",
+  security: bearerAuth,
+  request: {
+    query: z.object({
+      q: z.string().optional().openapi({ description: "Search term. Empty returns empty groups." }),
+      limit: z.coerce.number().int().min(1).max(20).optional().openapi({
+        description: "Max hits per entity type. Default: 5. Clamped, not rejected, when out of range.",
+      }),
+    }),
+  },
+  responses: { 200: ok("Grouped, relevance-ranked search results", SearchResultsSchema), ...errors(401) },
 });

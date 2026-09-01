@@ -432,3 +432,38 @@ export const ResourceVersionListResponseSchema = paginated(
 export const PersonListResponseSchema = paginated("PersonListResponse", PersonSchema);
 export const ScheduleListResponseSchema = paginated("ScheduleListResponse", ScheduleListItemSchema);
 export const ActivityLogListResponseSchema = paginated("ActivityLogListResponse", ActivityLogSchema);
+
+// ---------------------------------------------------------------------------
+// Global search (⌘K palette) — DELIVERY entities only
+// ---------------------------------------------------------------------------
+
+export const SearchEntityTypeSchema = z
+  .enum(["client", "project", "environment", "server"])
+  .openapi("SearchEntityType");
+
+export const SearchHitSchema = z
+  .object({
+    id: z.string().uuid(),
+    type: SearchEntityTypeSchema,
+    label: z.string().openapi({
+      description:
+        "Primary identifying text: the entity's name, or display_name for servers.",
+    }),
+    secondary: z.string().nullable().openapi({
+      description:
+        "One distinguishing field — client status, a project's client, an environment's project, a server's IP (falling back to hostname).",
+    }),
+  })
+  .openapi("SearchHit");
+
+export const SearchResultsSchema = z
+  .object({
+    clients: z.array(SearchHitSchema),
+    projects: z.array(SearchHitSchema),
+    environments: z.array(SearchHitSchema),
+    servers: z.array(SearchHitSchema),
+    total: z.number().int().openapi({
+      description: "Total hits returned across all four groups, after per-type limiting.",
+    }),
+  })
+  .openapi("SearchResults");
