@@ -14,6 +14,16 @@ async function configFontSizeKeys(): Promise<string[]> {
   return Object.keys(resolveConfig(mod.default).theme.fontSize);
 }
 
+async function configBoxShadowKeys(): Promise<string[]> {
+  const mod = await import("../../tailwind.config.js" as string);
+  return Object.keys(resolveConfig(mod.default).theme.boxShadow);
+}
+
+async function configBorderRadiusKeys(): Promise<string[]> {
+  const mod = await import("../../tailwind.config.js" as string);
+  return Object.keys(resolveConfig(mod.default).theme.borderRadius);
+}
+
 /**
  * Guards the `extendTailwindMerge` registration in `utils.ts` (decision #43).
  *
@@ -82,3 +92,86 @@ describe("cn — custom fontSize token merging", () => {
     expect(configured.length).toBeGreaterThan(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Custom boxShadow token merging (Phase 8.1a)
+// ---------------------------------------------------------------------------
+
+/** Tailwind's built-in box-shadow scale — everything else is ours. */
+const BUILT_IN_SHADOWS = [
+  "", "inner", "none", "DEFAULT",
+  // Tailwind v3 built-in default scales:
+  "sm", "md", "lg", "xl", "2xl",
+];
+
+describe("cn — custom boxShadow token merging", () => {
+  it("lets one custom shadow replace another", () => {
+    expect(cn("shadow-elev-1", "shadow-elev-2")).toBe("shadow-elev-2");
+    expect(cn("shadow-underline", "shadow-underline-focus")).toBe("shadow-underline-focus");
+  });
+
+  it("lets a built-in shadow override a custom token", () => {
+    expect(cn("shadow-elev-2", "shadow-none")).toBe("shadow-none");
+    expect(cn("shadow-underline", "shadow-md")).toBe("shadow-md");
+  });
+
+  it("lets a custom token override a built-in shadow", () => {
+    expect(cn("shadow-md", "shadow-elev-1")).toBe("shadow-elev-1");
+  });
+
+  it("registers every custom boxShadow key defined in tailwind.config.js", async () => {
+    const configured = (await configBoxShadowKeys()).filter(
+      (key) => !BUILT_IN_SHADOWS.includes(key)
+    );
+
+    for (const key of configured) {
+      expect(
+        cn(`shadow-${key}`, "shadow-none"),
+        `shadow-${key} is not registered in utils.ts's extendTailwindMerge shadow group`
+      ).toBe("shadow-none");
+    }
+
+    expect(configured.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Custom borderRadius token merging (Phase 8.1a)
+// ---------------------------------------------------------------------------
+
+/** Tailwind's built-in borderRadius scale — everything else is ours. */
+const BUILT_IN_RADII = [
+  "none", "sm", "", "md", "lg", "xl", "2xl", "3xl", "full", "DEFAULT",
+];
+
+describe("cn — custom borderRadius token merging", () => {
+  it("lets one custom radius replace another", () => {
+    expect(cn("rounded-control", "rounded-panel")).toBe("rounded-panel");
+    expect(cn("rounded-modal", "rounded-pill")).toBe("rounded-pill");
+  });
+
+  it("lets a built-in radius override a custom token", () => {
+    expect(cn("rounded-panel", "rounded-full")).toBe("rounded-full");
+    expect(cn("rounded-control", "rounded-md")).toBe("rounded-md");
+  });
+
+  it("lets a custom token override a built-in radius", () => {
+    expect(cn("rounded-md", "rounded-panel")).toBe("rounded-panel");
+  });
+
+  it("registers every custom borderRadius key defined in tailwind.config.js", async () => {
+    const configured = (await configBorderRadiusKeys()).filter(
+      (key) => !BUILT_IN_RADII.includes(key)
+    );
+
+    for (const key of configured) {
+      expect(
+        cn(`rounded-${key}`, "rounded-full"),
+        `rounded-${key} is not registered in utils.ts's extendTailwindMerge border-radius group`
+      ).toBe("rounded-full");
+    }
+
+    expect(configured.length).toBeGreaterThan(0);
+  });
+});
+
