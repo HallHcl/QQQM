@@ -761,10 +761,42 @@ surface exists, otherwise leave the row inert and rely on the menu).
 **Known flaky tests, mitigated via a scoped `vi.setConfig({ testTimeout: 15000 })`** (CPU
 contention under full-suite/parallel runs, not a real defect in the test or the code
 under test):
-- `frontend/src/features/servers/components/ServerFormDialog.test.tsx`
-- `frontend/src/features/resources/components/ResourceEditor.test.tsx`
-- `frontend/src/features/schedule/components/ScheduleFormDialog.test.tsx`
+- `frontend/src/features/servers/components/ServerFormSheet.test.tsx`
+- `frontend/src/features/resources/components/ResourceEditorSheet.test.tsx`
+- `frontend/src/features/schedule/components/ScheduleFormSheet.test.tsx`
 - `frontend/src/features/people/components/PersonDetailDialog.test.tsx`
+
+> **↪ Paths corrected 2026-09-01.** The first three were listed under their
+> pre-Phase-7 names (`ServerFormDialog`, `ResourceEditor`, `ScheduleFormDialog`).
+> The modal-to-sheet migration renamed the components and their test files; the
+> `vi.setConfig` line travelled with each one. Same four tests, current paths.
+
+**Known flaky test, NOT yet mitigated:**
+- `frontend/src/features/schedule/SchedulePage.test.tsx` → `"renders schedule rows
+  once loaded"` (first test in the file). Times out under local machine load;
+  passes in CI and in isolation.
+
+  **Reproduced live 2026-09-01 (Ticket 8.1b): 1 failure in 4 full-suite runs
+  (~25%), 0 failures in 4 isolation runs.** The failing run reported
+  `1 failed | 735 passed (736)`, pointing at `SchedulePage.test.tsx:110`; an
+  immediate isolation re-run of the same file passed 22/22, and the next
+  full-suite run passed 736/736. This is the first time the flake has been
+  caught in the act rather than inferred from a handover note.
+
+  **Diagnosis (measured 2026-09-01, Ticket 8.1b).** `vitest.config.ts` sets no
+  `testTimeout`, so Vitest's **5000ms default** applies. Under a full-suite run (`--reporter=verbose`) this test took
+  **4826ms — 174ms of headroom, ~3.5%**. Every sibling test in the same file runs in
+  0.4–2.9s. Being the file's first test, it absorbs cold-start cost (component import
+  graph, first render) that the later ones do not. It is not near a cliff, it is on
+  one — which is exactly why it tips over under contention and passes cleanly in
+  isolation and in CI.
+
+  **Not fixed here, deliberately.** Ticket 8.1b was scoped documentation-only. The
+  obvious mitigation is the same scoped `vi.setConfig({ testTimeout: 15000 })` the
+  four tests above carry; note this file currently has **no** `vi.setConfig` at all,
+  which is what distinguishes it from that list. Whoever picks this up should also
+  consider whether the cold-start cost belongs in a `beforeAll` warm-up instead, since
+  a raised timeout hides the cost rather than removing it.
 
 If a future full-suite run times out on one of these again despite the scoped timeout,
 treat it as the same known CPU-contention pattern first, not a new regression — but see
@@ -779,11 +811,20 @@ gaps, not product bugs):**
   database rather than each run cleaning up after itself. This is a test-isolation defect
   in the fixture, not a bug in the code the test exercises. Needs a uniqueness
   suffix/cleanup step next time this spec is touched.
-- `frontend/tests/visual-sweep/create-flow-smoke.spec.ts` only covers the Server create
+- ~~`frontend/tests/visual-sweep/create-flow-smoke.spec.ts` only covers the Server create
   flow (confirming it's unaffected by the modal-to-inline-edit migration). It does **not**
   cover Environment's equivalent create flow, even though Environment received the same
   modal-to-inline-edit migration in this phase. Should be extended to cover Environment
-  create in a future ticket.
+  create in a future ticket.~~
+  **✅ Resolved 2026-09-01 (Ticket 8.1b).** The spec now covers Environment create as
+  well, matching the Server test's shape. Note for anyone reading the original item:
+  Server was the *only* entity covered — there was never a Clients or Projects
+  create-flow test to model against. Environment's flow is still a true centred
+  `EnvironmentFormDialog`; Server's became a side sheet in Phase 7, but both assert
+  `getByRole("dialog")` because `sheet.tsx` is built on `@radix-ui/react-dialog`.
+  **This spec is not run by CI** (needs a live db + backend + dev server), so the
+  addition is verified by `playwright test --list` and by static agreement with the
+  component's real labels, not by a green CI job.
 
 ## 28. Docker images do not auto-rebuild on `git push` (2026-08-20, workflow reminder from the Design System & Interaction Refresh phase)
 
