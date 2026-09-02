@@ -2,6 +2,7 @@ import { AlertTriangle } from "lucide-react";
 import { ApiError } from "@/api/errors";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { panelSurface } from "@/lib/panelSurface";
 
 export interface ErrorStateProps {
   /** The caught error, if available — used to derive a sensible default title/message. */
@@ -26,7 +27,8 @@ export function ErrorState({ error, title, message, onRetry, className }: ErrorS
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-md border border-border py-16 text-center",
+        "flex flex-col items-center justify-center gap-2 py-16 text-center",
+        panelSurface(),
         className
       )}
     >

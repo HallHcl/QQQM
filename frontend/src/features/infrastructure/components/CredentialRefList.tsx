@@ -4,6 +4,8 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { panelSurface } from "@/lib/panelSurface";
 import {
   useCredentialReferences,
   useDeleteCredentialReference,
@@ -91,7 +93,7 @@ export default function CredentialRefList({ serverId, manageable = false }: Prop
           {references.map((ref) => (
             <li
               key={ref.id}
-              className={manageable ? "rounded-md border border-border p-3 text-sm" : "text-sm"}
+              className={manageable ? cn(panelSurface(), "p-3 text-sm") : "text-sm"}
             >
               <div className="flex items-start justify-between gap-2">
                 <div>

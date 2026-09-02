@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/state/EmptyState";
 import { LoadingState } from "@/components/state/LoadingState";
 import { cn } from "@/lib/utils";
 import { useResourceVersion, useResourceVersions } from "@/hooks/useResourceVersions";
+import { panelSurface } from "@/lib/panelSurface";
 
 interface Props {
   resourceId: string;
@@ -92,7 +93,7 @@ export default function VersionHistoryPanel({ resourceId, onRevert }: Props) {
         })}
       </ul>
 
-      <div className="rounded-md border border-border bg-surface p-4">
+      <div className={cn(panelSurface(), "bg-surface p-4")}>
         {isDetailLoading ? (
           <LoadingState message="Loading version..." />
         ) : selectedVersion ? (

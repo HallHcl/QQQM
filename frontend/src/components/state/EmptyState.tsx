@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { panelSurface } from "@/lib/panelSurface";
 
 export interface EmptyStateProps {
   title?: string;
@@ -13,7 +14,8 @@ export function EmptyState({ title = "Nothing here yet", message, action, classN
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border py-16 text-center",
+        "flex flex-col items-center justify-center gap-2 py-16 text-center",
+        panelSurface({ dashed: true }),
         className
       )}
     >

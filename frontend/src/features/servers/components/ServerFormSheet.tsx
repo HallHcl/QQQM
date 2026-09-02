@@ -26,6 +26,7 @@ import { ApiError, apiErrorMessage } from "@/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { useCreateServer } from "@/hooks/useServers";
 import { cn } from "@/lib/utils";
+import { panelSurface } from "@/lib/panelSurface";
 
 /** Verified against backend/src/validators/servers.validator.ts. */
 const SERVICE_TYPES = [
@@ -468,7 +469,7 @@ export default function ServerFormSheet({ open, onOpenChange }: Props) {
               )}
             </div>
 
-            <fieldset className="space-y-4 rounded-md border border-border p-3">
+            <fieldset className={cn(panelSurface(), "space-y-4 p-3")}>
               <legend className="px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Access documentation
               </legend>

@@ -93,6 +93,15 @@ describe("ProjectDetailPage", () => {
     expect(screen.getByText("active")).toBeInTheDocument();
   });
 
+  it("exposes the project name as the page's single <h1>", async () => {
+    mockGetByPath({});
+
+    renderPage();
+
+    expect(await screen.findByRole("heading", { name: "Migration", level: 1 })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  });
+
   it("renders a not-found error state for a missing project", async () => {
     getMock.mockImplementation((path: string) => {
       if (path === "/api/projects/{id}") {

@@ -40,6 +40,41 @@ const twMerge = extendTailwindMerge({
           ],
         },
       ],
+      /**
+       * Custom `boxShadow` tokens (tailwind.config.js `theme.extend.boxShadow`).
+       * Without this registration `cn("shadow-elev-1", "shadow-elev-2")` emits
+       * both classes — the merge can't tell they belong to the same group.
+       * Keep in sync with `theme.extend.boxShadow`.
+       */
+      shadow: [
+        {
+          shadow: [
+            "underline",
+            "underline-focus",
+            "underline-disabled",
+            "underline-danger",
+            "elev-0",
+            "elev-1",
+            "elev-2",
+            "elev-3",
+          ],
+        },
+      ],
+      /**
+       * Custom `borderRadius` tokens (tailwind.config.js `theme.extend.borderRadius`).
+       * Without this registration `cn("rounded-control", "rounded-panel")` emits
+       * both classes. Keep in sync with `theme.extend.borderRadius`.
+       */
+      rounded: [
+        {
+          rounded: [
+            "control",
+            "panel",
+            "modal",
+            "pill",
+          ],
+        },
+      ],
     },
   },
 })

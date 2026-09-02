@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { panelSurface } from "@/lib/panelSurface";
 import type { ResourceListItem } from "@/hooks/useResources";
 
 interface Props {
@@ -19,7 +20,8 @@ export default function ResourceList({ resources, selectedId, onSelect }: Props)
               type="button"
               onClick={() => onSelect(resource)}
               className={cn(
-                "flex w-full flex-col items-start gap-1 rounded-md border border-border p-3 text-left transition-colors duration-150",
+                panelSurface(),
+                "flex w-full flex-col items-start gap-1 p-3 text-left transition-colors duration-150",
                 isDeleted && "text-muted-foreground",
                 selectedId === resource.id
                   ? "border-brand bg-surface-hover"

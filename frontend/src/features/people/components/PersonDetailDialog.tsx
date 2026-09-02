@@ -24,6 +24,8 @@ import {
   type PersonLinkedClient,
 } from "@/hooks/usePeople";
 import type { Person } from "@/types";
+import { cn } from "@/lib/utils";
+import { panelSurface } from "@/lib/panelSurface";
 
 interface Props {
   person: Person | undefined;
@@ -118,7 +120,7 @@ export default function PersonDetailDialog({ person, open, onOpenChange }: Props
                   {relationships.map((rel) => (
                     <li
                       key={rel.id}
-                      className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                      className={cn(panelSurface(), "flex items-center justify-between px-3 py-2 text-sm")}
                     >
                       <span>
                         {rel.name}

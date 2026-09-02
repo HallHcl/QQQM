@@ -1206,6 +1206,20 @@ intermediate state of a pilot-first migration, not drift.
 > taken. The 10 hand-rolled sites remain on `rounded-md` and are still
 > correctly described.
 
+> **↪ Both counts corrected, and the deferral closed, by decision #54
+> (Ticket 8.1a, 2026-09-01).** The enumeration above is short on both sides.
+> The hand-rolled panel sites are **11, not 10** — the prose names only nine
+> (`ScheduleCalendar`, `VersionHistoryPanel`, `ErrorState`, `EmptyState`,
+> `ResourceList`, `ServerDetailPage`, `CredentialRefList`, and the two
+> `<fieldset>`s) while claiming ten, and it misses `OverviewPage` and
+> `PersonDetailDialog` entirely. The avatar squares are **6, not 5** —
+> `ClientsPage`, `EnvironmentsPage`, `PeopleTable`, `ProjectsPage`,
+> `ScheduleList`, `ServersPage`. Note also that the `ServerFormDialog`
+> `<fieldset>` now lives in `ServerFormSheet` after the Phase 7 sheet
+> migration. #38's ruled-out table inherits both wrong counts by reference.
+> #37's *reasoning* survives intact: the avatar squares were indeed not
+> `panel`, and were consolidated separately rather than folded in.
+
 **Test-file consequence:** `Toolbar.test.tsx` asserted `toHaveClass(...,
 "rounded-md", ...)` and was updated to `"rounded-panel"`. The test's purpose —
 "applies the base layout classes" — is unchanged; only the expected radius
@@ -2329,3 +2343,78 @@ This also affects `ResourceList.tsx`, outside the six files. Remedying it means 
 ✅ **Tests:** 599/599 passed (62 files) — no regressions
 ✅ **All 6 `expectHoverGatedRowActions` assertions:** run explicitly across all six pages and passing, with `hoverActions.ts` unmodified
 ✅ **Commit:** `c74f024` (CI run #29, conclusion `success`)
+
+## 54. [Phase 8 — Design System Utilities] `panelSurface()` + `InitialsAvatar` extracted; #37's two deferred sweeps closed at 11 and 6 sites (Ticket 8.1a, 2026-09-01)
+
+**Decision:** the two duplication sweeps deferred by #37 and re-affirmed as
+non-blockers by #38 are now done, as ordinary scheduled work — not as a Phase 2
+reopening. Both are zero-visual-delta extractions.
+
+### 54a. `panelSurface()` — 11 sites
+
+`src/lib/panelSurface.ts` emits the canonical string **verbatim**:
+`rounded-md border border-border`, with a `dashed` flag appending
+`border-dashed`. A test pins both outputs, so the helper cannot drift from the
+string it replaced.
+
+| # | Site | Handling |
+|---|---|---|
+| 1 | `EmptyState` | `panelSurface({ dashed: true })` |
+| 2 | `ErrorState` | plain |
+| 3 | `OverviewPage` | plain — **not in #37's list** |
+| 4 | `PersonDetailDialog` (relationship rows) | plain — **not in #37's list** |
+| 5 | `VersionHistoryPanel` | plain |
+| 6 | `ScheduleCalendar` | plain |
+| 7 | `ServerDetailPage` | plain |
+| 8 | `ServerEditCard` `<fieldset>` | plain |
+| 9 | `ServerFormSheet` `<fieldset>` | plain (was `ServerFormDialog` in #37) |
+| 10 | `CredentialRefList` | **conditional** — only the `manageable` branch |
+| 11 | `ResourceList` | **interactive** — see below |
+
+**Three sites are parameterized, not blind replacements.** `EmptyState` needs
+the dashed variant; `CredentialRefList` applies the surface only when
+`manageable` is true and renders bare text otherwise; `ResourceList` is a
+`<button>` whose selected and hover states override the border with
+`border-brand`. `panelSurface()` is passed **first** into `cn()` there so
+tailwind-merge still lets `border-brand` win. Every call site uses `cn()` for
+the same reason — string interpolation would not merge.
+
+**Deliberately excluded, and this is the per-site decision #37 asked for:**
+
+- The Radix overlay primitives — `dropdown-menu`, `popover`, `select`,
+  `toast`. They carry `shadow-elev-2` and `bg-popover`: elevated surfaces, not
+  outlined content panels. They travel with the overlay scale, not this one.
+- The semantic-bordered callouts — `ConflictState` and `ResourceEditorSheet`
+  (`border-warning/40`), `PersonDetailDialog:78` (`border-danger/40`). These
+  are not `border-border` and are not zero-delta candidates.
+
+**This is the single call site Phase 8.3 updates** when `rounded-panel` reaches
+these surfaces.
+
+### 54b. `InitialsAvatar` — 6 sites
+
+`src/components/ui/initials-avatar.tsx`. Takes a plain `name: string` and
+derives initials through the existing `lib/initials.ts`. All six sites were
+**byte-identical** — same `aria-hidden="true"`, same twelve-class string, with
+only the name expression varying — so this is a pure extraction. A test pins
+the class string.
+
+**Not built on `ui/avatar.tsx`.** That is the Radix image-with-fallback
+primitive, and its sole consumer is the `Topbar` signed-in user. Different
+component, different semantics, different consumer; sharing a name is not
+sharing a purpose.
+
+**Not routed through `panelSurface()`,** despite emitting the same
+`rounded-md border border-border` substring. #37 already established these
+tiles are semantically `control`/`pill`, not `panel`. Coupling them would drag
+avatars along when 8.3 retunes the panel radius — the exact wrong outcome.
+The string overlap here is coincidence, not a shared concept.
+
+### 54c. Verification
+
+✅ **TypeScript:** clean (`tsc --noEmit -p tsconfig.app.json`)
+✅ **Lint:** `oxlint` clean (2 pre-existing `only-export-components` warnings in
+`button.tsx`/`badge.tsx`, untouched)
+✅ **Tests:** 732 → **736 passed**, 70 → **71 files**; +4 from the new
+`initials-avatar.test.tsx`, zero regressions
+✅ **Commits:** `5c5d850` (panelSurface sweep), `01fe249` (InitialsAvatar)

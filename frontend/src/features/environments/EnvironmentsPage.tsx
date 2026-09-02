@@ -32,7 +32,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { RelatedCount } from "@/components/RelatedCount";
 import { SERVERS_PER_ENVIRONMENT, useChildCounts } from "@/hooks/useChildCounts";
 import { apiErrorMessage } from "@/api/errors";
-import { getInitials } from "@/lib/initials";
+import { InitialsAvatar } from "@/components/ui/initials-avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import EnvironmentFormDialog from "./components/EnvironmentFormDialog";
@@ -233,12 +233,7 @@ export default function EnvironmentsPage() {
                   >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-caption font-semibold text-foreground"
-                        >
-                          {getInitials(environment.name)}
-                        </span>
+                        <InitialsAvatar name={environment.name} />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             {environment.name}

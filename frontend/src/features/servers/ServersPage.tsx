@@ -31,7 +31,7 @@ import { ErrorState } from "@/components/state/ErrorState";
 import { LoadingState } from "@/components/state/LoadingState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { apiErrorMessage } from "@/api/errors";
-import { getInitials } from "@/lib/initials";
+import { InitialsAvatar } from "@/components/ui/initials-avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import ServerFormSheet from "./components/ServerFormSheet";
@@ -254,12 +254,7 @@ export default function ServersPage() {
                           the title row) so the hostname subtext stays aligned
                           under display_name rather than under the avatar. */}
                       <div className="flex items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-caption font-semibold text-foreground"
-                        >
-                          {getInitials(server.display_name)}
-                        </span>
+                        <InitialsAvatar name={server.display_name} />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             {server.display_name}

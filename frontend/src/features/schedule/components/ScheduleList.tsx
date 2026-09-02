@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RowActions } from "@/components/RowActions";
 import { useHasRole } from "@/hooks/useHasRole";
-import { getInitials } from "@/lib/initials";
+import { InitialsAvatar } from "@/components/ui/initials-avatar";
 import { cn } from "@/lib/utils";
 import { parseScheduledDate } from "@/hooks/useSchedules";
 import type { Schedule } from "@/types";
@@ -68,12 +68,7 @@ export default function ScheduleList({ schedules, onEdit, onDelete, onRestore }:
             <TableRow key={schedule.id} className={cn("group", isDeleted && "[&_td]:text-muted-foreground")}>
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-caption font-semibold text-foreground"
-                  >
-                    {getInitials(schedule.title)}
-                  </span>
+                  <InitialsAvatar name={schedule.title} />
                   {schedule.title}
                   {isDeleted && <Badge variant="neutral">Deleted</Badge>}
                 </div>

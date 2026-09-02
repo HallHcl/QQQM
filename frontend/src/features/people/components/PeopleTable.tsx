@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getInitials } from "@/lib/initials";
+import { InitialsAvatar } from "@/components/ui/initials-avatar";
 import { cn } from "@/lib/utils";
 import type { Person } from "@/types";
 
@@ -60,12 +60,7 @@ export default function PeopleTable({ people, onSelect, onEdit, onDelete, onRest
             >
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-caption font-semibold text-foreground"
-                  >
-                    {getInitials(person.name)}
-                  </span>
+                  <InitialsAvatar name={person.name} />
                   {person.name}
                   {isDeleted && <Badge variant="neutral">Deleted</Badge>}
                 </div>

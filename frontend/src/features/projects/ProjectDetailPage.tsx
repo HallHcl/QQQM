@@ -37,7 +37,9 @@ export default function ProjectDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>{project.name}</CardTitle>
+                <CardTitle asChild>
+                  <h1>{project.name}</h1>
+                </CardTitle>
                 <div className="mt-1 flex items-center gap-2">
                   <Badge variant="outline">{project.owner_status}</Badge>
                   <span className="text-sm text-muted-foreground">{project.client.name}</span>

@@ -132,6 +132,15 @@ describe("EnvironmentDetailPage", () => {
     expect(screen.getByText("Migration")).toBeInTheDocument();
   });
 
+  it("exposes the environment name as the page's single <h1>", async () => {
+    mockGetByPath({});
+
+    renderPage();
+
+    expect(await screen.findByRole("heading", { name: "Production", level: 1 })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  });
+
   it("renders a not-found error state for a missing environment", async () => {
     getMock.mockImplementation((path: string) => {
       if (path === "/api/environments/{id}") {
@@ -228,6 +237,16 @@ describe("EnvironmentDetailPage", () => {
       expect(screen.queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
+    });
+
+    it("keeps the <h1> present in edit mode — the heading used to live inside the `!isEditing` guard and vanished on Edit", async () => {
+      mockGetByPath({});
+      renderPage("/environments/e1?edit=true");
+
+      await screen.findByLabelText("Name");
+
+      expect(screen.getByRole("heading", { name: "Production", level: 1 })).toBeInTheDocument();
+      expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     });
 
     it("loading /environments/e1?edit=true directly (deep link) enters edit mode without clicking Edit first", async () => {

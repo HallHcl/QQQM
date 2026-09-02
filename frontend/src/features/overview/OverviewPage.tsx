@@ -32,6 +32,8 @@ import { useServers } from "@/hooks/useServers";
 import { useResources } from "@/hooks/useResources";
 import { useSchedules } from "@/hooks/useSchedules";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
+import { cn } from "@/lib/utils";
+import { panelSurface } from "@/lib/panelSurface";
 
 export default function OverviewPage() {
   const { data: clients = [] } = useClients();
@@ -154,7 +156,7 @@ export default function OverviewPage() {
                   {projects.map((project) => (
                     <li
                       key={project.id}
-                      className="flex items-center justify-between rounded-md border p-3"
+                      className={cn(panelSurface(), "flex items-center justify-between p-3")}
                     >
                       <div>
                         <p className="text-sm font-medium">{project.name}</p>
