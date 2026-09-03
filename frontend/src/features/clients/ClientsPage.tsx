@@ -256,7 +256,7 @@ export default function ClientsPage() {
                     <TableCell className="text-muted-foreground">
                       {client.description ?? "—"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="font-mono text-xs text-muted-foreground tabular-nums">
                       {new Date(client.updated_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell

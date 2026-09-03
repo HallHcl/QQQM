@@ -2540,3 +2540,81 @@ warnings in `button.tsx`/`badge.tsx`, untouched)
 ✅ **Typecheck:** clean over the new specs (`tests/` sits outside
 `tsconfig.app.json`'s `include`, so this was run explicitly)
 ✅ **Vitest:** 736 passed / 71 files — unchanged, no `src/` changes
+
+## 56. [Phase 8 — Release Gate follow-up] Both 8.3 defects fixed; Port column is now content-sized, Clients joins the shared date treatment (Ticket 8.3a, 2026-09-03)
+
+**Decision:** the two cosmetic defects #55b recorded are fixed, and their
+`test.fail()`-marked guards are promoted to ordinary passing assertions. That
+promotion is the acceptance signal — the specs that documented the defects now
+prove the fixes.
+
+### 56a. `Port` label overflow — the column is measured, not guessed
+
+`ServerFormSheet` and `ServerEditCard` both wrapped the Port field in a
+hardcoded `w-24` (96px). Measured at 1280px: the `OptionalLabel` is **124.2px**
+("Port" 33.7 + `gap-1.5` 6 + "(optional)" 84.5), so it spilled **15.2px** past
+the Access documentation panel's right border.
+
+**The fixed width is removed.** The enclosing grid is already
+`grid-cols-[1fr_auto]`, so the second track now sizes to its own content — the
+label, because `Input` is `w-full` and contributes nothing larger. Verified in
+the browser: label 124px, input 124px, both flush with the panel's inner right
+edge (13px in, exactly the `p-3` + border), Access host 389px → **360.8px**.
+
+**Three alternatives were measured and rejected:**
+
+| Option | Why not |
+|---|---|
+| `w-32` (128px) | Matches the app's only other fixed control width (7 `w-32` sort-order triggers) and does fix it — but clears the label by **3.8px**. That is the same class of magic number that caused the defect; any label-text or font change re-breaks it. |
+| Let the label wrap (`flex-wrap`) | Makes the Port label two lines while "Access host" beside it is one, so the two inputs in the same grid row stop aligning — visibly worse than the overflow. |
+| Drop `(optional)` from this label | Contradicts **#25**, a standing convention. Port is genuinely optional and is not one of #25's documented conditionally-required exceptions. |
+
+The measurement that settled it: with no fixed width the column lands at exactly
+the label width under **both** Inter (124.2px) and the system-ui fallback
+(114.67px, verified by blocking `fonts.gstatic.com`), staying flush in both. A
+width derived from content cannot drift out of step with that content.
+
+### 56b. Clients' `Updated` column
+
+Now `font-mono text-xs text-muted-foreground tabular-nums`, matching
+Projects/Servers/Environments/Schedule. `TABULAR_MODULES` in
+`phase-8-3-tables-badges.spec.ts` gains `clients`, so all five modules that have
+a date column are asserted and People (no date column) remains the only absence.
+
+### 56c. Guards promoted
+
+| Spec | Was | Now |
+|---|---|---|
+| `phase-8-3-sheets` | `test.fail()` "FINDING: ServerFormSheet's Port label overflows…" | "ServerFormSheet: nothing inside the Access documentation panel overflows it" — plus asserts the label fits the column its input defines |
+| `phase-8-3-detail-pages` | `test.fail()` "FINDING: ServerEditCard's Port label overflows…" | "Server detail (edit mode): nothing inside the Access documentation panel overflows it" — same extra assertion |
+| `phase-8-3-tables-badges` | `TABULAR_MODULES` documenting Clients as the gap | `clients` included and asserted |
+
+Test count is unchanged at **62 / 129** — no specs added or removed, three
+stopped being expected-failures.
+
+> **Note for future use of `test.fail()`:** it must be called *inside* the test
+> body. A bare file-scope `test.fail()` annotates every test in the file — hit
+> during 8.3 and worth not rediscovering.
+
+### 56d. Verification
+
+✅ **Phase 8.3 sweep:** 62/62 passing, none marked expected-failure. Measured
+after the fix: `ServerFormSheet` Port label=124px input=124px; `ServerEditCard`
+Port label=124px input=124px; Clients `tabular-nums` present=true
+✅ **Vitest:** 736 passed / 71 files — unchanged
+✅ **Lint:** `oxlint` clean (same 2 pre-existing `only-export-components` warnings)
+✅ **Build:** `tsc -b && vite build` clean
+
+### 56e. Further pre-existing spec drift observed (out of scope, unfixed)
+
+Beyond the two fixture-drift items #55d already records, four more pre-existing
+failures were confirmed — verified by stashing this ticket's `src/` changes and
+re-running, which reproduced them identically, so none is caused by this work:
+
+- `clients-ux-phase-a.spec.ts` ×2 — still assert the **pre-#53** hover-gated row
+  actions (`opacity < 0.5` idle, i.e. `opacity-0`). They measure `0.6`, which is
+  the intended `opacity-60` idle dim that `src/test/hoverActions.ts` and the 8.3
+  sweep both pin. Stale spec, correct app.
+- `inline-edit-sweep.spec.ts` ×2 — `getByRole("button", { name: /^edit$/i })`
+  is a strict-mode violation on `ServerDetailPage`: two "Edit" buttons now match
+  (the header action and one inside a list item). Needs a scoped locator.

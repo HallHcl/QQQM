@@ -42,10 +42,16 @@ tables and their badges, and the record detail pages in view and edit mode.
 `phase-8-3-helpers.ts` holds the shared assertion vocabulary those five specs
 use; prefer extending it over re-deriving the same checks.
 
-Two specs in that set are marked `test.fail()`. They pin real, open defects
-found by the sweep (see `docs/phase-8-3-visual-walkthrough.md`), so the run
+The sweep found two real defects, which 8.3a then fixed; the specs that pinned
+them are now ordinary passing assertions and stand as regression guards (the
+`Port` label overflow at the two Access-documentation panels, and Clients'
+missing `tabular-nums`). See `docs/phase-8-3-visual-walkthrough.md`.
+
+If you ever need to record a defect you are deliberately not fixing, that
+pattern is worth reusing: mark the spec `test.fail()` *inside the test body*
+(a bare file-scope `test.fail()` annotates every test in the file), so the run
 stays green while the defect stands and goes red the moment it is fixed — at
-which point the annotation should be dropped and the assertion promoted.
+which point drop the annotation and promote the assertion.
 
 ## Known local-fixture drift
 

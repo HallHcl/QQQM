@@ -221,29 +221,35 @@ test("Server detail (edit mode): the edit fieldset keeps the outlined-panel trea
 });
 
 /**
- * FINDING (Phase 8.3, not fixed here — this ticket is verification):
- * the `Port` OptionalLabel overflows its own column and spills past the
- * Access documentation panel's right border.
+ * Regression guard for the `Port` label overflow 8.3 found and 8.3a fixed.
  *
- * `Label` is `inline-flex` with no wrapping (8.1a unified Label and
+ * `Label` is `inline-flex` and cannot wrap (8.1a unified Label and
  * OptionalLabel onto that box model), so "PORT (optional)" lays out on one
- * line at ~124px inside a `w-24` (96px) grid track. It reproduces at both
- * render sites — `ServerEditCard` here and `ServerFormSheet` (see
- * phase-8-3-sheets.spec.ts) — because both spell the same `w-24` column.
- *
- * Marked `test.fail()` rather than deleted or loosened: the sweep records
- * the defect, the run stays green, and this trips the moment it is fixed so
- * the assertion can be promoted to an ordinary expectation.
+ * line at ~124px — which used to sit inside a hardcoded `w-24` (96px) column
+ * and spill ~15px past the panel border. The column is now content-sized by
+ * the grid's `auto` track. `ServerFormSheet` has the twin guard in
+ * phase-8-3-sheets.spec.ts.
  */
-test("FINDING: ServerEditCard's Port label overflows the Access documentation panel", async ({
+test("Server detail (edit mode): nothing inside the Access documentation panel overflows it", async ({
   page,
 }) => {
-  test.fail();
   const { url } = await openFirstDetail(page, "/servers", "Servers", "Back to servers");
   await page.goto(`${url}?edit=true`);
   const fieldset = page.locator("fieldset");
   await expect(fieldset).toBeVisible({ timeout: 15_000 });
   await assertNoChildOverflow(fieldset, "ServerEditCard fieldset");
+
+  const geometry = await fieldset.evaluate((fs) => {
+    const label = fs.querySelector('label[for="access_port"]')!.getBoundingClientRect();
+    const input = fs.querySelector("#access_port")!.getBoundingClientRect();
+    return {
+      label: Math.round(label.width),
+      input: Math.round(input.width),
+      labelFitsInput: label.width <= input.width + 1,
+    };
+  });
+  console.log(`MEASURED [ServerEditCard] Port label=${geometry.label}px input=${geometry.input}px`);
+  expect(geometry.labelFitsInput, "the Port label fits the column its input defines").toBe(true);
 });
 
 test("Clients: row click opens the client form dialog — there is no /clients/:id detail page", async ({

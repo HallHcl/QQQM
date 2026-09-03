@@ -174,40 +174,53 @@ two `<dl>` columns.
 
 ## Findings
 
-Two real defects were found. Both are **recorded, not fixed** — this ticket is
-verification. Each is pinned by a `test.fail()`-marked spec, so the suite stays
-green today and trips the moment the layout is corrected.
+Two real defects were found by this sweep. Both were recorded here first (each
+pinned by a `test.fail()`-marked spec) and **both are now fixed** — see decision
+#56 and the follow-up ticket 8.3a. Their guards have been promoted from
+expected-failures to ordinary passing assertions, which is the proof the fixes
+landed.
 
-### 1. `Port` label overflows the Access documentation panel — 2 sites
+### 1. `Port` label overflowed the Access documentation panel — 2 sites ✅ fixed
 
-The `Port` `OptionalLabel` lays out at ~124px inside a `w-24` (96px) grid
-track and spills ~15px past the panel's right border.
+The `Port` `OptionalLabel` laid out at 124.2px inside a `w-24` (96px) grid
+track and spilled 15.2px past the panel's right border.
 
 - **Cause:** `Label` is `inline-flex` with no wrapping — the box model 8.1a
-  unified `Label` and `OptionalLabel` onto (commit `898e6ef`). "PORT" plus the
-  `(optional)` span cannot break onto a second line.
-- **Sites:** `ServerFormSheet.tsx` and `ServerEditCard.tsx`, which spell the
+  unified `Label` and `OptionalLabel` onto (commit `898e6ef`). "PORT" (33.7px)
+  plus the `(optional)` span (84.5px) cannot break onto a second line, and the
+  hardcoded 96px column predated that change.
+- **Sites:** `ServerFormSheet.tsx` and `ServerEditCard.tsx`, which spelled the
   same `w-24` column.
-- **Measured:** label `[1147..1271]` (124px) in a column `[1147..1243]` (96px),
-  fieldset right edge `1256`.
-- **Guards:** `phase-8-3-sheets.spec.ts` → *"FINDING: ServerFormSheet's Port
-  label overflows…"*; `phase-8-3-detail-pages.spec.ts` → *"FINDING:
-  ServerEditCard's Port label overflows…"*.
-- **Severity:** cosmetic. Every *control* inside the panel stays within it
-  (asserted separately); only the label text crosses the border.
+- **Fix:** the fixed width is gone. The enclosing grid's second track is
+  already `auto`, so the column now sizes to its own content — the label, since
+  `Input` is `w-full`. Label and input both measure 124px and sit flush with
+  the panel's inner right edge; Access host keeps 361px. A width that is
+  *measured* rather than *guessed* cannot drift the same way again when label
+  text or font metrics change.
+- **Considered and rejected:** widening to `w-32` (128px) matched the app's
+  only other fixed control width but cleared the label by just 3.8px — the same
+  class of magic number that caused the defect. Wrapping the label would have
+  left the Port input ~15px lower than Access host in the same grid row.
+  Dropping `(optional)` would contradict decision #25's standing convention.
+- **Guards, now ordinary assertions:** `phase-8-3-sheets.spec.ts` →
+  *"ServerFormSheet: nothing inside the Access documentation panel overflows
+  it"*; `phase-8-3-detail-pages.spec.ts` → *"Server detail (edit mode): nothing
+  inside the Access documentation panel overflows it"*. Both also assert the
+  label fits the column its input defines.
 
-### 2. Clients' `Updated` column is the only date column without `tabular-nums`
+### 2. Clients' `Updated` column had no `tabular-nums` ✅ fixed
 
 `ProjectsPage`, `ServersPage`, `EnvironmentsPage` and `ScheduleList` all render
 their date cell as `font-mono text-xs text-muted-foreground tabular-nums`.
-`ClientsPage` renders a bare `new Date(...).toLocaleDateString()` in a plain
-`text-muted-foreground` cell — so its dates do not column-align with the rest of
+`ClientsPage` rendered a bare `toLocaleDateString()` in a plain
+`text-muted-foreground` cell, so its dates did not column-align with the rest of
 the app. (People has no date column at all, which is a different thing and not a
 defect.)
 
+- **Fix:** `ClientsPage`'s cell now uses the same shared pattern.
 - **Guard:** `phase-8-3-tables-badges.spec.ts` → *"tabular-nums on the date
-  column of every module that has one"*, whose `TABULAR_MODULES` set documents
-  the gap explicitly.
+  column of every module that has one"*, whose `TABULAR_MODULES` set now
+  includes `clients`.
 
 ### Scope notes (not defects)
 
@@ -247,6 +260,7 @@ drifted away from.
 - [x] Screenshots exported as evidence; the highlighted subset committed and
       embedded above.
 - [x] No unexpected visual regressions in the Phase 5–7 redesign.
-- [x] Two real defects found, both cosmetic, both recorded with guard specs
-      rather than silently fixed.
+- [x] Two real defects found, both cosmetic — recorded with guard specs during
+      8.3, then fixed in 8.3a. Both guards now pass as ordinary assertions
+      rather than expected-failures.
 - [ ] **Hello's sign-off.**
