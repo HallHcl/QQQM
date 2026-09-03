@@ -2459,3 +2459,84 @@ The string overlap here is coincidence, not a shared concept.
 ✅ **Tests:** 732 → **736 passed**, 70 → **71 files**; +4 from the new
 `initials-avatar.test.tsx`, zero regressions
 ✅ **Commits:** `5c5d850` (panelSurface sweep), `01fe249` (InitialsAvatar)
+
+## 55. [Phase 8 — Release Gate] Comprehensive visual sweep: 5 scope groups, 62 new Playwright assertions, 2 defects recorded not fixed (Ticket 8.3, 2026-09-03)
+
+**Decision:** the final gate for the Phase 5–7 redesign is verified the way
+this project has always verified visual work — live DOM/layout assertions plus
+exported screenshots as evidence — not by introducing pixel-diffing or a
+committed baseline. Five new specs under `frontend/tests/visual-sweep/`
+(`phase-8-3-*.spec.ts`) cover the five scope groups; `phase-8-3-helpers.ts`
+holds the assertion vocabulary they share.
+
+Full walkthrough, with embedded screenshots, is
+`docs/phase-8-3-visual-walkthrough.md`. That document — not the individual
+screenshots — is the artifact for Hello's sign-off.
+
+### 55a. Coverage and viewport
+
+1280 × 900, desktop only, per the standing deferral of mobile/responsive work
+past Phase 8. 1280 is the width every other desktop sweep in the directory
+already uses.
+
+| Group | Spec | Tests |
+|---|---|---|
+| Dashboard Overview (KPI hover + click-through, Urgent Action Items ×3 states, Activity Timeline) | `phase-8-3-dashboard` | 13 |
+| Global shell & navigation (sidebar, Topbar, ⌘K palette ×4 states) | `phase-8-3-shell-nav` | 6 |
+| All 3 Sheet forms, each with validation errors, plus ConflictState and duplicate-confirm | `phase-8-3-sheets` | 12 |
+| Data tables & status badges across 6 modules | `phase-8-3-tables-badges` | 21 |
+| Detail pages, view **and** edit mode | `phase-8-3-detail-pages` | 10 |
+
+Visual sweep: 67 tests / 10 files → **129 tests / 15 files**. Vitest unchanged
+at 736 / 71 — this ticket adds no `src/` changes.
+
+### 55b. Two defects found, recorded rather than fixed
+
+This is a verification ticket, so neither was remediated here. Both are pinned
+by a `test.fail()`-marked spec: the suite stays green while the defect stands
+and trips the moment it is fixed, at which point the annotation is dropped and
+the assertion promoted.
+
+1. **`Port` OptionalLabel overflows the Access documentation panel** at two
+   sites — `ServerFormSheet` and `ServerEditCard`. `Label` is `inline-flex`
+   with no wrapping (the box model #54-era commit `898e6ef` unified both label
+   components onto), so "PORT (optional)" lays out at ~124px inside a `w-24`
+   (96px) grid track and spills ~15px past the panel border. Cosmetic: every
+   *control* inside the panel stays within it, asserted separately.
+2. **`ClientsPage`'s `Updated` column is the only date column without
+   `tabular-nums`.** Projects/Servers/Environments/Schedule all use
+   `font-mono text-xs text-muted-foreground tabular-nums`; Clients renders a
+   bare `toLocaleDateString()` in a plain cell, so its dates do not
+   column-align with the rest of the app. People has no date column, which is
+   a different thing and not a defect.
+
+### 55c. Two scope corrections
+
+- **There is no Client detail page.** `/clients/:id` is not a route
+  (`AppRoutes.tsx`); the list opens `ClientFormDialog` on row click. The sweep
+  covers that dialog and asserts the absence, so a future `/clients/:id` trips
+  the test rather than leaving a stale claim behind.
+- **The sidebar has three labelled groups, not four** — Delivery / Operations
+  / Knowledge, plus pinned Overview and pinned Settings.
+
+### 55d. Pre-existing local-fixture drift, unrelated to the redesign
+
+Two older specs fail against the current local database, both on hard-coded
+fixture expectations rather than layout:
+
+- `overview-metrics.spec.ts` asserts literal seed counts (2/2/5/8/8/2) and now
+  reads 3/3/6/9/8/1 — `create-flow-smoke.spec.ts` creates a real throwaway
+  server and environment on every run, so the counts drift by design. Worth
+  decoupling in a follow-up.
+- `375px-sweep.spec.ts` looks for a long-named person that exists eight times
+  over but is soft-deleted in every instance, while the spec searches with the
+  default `deleted=false` filter.
+
+### 55e. Verification
+
+✅ **Phase 8.3 sweep:** 62/62 passing (includes the 2 `test.fail()` defect guards)
+✅ **Lint:** `oxlint` clean (the same 2 pre-existing `only-export-components`
+warnings in `button.tsx`/`badge.tsx`, untouched)
+✅ **Typecheck:** clean over the new specs (`tests/` sits outside
+`tsconfig.app.json`'s `include`, so this was run explicitly)
+✅ **Vitest:** 736 passed / 71 files — unchanged, no `src/` changes
