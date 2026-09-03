@@ -173,24 +173,37 @@ test("ServerFormSheet: all 12 fields render inside the sheet shell", async ({ pa
 });
 
 /**
- * FINDING (Phase 8.3, not fixed here — this ticket is verification):
- * `Port`'s OptionalLabel is ~124px wide inside a `w-24` (96px) column, so it
- * spills ~15px past the Access documentation panel's right border. `Label` is
- * `inline-flex` with no wrapping since 8.1a unified the two label components
- * onto one box model. Same defect, same cause, at `ServerEditCard` — see
- * phase-8-3-detail-pages.spec.ts.
+ * Regression guard for the `Port` label overflow 8.3 found and 8.3a fixed.
  *
- * `test.fail()` so the sweep records it without going red, and trips the
- * moment the layout is fixed.
+ * `Label` is `inline-flex` and cannot wrap (8.1a unified Label and
+ * OptionalLabel onto that box model), so "PORT (optional)" lays out on one
+ * line at ~124px — which used to sit inside a hardcoded `w-24` (96px) column
+ * and spill ~15px past the panel border. The column is now content-sized by
+ * the grid's `auto` track, so the label always fits. This asserts nothing
+ * inside the panel crosses its border; `ServerEditCard` has the twin guard in
+ * phase-8-3-detail-pages.spec.ts.
  */
-test("FINDING: ServerFormSheet's Port label overflows the Access documentation panel", async ({
+test("ServerFormSheet: nothing inside the Access documentation panel overflows it", async ({
   page,
 }) => {
-  test.fail();
   const sheet = await openServerSheet(page);
   const fieldset = sheet.locator("fieldset");
   await expect(fieldset).toBeVisible();
   await assertNoChildOverflow(fieldset, "ServerFormSheet access fieldset");
+
+  // The Port column is sized by its label, and both are flush with the
+  // panel's inner right edge rather than short of it or past it.
+  const geometry = await fieldset.evaluate((fs) => {
+    const label = fs.querySelector('label[for="access_port"]')!.getBoundingClientRect();
+    const input = fs.querySelector("#access_port")!.getBoundingClientRect();
+    return {
+      label: Math.round(label.width),
+      input: Math.round(input.width),
+      labelFitsInput: label.width <= input.width + 1,
+    };
+  });
+  console.log(`MEASURED [ServerFormSheet] Port label=${geometry.label}px input=${geometry.input}px`);
+  expect(geometry.labelFitsInput, "the Port label fits the column its input defines").toBe(true);
 });
 
 test("ServerFormSheet: empty submit flags all six required fields and focuses the first", async ({

@@ -554,7 +554,16 @@ export default function ServerFormSheet({ open, onOpenChange }: Props) {
                     </p>
                   )}
                 </div>
-                <div className="w-24 space-y-1">
+                {/* Deliberately no fixed width: the enclosing grid's second
+                    track is `auto`, so this column sizes to its own content —
+                    which is the label, not the input (Input is `w-full`). A
+                    hardcoded `w-24` (96px) lived here and silently broke when
+                    #54's label unification made OptionalLabel an `inline-flex`
+                    that cannot wrap: "PORT (optional)" measures ~124px and
+                    spilled ~15px past the panel border. Letting the track do
+                    the measuring cannot drift that way again, whatever the
+                    label says or which font is loaded. */}
+                <div className="space-y-1">
                   <OptionalLabel htmlFor="access_port">Port</OptionalLabel>
                   <Input
                     id="access_port"

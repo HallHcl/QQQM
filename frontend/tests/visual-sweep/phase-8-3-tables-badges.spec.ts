@@ -40,14 +40,16 @@ const MODULES = [
 ];
 
 /**
- * Modules whose date column carries the `font-mono … tabular-nums` treatment.
+ * Modules whose date column carries the `font-mono … tabular-nums` treatment —
+ * i.e. every module that has a date column at all.
  *
- * Clients and People are deliberately absent, and the two absences are not
- * the same thing: People has no date column at all, while Clients renders
- * one (`Updated`, a bare `toLocaleDateString()`) without the treatment its
- * four siblings use. See the walkthrough — flagged, not fixed here.
+ * People is the sole absence and is not a gap: it renders no date column.
+ * Clients was the real gap 8.3 found (an `Updated` cell rendering a bare
+ * `toLocaleDateString()` in a plain `text-muted-foreground` cell, so its dates
+ * did not column-align with the rest of the app); 8.3a brought it onto the
+ * shared pattern, and it belongs in this set now.
  */
-const TABULAR_MODULES = new Set(["projects", "servers", "environments", "schedule"]);
+const TABULAR_MODULES = new Set(["clients", "projects", "servers", "environments", "schedule"]);
 
 /** The exact token values behind each schedule status badge. */
 const STATUS_COLORS = {
