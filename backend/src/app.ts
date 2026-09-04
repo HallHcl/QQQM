@@ -22,7 +22,7 @@ import schedulesRoutes from "./routes/schedules.routes";
 import activityLogsRoutes from "./routes/activityLogs.routes";
 import searchRoutes from "./routes/search.routes";
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 export const app = express();
 
