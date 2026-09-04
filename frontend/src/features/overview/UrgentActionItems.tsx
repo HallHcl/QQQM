@@ -49,6 +49,7 @@ export default function UrgentActionItems() {
   const today = format(new Date(), "yyyy-MM-dd");
   const {
     data: schedules = [],
+    pagination,
     isLoading,
     isError,
   } = useSchedules({
@@ -57,6 +58,16 @@ export default function UrgentActionItems() {
     sort: "scheduled_date",
     order: "asc",
   });
+
+  // pagination.total counts every schedule matching `to`/`deleted` regardless
+  // of status (it has no status filter — see useSchedules.ts), so it is NOT
+  // "total urgent items" and must not be compared against the bucketed
+  // overdue/dueToday counts. It IS the right signal for "did the per_page:100
+  // cap truncate the fetch": if total exceeds what came back on this page,
+  // rows beyond the cap (the ones with the latest scheduled_date, i.e.
+  // closest to today) were never fetched at all and may include additional
+  // overdue or due-today items.
+  const truncated = Boolean(pagination && pagination.total > schedules.length);
 
   // Assignee names are not in the list payload — ScheduleListItem carries only
   // the assigned_to UUID, and assigned_to_person.name exists solely on
@@ -156,6 +167,13 @@ export default function UrgentActionItems() {
                 ))}
               </ul>
             </section>
+          )}
+
+          {!isLoading && !isError && truncated && (
+            <p className="px-3 text-xs text-muted-foreground">
+              Showing the {schedules.length} oldest of {pagination?.total} items due on or
+              before today &mdash; some overdue or due-today items may not be shown.
+            </p>
           )}
         </CardContent>
       </Card>
