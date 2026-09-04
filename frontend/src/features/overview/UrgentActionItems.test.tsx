@@ -68,7 +68,7 @@ function okResult(data: unknown[]) {
   };
 }
 
-function routeGet(schedules: unknown[], { scheduleError = false } = {}) {
+function routeGet(schedules: unknown[], { scheduleError = false, total }: { scheduleError?: boolean; total?: number } = {}) {
   getMock.mockImplementation((path: string) => {
     if (path === "/api/people") return Promise.resolve(okResult([PERSON]));
     if (path === "/api/schedules") {
@@ -77,6 +77,16 @@ function routeGet(schedules: unknown[], { scheduleError = false } = {}) {
           data: undefined,
           error: { error: { message: "Boom" } },
           response: new Response(null, { status: 500 }),
+        });
+      }
+      if (total !== undefined) {
+        return Promise.resolve({
+          data: {
+            data: schedules,
+            pagination: { page: 1, per_page: 100, total, total_pages: Math.ceil(total / 100) },
+          },
+          error: undefined,
+          response: new Response(null, { status: 200 }),
         });
       }
       return Promise.resolve(okResult(schedules));
@@ -274,6 +284,29 @@ describe("UrgentActionItems", () => {
     expect(
       screen.queryByText("All caught up! No overdue schedules.")
     ).not.toBeInTheDocument();
+  });
+
+  it("shows a truncation note when the API's total exceeds the fetched page", async () => {
+    routeGet(
+      [schedule({ id: "now", title: "Patch database", scheduled_date: isoDate(TODAY) })],
+      { total: 143 }
+    );
+    renderBox();
+
+    expect(
+      await screen.findByText(/Showing the 1 oldest of 143 items due on or before today/)
+    ).toBeInTheDocument();
+  });
+
+  it("shows no truncation note when the fetched page covers the full total", async () => {
+    routeGet(
+      [schedule({ id: "now", title: "Patch database", scheduled_date: isoDate(TODAY) })],
+      { total: 1 }
+    );
+    renderBox();
+
+    await screen.findByText("Patch database");
+    expect(screen.queryByText(/Showing the/)).not.toBeInTheDocument();
   });
 
   it("requests only schedules dated on or before today, bounded", async () => {
