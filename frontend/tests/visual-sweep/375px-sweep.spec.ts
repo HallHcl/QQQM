@@ -84,7 +84,12 @@ test.describe("375px sweep", () => {
   }) => {
     // Create the long-name fixture via the API (not the UI form) so this
     // test only exercises what it's checking: dialog rendering, not the
-    // create-person flow.
+    // create-person flow. Suffixed with Date.now() (mirroring
+    // create-flow-smoke.spec.ts) so repeated local runs against the same
+    // shared dev DB each create a distinct row instead of piling up
+    // same-named duplicates — the un-suffixed name previously accumulated
+    // across runs until PeopleTable's row locator below hit a strict-mode
+    // multi-match failure.
     const apiBase = baseURL!.replace("5173", "4000") + "/api";
     const loginRes = await request.post(`${apiBase}/auth/login`, {
       data: ADMIN,
@@ -93,14 +98,20 @@ test.describe("375px sweep", () => {
 
     const createRes = await request.post(`${apiBase}/people`, {
       headers: { Authorization: `Bearer ${token}` },
-      data: { name: LONG_NAME, type: "internal_engineer" },
+      data: { name: `${LONG_NAME}${Date.now()}`, type: "internal_engineer" },
     });
     expect(createRes.ok()).toBeTruthy();
+    const created = await createRes.json();
 
     await page.goto("/people");
-    await page.getByPlaceholder(/search/i).fill(LONG_NAME);
+    await page.getByPlaceholder(/search/i).fill(created.name);
     await page.waitForTimeout(500);
-    await page.getByText(LONG_NAME).click();
+    // PeopleTable rows carry `aria-label="View <name>"`; deriving the
+    // locator from the API response's own `name` (rather than re-deriving
+    // it locally) keeps this exact even if the suffixing scheme above ever
+    // changes. `.first()` is a defensive fallback only — the per-run suffix
+    // is what actually guarantees a single match.
+    await page.getByRole("button", { name: `View ${created.name}` }).first().click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
