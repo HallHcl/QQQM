@@ -180,6 +180,8 @@ pinned by a `test.fail()`-marked spec) and **both are now fixed** — see decisi
 expected-failures to ordinary passing assertions, which is the proof the fixes
 landed.
 
+Also tracked in git as "Phase 8.4" (PR #6, merge commit `2679431`).
+
 ### 1. `Port` label overflowed the Access documentation panel — 2 sites ✅ fixed
 
 The `Port` `OptionalLabel` laid out at 124.2px inside a `w-24` (96px) grid

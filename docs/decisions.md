@@ -1292,7 +1292,7 @@ without a fresh, explicit decision recorded in this document:
 | Ruled-out item | Where tracked |
 |---|---|
 | `Sidebar.tsx:21` violet `focus-visible:outline-brand` | decision #36 |
-| 10 hand-rolled `rounded-md border border-border` panel-like sites | decision #37 |
+| 11 hand-rolled `rounded-md border border-border` panel-like sites | decisions #37, #54 |
 | 5 avatar-square (32px) sites — semantically `control`/`pill`, not `panel` | decision #37 |
 | `elev-0` vs `shadow-none` — the twice-deferred overlap question | decisions #34, #37 |
 | "Table container" — #35 names it, but no such component exists in the code | decisions #35, #37 |
@@ -2542,6 +2542,8 @@ warnings in `button.tsx`/`badge.tsx`, untouched)
 ✅ **Vitest:** 736 passed / 71 files — unchanged, no `src/` changes
 
 ## 56. [Phase 8 — Release Gate follow-up] Both 8.3 defects fixed; Port column is now content-sized, Clients joins the shared date treatment (Ticket 8.3a, 2026-09-03)
+
+> Also tracked in git as "Phase 8.4" (PR #6, merge commit `2679431`).
 
 **Decision:** the two cosmetic defects #55b recorded are fixed, and their
 `test.fail()`-marked guards are promoted to ordinary passing assertions. That
