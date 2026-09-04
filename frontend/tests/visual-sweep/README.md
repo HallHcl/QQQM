@@ -53,10 +53,23 @@ pattern is worth reusing: mark the spec `test.fail()` *inside the test body*
 stays green while the defect stands and goes red the moment it is fixed — at
 which point drop the annotation and promote the assertion.
 
-## Known local-fixture drift
+## Local-fixture drift (fixed)
 
-`overview-metrics.spec.ts` asserts literal seed counts, and
-`create-flow-smoke.spec.ts` creates a real throwaway server and environment on
-every run — so the former drifts out of date as the latter runs.
-`375px-sweep.spec.ts` looks for a long-named person that is soft-deleted in the
-current seed. Both are fixture problems, not layout regressions.
+Two fixture problems, not layout regressions, used to make these specs flaky
+depending on local run history:
+
+- `overview-metrics.spec.ts` asserted literal seed counts, and
+  `create-flow-smoke.spec.ts` creates a real throwaway server and environment
+  on every run, so the former drifted out of date as the latter ran. Fixed by
+  fetching the same live totals OverviewPage.tsx's tiles read (`per_page: 1`,
+  `pagination.total`) in a `beforeAll` and asserting against those instead of
+  literals — `npm run seed` only inserts 1 client and 1 person
+  (`backend/src/db/seed.ts`), so these counts were never tied to a
+  reproducible fixture in the first place.
+- `375px-sweep.spec.ts`'s long-name PersonDetailDialog test creates its fixture
+  with a fixed name and no cleanup; repeated local runs against the same
+  shared dev DB accumulated same-named duplicates until the row locator hit a
+  strict-mode multi-match failure — soft-deletion was never the mechanism.
+  Fixed by suffixing the name with `Date.now()` per run (mirroring
+  `create-flow-smoke.spec.ts`) and deriving the row locator from the created
+  person's own `name` in the POST response.
