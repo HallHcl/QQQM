@@ -49,7 +49,9 @@ export default function LoginPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Sign in</CardTitle>
+            <CardTitle asChild>
+              <h1>Sign in</h1>
+            </CardTitle>
             <CardDescription>
               Enter your credentials to access the client &amp; project workspace.
             </CardDescription>
