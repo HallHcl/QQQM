@@ -3,6 +3,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/state/EmptyState";
 import { LoadingState } from "@/components/state/LoadingState";
 import { Button } from "@/components/ui/button";
+import { CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -104,7 +105,9 @@ export default function ProjectRoster({ projectId, clientId }: Props) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Team</h2>
+      <CardTitle asChild className="text-lg font-semibold">
+        <h2>Team</h2>
+      </CardTitle>
 
       {rosterLoading ? (
         <LoadingState message="Loading team..." />
